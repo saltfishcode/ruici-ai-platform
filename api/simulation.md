@@ -12,13 +12,16 @@
 - `POST /api/simulation/sessions`
 - 用途：创建新的情景模拟会话。
 - 兼容行为：当传入 `resumeId` 且未设置 `forceCreate=true` 时，后端会优先尝试恢复“同一文档 + 同一场景 + 同一模板”的未完成会话，而不是简单按文档全局复用。
+- 限流：`GLOBAL=5`，`IP=5`
 - 关键请求字段：
   - `scenarioType`：场景类型，当前已支持 `job-interview`、`tcm-qa`、`novel-expert`
   - `skillId`：技能模板 ID，例如 `java-backend`
   - `difficulty`：难度级别
   - `questionCount`：题目数量
   - `resumeId` / `resumeText`：文档关联信息
+  - `customCategories` / `jdText`：自定义场景（可选，JD 解析结果 + 原文）
   - `llmProvider`：可选，指定 Provider
+  - `forceCreate`：可选，强制创建新会话（默认 `false`）
 - 返回：`InterviewSessionDTO`
 
 ## 3. 获取会话详情
@@ -34,6 +37,7 @@
 ## 5. 提交答案并推进
 
 - `POST /api/simulation/sessions/{sessionId}/answers`
+- 限流：`GLOBAL=10`
 - 请求体：
   - `questionIndex`
   - `answer`

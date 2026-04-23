@@ -35,3 +35,4 @@
 - `POST /api/rag-chat/sessions/{sessionId}/messages/stream`
 - 返回：`text/event-stream`
 - 说明：服务端会先落库用户消息与 AI 占位消息，再流式返回内容，结束后回写完整答案。
+- 输出格式：使用 SSE 的 `data:` 事件返回文本分片；服务端会对换行符做转义以避免破坏 SSE 帧格式。

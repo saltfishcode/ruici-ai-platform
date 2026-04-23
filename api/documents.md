@@ -7,9 +7,12 @@
 - `POST /api/documents/upload`
 - `Content-Type: multipart/form-data`
 - 表单字段：`file`
-- 用途：上传职业文档并直接返回分析结果。
-- 说明：若命中重复文档，会返回历史分析结果。
-- 说明：当前文档分析响应模型已经收敛到 `modules/document/model/DocumentAnalysisResponse`，不再依赖 simulation 模块中的历史 DTO。
+- 用途：上传职业文档并触发异步分析（分析任务通过 Redis Stream 入队）。
+- 限流：`GLOBAL=5`，`IP=5`
+- 业务约束：服务层默认限制文件大小 `10MB`；允许的 `Content-Type` 由配置 `app.resume.allowed-types` 控制。
+- 返回：`Result<Map<String, Object>>`
+  - `duplicate=false`：返回 `resume`（含 `id/filename/analyzeStatus=PENDING`）与 `storage`（含 `fileKey/fileUrl/resumeId`）
+  - `duplicate=true`：优先返回 `analysis`（历史 `DocumentAnalysisResponse`）；若无历史分析则返回 `resume` 状态 + `storage`
 
 ## 2. 获取文档列表
 
@@ -24,7 +27,8 @@
 ## 4. 导出分析报告
 
 - `GET /api/documents/{id}/export`
-- 用途：导出文档分析报告 PDF。
+- 用途：导出文档分析报告 PDF（二进制流）。
+- 返回：`application/pdf`
 
 ## 5. 删除文档
 
@@ -35,6 +39,7 @@
 
 - `POST /api/documents/{id}/reanalyze`
 - 用途：手动触发重新分析。
+- 限流：`GLOBAL=2`，`IP=2`
 
 ## 7. 健康检查
 

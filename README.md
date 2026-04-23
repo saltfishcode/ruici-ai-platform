@@ -40,7 +40,7 @@
 
 - **主聊天 / 通用推理 / 情景模拟**：默认走第三方 OpenAI-compatible 中转
   - Base URL: `https://api-s.zwenooo.link/v1`
-  - Model: `gpt5.2`
+  - Model: `gpt-5.2`
 - **向量化 / Embedding**：默认保留 `Qwen / DashScope`
 - **语音 ASR / TTS / Realtime**：继续保留 `Qwen / DashScope`
 
@@ -127,6 +127,9 @@ ruici-ai-platform/
 ├── src/main/resources/
 │   ├── application.yml
 │   ├── application-dev.yml
+│   ├── logback-spring.xml
+│   ├── voice-interview-opening.yml
+│   ├── fonts/
 │   ├── prompts/
 │   ├── scripts/
 │   └── skills/
@@ -175,7 +178,7 @@ cp .env.example .env
 AI_DEFAULT_PROVIDER=third-party
 THIRD_PARTY_BASE_URL=https://api-s.zwenooo.link/v1
 THIRD_PARTY_API_KEY=your_gateway_key
-THIRD_PARTY_MODEL=gpt5.2
+THIRD_PARTY_MODEL=gpt-5.2
 THIRD_PARTY_FALLBACK_MODEL=qwen-plus
 
 AI_BAILIAN_API_KEY=your_dashscope_key
@@ -187,6 +190,21 @@ APP_VOICE_INTERVIEW_LLM_PROVIDER=dashscope
 
 > 安全提醒：请仅在 `.env` 或环境变量中填写真实密钥，严禁把真实 `API Key/Token/Password` 写入
 > `README`、`SETUP_API_KEYS.md`、测试用例或其他会进入版本库的文件。
+
+#### 安全数据区（基于 `.gitignore`）
+
+为了降低误提交敏感信息的风险，本项目把以下内容视为“安全数据区”，默认不进入版本控制：
+
+- 环境变量与密钥：`.env`、`.env.*`（仅保留 `.env.example` 作为模板）。
+- 本地 Spring 覆盖配置：`application-local.*`、`application-dev-local.*`、`bootstrap-local.*`。
+- 证书/私钥/Keystore：`*.pem`、`*.key`、`*.p12`、`*.pfx`、`*.jks`、`id_rsa` 等。
+- 内部资料与提示词草案：`private/`。
+- 工具缓存（可能携带 token/会话态）：`.playwright-mcp/`、`.playwright-cli/`。
+
+另外，`.gitignore` 里也默认忽略 `src/main/resources/application-dev.yml`：
+
+- 如果你需要团队共享开发环境默认配置，建议改为提交一个不含密钥的 `application-dev.example.yml`，并在本地用 `application-dev.yml` 覆盖。
+- 如果你只在本地开发使用它，请确保里面不出现真实 `API Key/Password`。
 
 #### 2.1 关于“旧键名”和“新语义”的关系
 

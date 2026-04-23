@@ -15,6 +15,7 @@
 ## 3. 解析 JD 为分类
 
 - `POST /api/simulation/skills/parse-jd`
+- 限流：`IP=5`
 - 请求体：
   - `jdText`
 - 用途：将岗位 JD 文本解析为前端可编辑的分类列表，常用于自定义技能生成。
