@@ -1,7 +1,5 @@
-import {getErrorMessage, request} from './request';
+import { buildApiUrl, getErrorMessage, request } from './request';
 import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:8080';
 
 // 向量化状态
 export type VectorStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
@@ -79,7 +77,7 @@ export const knowledgeBaseApi = {
      * 下载知识库文件
      */
     async downloadKnowledgeBase(id: number): Promise<Blob> {
-        const response = await axios.get(`${API_BASE_URL}/api/knowledgebase/${id}/download`, {
+        const response = await axios.get(buildApiUrl(`/api/knowledgebase/${id}/download`), {
             responseType: 'blob',
         });
         return response.data;
@@ -191,7 +189,7 @@ export const knowledgeBaseApi = {
     onError: (error: Error) => void
   ): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/knowledgebase/query/stream`, {
+      const response = await fetch(buildApiUrl('/api/knowledgebase/query/stream'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

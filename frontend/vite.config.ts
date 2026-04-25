@@ -28,6 +28,12 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            // Avoid backend origin validation mismatches when LAN clients use IP access.
+            proxyReq.removeHeader('origin');
+          });
+        },
       },
     },
     // 忽略 @ricky0123/vad-web 的 sourcemap 警告
