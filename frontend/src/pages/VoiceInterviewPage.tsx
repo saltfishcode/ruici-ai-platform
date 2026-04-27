@@ -12,6 +12,7 @@ import {
   connectWebSocket,
   VoiceWebSocket,
 } from '../api/voice';
+import { API_BASE_URL } from '../api/request';
 
 export default function VoiceInterviewPage() {
   const navigate = useNavigate();
@@ -396,7 +397,18 @@ export default function VoiceInterviewPage() {
       setCurrentPhase(session.currentPhase);
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const wsUrl = session.webSocketUrl || `${wsProtocol}://${window.location.host}/ws/voice-interview/${session.sessionId}`;
+      let host = window.location.host;
+
+      if (API_BASE_URL && API_BASE_URL.startsWith('http')) {
+        try {
+          const url = new URL(API_BASE_URL);
+          host = url.host;
+        } catch (e) {
+          console.warn('Failed to parse API_BASE_URL for WebSocket host:', e);
+        }
+      }
+
+      const wsUrl = session.webSocketUrl || `${wsProtocol}://${host}/ws/voice-interview/${session.sessionId}`;
       connectWithHandlers(session.sessionId, wsUrl);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '创建面试会话失败，请重试';
@@ -431,7 +443,18 @@ export default function VoiceInterviewPage() {
       setMessages(restored);
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const wsUrl = session.webSocketUrl || `${wsProtocol}://${window.location.host}/ws/voice-interview/${session.sessionId}`;
+      let host = window.location.host;
+
+      if (API_BASE_URL && API_BASE_URL.startsWith('http')) {
+        try {
+          const url = new URL(API_BASE_URL);
+          host = url.host;
+        } catch (e) {
+          console.warn('Failed to parse API_BASE_URL for WebSocket host:', e);
+        }
+      }
+
+      const wsUrl = session.webSocketUrl || `${wsProtocol}://${host}/ws/voice-interview/${session.sessionId}`;
       connectWithHandlers(session.sessionId, wsUrl);
     } catch (error) {
       setError(error instanceof Error ? error.message : '恢复会话失败');
@@ -501,7 +524,7 @@ export default function VoiceInterviewPage() {
     if (!sessionId) return;
     try {
       await voiceApi.pauseSession(sessionId);
-      navigate('/interviews');
+      navigate('/simulation/history');
     } catch (error) {
       alert('暂停失败，请重试');
     }
@@ -522,7 +545,7 @@ export default function VoiceInterviewPage() {
         console.error('Failed to end session:', error);
       }
     }
-    navigate('/interviews');
+    navigate('/simulation/history');
   };
 
   const handleCloseModal = () => {
@@ -572,7 +595,7 @@ export default function VoiceInterviewPage() {
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => navigate('/interviews')}
+                    onClick={() => navigate('/simulation/history')}
                     className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center"
                     title="返回面试记录"
                   >

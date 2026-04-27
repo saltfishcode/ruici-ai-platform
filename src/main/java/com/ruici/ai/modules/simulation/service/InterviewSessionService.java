@@ -56,6 +56,7 @@ public class InterviewSessionService {
     public InterviewSessionDTO createSession(CreateInterviewRequest request) {
         SimulationScenarioType scenarioType = SimulationScenarioType.fromNullable(request.scenarioType());
         String skillId = request.skillId() != null ? request.skillId() : ScenarioDefaults.SKILL_ID;
+        validateResumeTextUsable(request.resumeText());
 
         // 如果指定了resumeId且未强制创建，检查是否有未完成的会话
         if (request.resumeId() != null && !Boolean.TRUE.equals(request.forceCreate())) {
@@ -98,6 +99,7 @@ public class InterviewSessionService {
         );
 
         // 保存到 Redis 缓存
+        int totalMainQuestions = countMainQuestions(questions);
         sessionCache.saveSession(
             sessionId,
             scenarioType.id(),
@@ -112,7 +114,7 @@ public class InterviewSessionService {
         // 保存到数据库
         try {
             persistenceService.saveSession(sessionId, scenarioType.id(), request.resumeId(),
-                questions.size(), questions, request.llmProvider(), skillId, difficulty);
+                totalMainQuestions, questions, request.llmProvider(), skillId, difficulty);
         } catch (Exception e) {
             sessionCache.deleteSession(sessionId);
             log.error("保存情景模拟会话到数据库失败，已回滚缓存: sessionId={}", sessionId, e);
@@ -123,7 +125,7 @@ public class InterviewSessionService {
             sessionId,
             scenarioType.id(),
             request.resumeText() != null ? request.resumeText() : "",
-            questions.size(),
+            totalMainQuestions,
             0,
             questions,
             SessionStatus.CREATED
@@ -401,8 +403,53 @@ public class InterviewSessionService {
             hasNextQuestion,
             nextQuestion,
             newIndex,
-            questions.size()
+            countMainQuestions(questions)
         );
+    }
+
+    static int countMainQuestions(List<InterviewQuestionDTO> questions) {
+        return (int) questions.stream()
+            .filter(question -> !question.isFollowUp())
+            .count();
+    }
+
+    static void validateResumeTextUsable(String resumeText) {
+        if (resumeText == null || resumeText.isBlank()) {
+            return;
+        }
+
+        String normalized = resumeText.trim();
+        if (normalized.length() < 80) {
+            throw new BusinessException(
+                ErrorCode.BAD_REQUEST,
+                "当前文档内容过短，无法生成基于简历的模拟题，请更换文档或使用通用提问模式"
+            );
+        }
+
+        long meaningfulCharCount = normalized.chars()
+            .filter(character -> Character.isLetterOrDigit(character) || Character.UnicodeScript.of(character) == Character.UnicodeScript.HAN)
+            .count();
+        if (meaningfulCharCount < 40) {
+            throw new BusinessException(
+                ErrorCode.BAD_REQUEST,
+                "当前文档内容噪声过多，无法稳定提取简历信息，请更换文档或使用通用提问模式"
+            );
+        }
+
+        String lowerCaseText = normalized.toLowerCase();
+        List<String> resumeSignals = List.of(
+            "项目", "经历", "经验", "技能", "教育", "工作", "职责",
+            "project", "experience", "skill", "education", "work", "responsibility"
+        );
+        long signalCount = resumeSignals.stream()
+            .filter(lowerCaseText::contains)
+            .count();
+        if (signalCount == 0) {
+            throw new BusinessException(
+                ErrorCode.BAD_REQUEST,
+                "当前文档不像可用于面试的问题素材，请上传更贴近履历/经历的文档，或使用通用提问模式"
+            );
+        }
     }
 
     /**

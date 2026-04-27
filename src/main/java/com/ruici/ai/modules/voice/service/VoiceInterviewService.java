@@ -22,6 +22,7 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -519,8 +520,18 @@ public class VoiceInterviewService {
                 .status(session.getStatus().name())
                 .startTime(session.getStartTime())
                 .plannedDuration(session.getPlannedDuration())
-                .webSocketUrl(String.format("ws://localhost:8080/ws/voice-interview/%d", session.getId()))
+                .webSocketUrl(buildWebSocketUrl(session.getId()))
                 .build();
+    }
+
+    private String buildWebSocketUrl(Long sessionId) {
+        String contextUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+            .build()
+            .toUriString();
+        String websocketBaseUrl = contextUrl
+            .replaceFirst("^http://", "ws://")
+            .replaceFirst("^https://", "wss://");
+        return websocketBaseUrl + "/ws/voice-interview/" + sessionId;
     }
 
     /**

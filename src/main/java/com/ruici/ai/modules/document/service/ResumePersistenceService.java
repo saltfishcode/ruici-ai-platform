@@ -133,7 +133,7 @@ public class ResumePersistenceService {
      * 获取所有简历列表
      */
     public List<ResumeEntity> findAllResumes() {
-        return resumeRepository.findAll();
+        return resumeRepository.findAllByOrderByUploadedAtDescIdDesc();
     }
     
     /**

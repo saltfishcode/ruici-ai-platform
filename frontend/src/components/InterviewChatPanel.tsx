@@ -42,10 +42,18 @@ export default function InterviewChatPanel({
 }: InterviewChatPanelProps) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
-  const progress = useMemo(() => {
+  const currentMainQuestionNumber = useMemo(() => {
     if (!session || !currentQuestion) return 0;
-    return ((currentQuestion.questionIndex + 1) / session.totalQuestions) * 100;
+    return session.questions
+      .slice(0, currentQuestion.questionIndex + 1)
+      .filter(question => !question.isFollowUp)
+      .length;
   }, [session, currentQuestion]);
+
+  const progress = useMemo(() => {
+    if (!session || session.totalQuestions <= 0) return 0;
+    return (Math.min(currentMainQuestionNumber, session.totalQuestions) / session.totalQuestions) * 100;
+  }, [currentMainQuestionNumber, session]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -60,7 +68,7 @@ export default function InterviewChatPanel({
             className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-4 shadow-sm dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            题目 {currentQuestion ? currentQuestion.questionIndex + 1 : 0} / {session.totalQuestions}
+            题目 {currentMainQuestionNumber} / {session.totalQuestions}
           </span>
             <span className="text-sm text-slate-500 dark:text-slate-400">
             {Math.round(progress)}%

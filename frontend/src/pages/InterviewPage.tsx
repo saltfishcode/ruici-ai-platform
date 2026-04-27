@@ -168,6 +168,11 @@ export default function Interview({
 
       if (response.hasNextQuestion && response.nextQuestion) {
         setCurrentQuestion(response.nextQuestion);
+        setSession(prev => prev ? {
+          ...prev,
+          currentQuestionIndex: response.currentIndex,
+          totalQuestions: response.totalQuestions
+        } : null);
         setMessages(prev => [...prev, {
           type: 'interviewer',
           content: response.nextQuestion!.question,

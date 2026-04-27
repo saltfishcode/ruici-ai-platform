@@ -97,8 +97,10 @@ public class LlmProviderRegistry {
     }
 
     /**
-     * 获取语音面试专用 ChatClient：SkillsTool + ToolCallAdvisor（流式）。
-     * 不加 Memory Advisor（语音面试手动管理对话历史）。
+     * 获取语音交互专用 ChatClient。
+     *
+     * <p>语音链路对首包时延和稳定性更敏感，这里显式禁用 SkillsTool / ToolCallAdvisor，
+     * 避免 OpenAI-compatible provider 在流式回复中触发工具调用导致链路中断。</p>
      */
     public ChatClient getVoiceChatClient(String providerId) {
         String id = resolveProviderId(providerId);
@@ -129,16 +131,8 @@ public class LlmProviderRegistry {
 
     private ChatClient createVoiceChatClient(String providerId) {
         OpenAiChatModel chatModel = buildChatModel(providerId);
-
-        ChatClient.Builder builder = ChatClient.builder(chatModel);
-        if (interviewSkillsToolCallback != null) {
-            builder.defaultToolCallbacks(interviewSkillsToolCallback);
-        }
-        if (toolCallingManager != null) {
-            builder.defaultAdvisors(buildToolCallAdvisor(true, true));
-        }
-        log.info("[LlmProviderRegistry] Created voice ChatClient (SkillsTool + streaming ToolCall) for {}", providerId);
-        return builder.build();
+        log.info("[LlmProviderRegistry] Created voice ChatClient (plain/no tools) for {}", providerId);
+        return ChatClient.builder(chatModel).build();
     }
 
     private OpenAiChatModel buildChatModel(String providerId) {

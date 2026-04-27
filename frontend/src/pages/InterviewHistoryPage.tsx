@@ -305,8 +305,8 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
       const isLive = isLiveStatus(item.status);
       if (isLive) {
         navigate('/voice', { state: { voiceSessionId: item.voiceSessionId } });
-      } else {
-        navigate(`/voice-interview/${item.voiceSessionId}/evaluation`);
+        } else {
+        navigate(`/voice/${item.voiceSessionId}/evaluation`);
       }
     }
   };

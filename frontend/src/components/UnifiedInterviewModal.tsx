@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useInterviewConfig, CUSTOM_SKILL_ID, DIFFICULTY_OPTIONS, type InterviewMode, type Difficulty } from '../hooks/useInterviewConfig';
 import { getSkillIcon } from '../utils/skillIcons';
+import { formatDateOnly } from '../utils/date';
 
 // Re-export for backward compatibility
 export type { InterviewMode, Difficulty };
@@ -376,12 +377,14 @@ export default function UnifiedInterviewModal({
                           value={config.resumeId || ''}
                           onChange={e => config.setResumeId(e.target.value ? parseInt(e.target.value) : undefined)}
                           className="w-full px-4 py-2.5 rounded-lg border border-primary-200 dark:border-primary-700/50
-                            bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white
+                            bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-200
                             focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-shadow"
                         >
-                          <option value="">不使用简历（通用提问）</option>
+                          <option value="" className="dark:bg-slate-800">不使用简历（通用提问）</option>
                           {config.resumes.map(r => (
-                            <option key={r.id} value={r.id}>{r.filename}</option>
+                            <option key={r.id} value={r.id} className="dark:bg-slate-800">
+                              {r.filename} ({formatDateOnly(r.uploadedAt)})
+                            </option>
                           ))}
                         </select>
                       </div>
