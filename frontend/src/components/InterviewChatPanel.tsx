@@ -4,6 +4,7 @@ import {Virtuoso, type VirtuosoHandle} from 'react-virtuoso';
 import type {InterviewQuestion, InterviewSession} from '../types/simulation';
 import {Send} from 'lucide-react';
 import InterviewMessageBubble from './InterviewMessageBubble';
+import { getSimulationRoleLabel } from '../utils/simulation';
 
 interface Message {
   type: 'interviewer' | 'user';
@@ -61,6 +62,8 @@ export default function InterviewChatPanel({
     }
   };
 
+  const aiRoleLabel = getSimulationRoleLabel(session.simulationDirection);
+
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto">
       {/* 进度条 */}
@@ -98,6 +101,7 @@ export default function InterviewChatPanel({
               <InterviewMessageBubble
                 role={msg.type === 'interviewer' ? 'interviewer' : 'user'}
                 text={msg.content}
+                roleLabel={msg.type === 'interviewer' ? aiRoleLabel : undefined}
                 category={msg.category}
               />
             </div>

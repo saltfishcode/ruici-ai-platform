@@ -6,6 +6,7 @@
 - 场景名称：{scenarioName}
 - 场景目标：{scenarioObjective}
 - 提问风格：{scenarioQuestionStyle}
+- AI 扮演角色：{aiRoleLabel}
 
 ## 场景主题
 {skillName}（{skillDescription}）
@@ -23,6 +24,8 @@
 
 ## 输出要求
 - questions 数组必须包含恰好 {questionCount} 个元素，不多不少
+- 问题必须严格贴合当前场景方向、岗位主题与难度层级，优先围绕文档中的真实经历做岗位化追问
+- AI 角色的表达方式必须与场景一致，例如求职面试像面试官、专业答疑像提问者、职业沟通像协作方
 - 每个主问题必须包含 topicSummary 字段：10 字以内的知识点摘要（用于历史去重），格式示例：
   - "Redis 缓存策略设计"
   - "MySQL 索引优化"

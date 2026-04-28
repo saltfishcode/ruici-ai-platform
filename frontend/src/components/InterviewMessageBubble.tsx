@@ -7,6 +7,7 @@ export type InterviewMessageRole = 'interviewer' | 'user';
 interface InterviewMessageBubbleProps {
   role: InterviewMessageRole;
   text: string;
+  roleLabel?: string;
   category?: string;
   highlight?: boolean;
   italic?: boolean;
@@ -16,6 +17,7 @@ interface InterviewMessageBubbleProps {
 export default function InterviewMessageBubble({
   role,
   text,
+  roleLabel,
   category,
   highlight = false,
   italic = false,
@@ -33,7 +35,7 @@ export default function InterviewMessageBubble({
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">面试官</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{roleLabel || '面试官'}</span>
             {category && (
               <span className="px-2 py-0.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs rounded-full">
                 {category}

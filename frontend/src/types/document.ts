@@ -48,6 +48,13 @@ export interface ApiError {
 
 export type AnalyzeStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
+export type DocumentSimulationStatus =
+  | 'PENDING_SIMULATION'
+  | 'IN_PROGRESS'
+  | 'EVALUATING'
+  | 'COMPLETED'
+  | 'FAILED';
+
 export interface ResumeListItem {
   id: number;
   filename: string;
@@ -59,6 +66,7 @@ export interface ResumeListItem {
   latestScore?: number;
   lastAnalyzedAt?: string;
   interviewCount: number;
+  simulationStatus?: DocumentSimulationStatus;
   analyzeStatus?: AnalyzeStatus;
   analyzeError?: string;
   storageUrl?: string;

@@ -374,7 +374,12 @@ public class InterviewPersistenceService {
                     return java.util.stream.Stream.<HistoricalQuestion>empty();
                 }
             })
-            .filter(hq -> seen.add(hq.question()))
+            .filter(hq -> {
+                String dedupKey = hq.topicSummary() != null && !hq.topicSummary().isBlank()
+                    ? hq.topicSummary()
+                    : hq.question();
+                return seen.add(dedupKey);
+            })
             .limit(MAX_HISTORICAL_QUESTIONS)
             .toList();
 

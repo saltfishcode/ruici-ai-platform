@@ -8,6 +8,7 @@ import type {InterviewQuestion, InterviewSession} from '../types/simulation';
 import type {Difficulty} from '../components/UnifiedInterviewModal';
 import type {CategoryDTO} from '../api/skill';
 import { CUSTOM_SKILL_ID, type SimulationDirection } from '../hooks/useInterviewConfig';
+import { getSimulationDirectionLabel, getSimulationRoleLabel } from '../utils/simulation';
 
 interface Message {
   type: 'interviewer' | 'user';
@@ -60,6 +61,8 @@ export default function Interview({
   const simulationDirection = initialConfig?.simulationDirection ?? 'JOB_INTERVIEW';
   const customCategories = initialConfig?.customCategories;
   const jdText = initialConfig?.jdText;
+  const aiRoleLabel = getSimulationRoleLabel(simulationDirection);
+  const directionLabel = getSimulationDirectionLabel(simulationDirection);
 
   const initSession = useCallback((s: InterviewSession) => {
     setSession(s);
@@ -269,8 +272,8 @@ export default function Interview({
   return (
     <div className="pb-10">
       <InterviewPageHeader
-        title="模拟面试"
-        subtitle="认真回答每个问题，展示您的实力"
+        title={directionLabel}
+        subtitle={`${aiRoleLabel}会根据当前情景持续追问，请结合岗位与场景认真作答`}
         icon={(
           <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none">
             <title>语音图标</title>

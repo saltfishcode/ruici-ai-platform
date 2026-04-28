@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import {AnimatePresence, motion} from 'framer-motion';
 import {AlertCircle, CheckCircle, Clock, FileStack, RefreshCw, Sparkles, Upload} from 'lucide-react';
 import {documentApi} from '../api/document';
-import type { ResumeListItem } from '../types/document';
+import type { DocumentSimulationStatus, ResumeListItem } from '../types/document';
 import DeleteConfirmDialog from '../components/DeleteConfirmDialog';
 import {formatDateOnly} from '../utils/date';
 import {getScoreProgressColor} from '../utils/score';
@@ -45,11 +45,44 @@ function getAnalysisDifficultyLabel(analysisDifficulty?: string | null): string 
   }
 }
 
+function getSimulationStatusText(status?: DocumentSimulationStatus): string {
+  switch (status) {
+    case 'IN_PROGRESS':
+      return '进行中';
+    case 'EVALUATING':
+      return '评估中';
+    case 'COMPLETED':
+      return '已完成';
+    case 'FAILED':
+      return '评估失败';
+    case 'PENDING_SIMULATION':
+    default:
+      return '待模拟';
+  }
+}
+
+function getSimulationStatusClassName(status?: DocumentSimulationStatus): string {
+  switch (status) {
+    case 'IN_PROGRESS':
+      return 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300';
+    case 'EVALUATING':
+      return 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300';
+    case 'COMPLETED':
+      return 'bg-emerald-50 dark:bg-emerald-900 text-emerald-600';
+    case 'FAILED':
+      return 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300';
+    case 'PENDING_SIMULATION':
+    default:
+      return 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300';
+  }
+}
+
 function resumesEqual(a: ResumeListItem[], b: ResumeListItem[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].id !== b[i].id ||
         a[i].analyzeStatus !== b[i].analyzeStatus ||
+        a[i].simulationStatus !== b[i].simulationStatus ||
         a[i].latestScore !== b[i].latestScore) return false;
   }
   return true;
@@ -210,7 +243,7 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
               <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">上传日期</th>
               <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">分析状态</th>
               <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">AI 评分</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">面试状态</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">模拟状态</th>
               <th className="w-20"></th>
             </tr>
             </thead>
@@ -290,21 +323,18 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
                     )}
                   </td>
                   <td className="px-6 py-5">
-                    {resume.interviewCount > 0 ? (
-                      <span
-                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900 text-emerald-600 rounded-full text-sm font-medium">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${getSimulationStatusClassName(resume.simulationStatus)}`}>
+                      {resume.simulationStatus === 'COMPLETED' && (
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
                           <title>已完成</title>
                           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
                           <polyline points="9,12 11,14 15,10" stroke="currentColor" strokeWidth="2"
                                     strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                        已完成
-                      </span>
-                    ) : (
-                      <span
-                        className="inline-flex px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-full text-sm">待面试</span>
-                    )}
+                      )}
+                      {getSimulationStatusText(resume.simulationStatus)}
+                    </span>
                   </td>
                   <td className="px-4">
                     <div className="flex items-center gap-2">

@@ -53,8 +53,8 @@ export interface QueryRequest {
 
 export interface QueryResponse {
   answer: string;
-  knowledgeBaseId: number;
-  knowledgeBaseName: string;
+  knowledgeBaseId: number | null;
+  knowledgeBaseName: string | null;
 }
 
 export const knowledgeBaseApi = {

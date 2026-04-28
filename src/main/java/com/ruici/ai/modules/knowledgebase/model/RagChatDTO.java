@@ -1,7 +1,6 @@
 package com.ruici.ai.modules.knowledgebase.model;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,7 +16,6 @@ public class RagChatDTO {
      * 创建会话请求
      */
     public record CreateSessionRequest(
-        @NotEmpty(message = "至少选择一个知识库")
         List<Long> knowledgeBaseIds,
 
         String title  // 可选，为空则自动生成
@@ -43,7 +41,6 @@ public class RagChatDTO {
      * 更新知识库请求
      */
     public record UpdateKnowledgeBasesRequest(
-        @NotEmpty(message = "至少选择一个知识库")
         List<Long> knowledgeBaseIds
     ) {}
 

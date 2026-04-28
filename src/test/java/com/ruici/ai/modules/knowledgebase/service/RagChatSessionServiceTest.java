@@ -19,6 +19,14 @@ class RagChatSessionServiceTest {
     class DefaultTitleGeneration {
 
         @Test
+        @DisplayName("未选择知识库的新会话使用通用标题")
+        void shouldUseGenericTitleForSessionWithoutKnowledgeBase() {
+            String title = RagChatSessionService.generateTitle(List.of());
+
+            assertThat(title).isEqualTo("新对话");
+        }
+
+        @Test
         @DisplayName("单知识库新会话使用通用标题而不是知识库名称")
         void shouldUseGenericTitleForSingleKnowledgeBase() {
             String title = RagChatSessionService.generateTitle(List.of(knowledgeBase(1L, "Java 面试题库")));
