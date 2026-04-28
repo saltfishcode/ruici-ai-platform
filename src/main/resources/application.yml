@@ -240,7 +240,7 @@ app:
     qwen:
       asr:
         url: wss://dashscope.aliyuncs.com/api-ws/v1/realtime
-        model: qwen3-asr-flash-realtime
+        model: ${AI_ASR_MODEL:qwen3-asr-flash-realtime}
         api-key: ${AI_BAILIAN_API_KEY}
         language: zh
         format: pcm
@@ -254,7 +254,7 @@ app:
       # Qwen TTS Realtime Configuration (WebSocket-based)
       # 音色列表文档：https://help.aliyun.com/zh/model-studio/qwen-tts-realtime
       tts:
-        model: qwen3-tts-flash-realtime
+        model: ${AI_TTS_MODEL:qwen3-tts-flash-realtime}
         api-key: ${AI_BAILIAN_API_KEY}
         voice: Cherry
         format: pcm

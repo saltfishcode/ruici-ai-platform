@@ -7,9 +7,11 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ruici-postgres
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-302304}
       POSTGRES_DB: ${POSTGRES_DB:-ruici_ai_platform}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -23,14 +25,17 @@ services:
       retries: 5
 
   redis:
-    image: redis:7
+    image: redis:6.2.14
     container_name: ruici-redis
+    env_file:
+      - .env
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-302304}"]
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-302304} ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -39,9 +44,11 @@ services:
     image: rustfs/rustfs:latest
     container_name: ruici-rustfs
     command: ["/data"]
+    env_file:
+      - .env
     environment:
-      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
-      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      RUSTFS_ACCESS_KEY: ${APP_STORAGE_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${APP_STORAGE_SECRET_KEY:-rustfsadmin}
       RUSTFS_CONSOLE_ENABLE: "true"
     ports:
       - "9000:9000"
@@ -54,9 +61,24 @@ services:
       timeout: 3s
       retries: 5
 
+  createbuckets:
+    image: minio/mc
+    env_file:
+      - .env
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set mys3 http://rustfs:9000 ${APP_STORAGE_ACCESS_KEY:-rustfsadmin} ${APP_STORAGE_SECRET_KEY:-rustfsadmin};
+      /usr/bin/mc mb --ignore-existing mys3/${APP_STORAGE_BUCKET:-ruici-ai-platform};
+      /usr/bin/mc anonymous set public mys3/${APP_STORAGE_BUCKET:-ruici-ai-platform};
+      exit 0;
+      "
+
 # 首次启动后，浏览器访问 http://localhost:9001
-# 使用 ${RUSTFS_ACCESS_KEY} / ${RUSTFS_SECRET_KEY} 登录。
-# 新手注意：dev 编排不会自动创建 bucket，需要你手动创建名为 ruici-ai-platform 的 bucket。
+# 使用 APP_STORAGE_ACCESS_KEY / APP_STORAGE_SECRET_KEY 登录。
+# 新手注意：dev 编排已自动创建 bucket（默认 ruici-ai-platform）。
 
 volumes:
   postgres_data:
