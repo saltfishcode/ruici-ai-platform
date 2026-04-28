@@ -20,7 +20,7 @@ export function getSimulationRoleLabel(simulationDirection?: string): string {
       return '协作方';
     case 'JOB_INTERVIEW':
     default:
-      return '面试官';
+      return '模拟对象';
   }
 }
 

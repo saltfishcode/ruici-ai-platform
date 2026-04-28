@@ -182,20 +182,20 @@ export default function UnifiedInterviewModal({
                 {!hideModeSwitch && (
                   <div>
                     <p className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                      面试模式
+                      模拟模式
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {([
                         {
                           value: 'text' as InterviewMode,
-                          label: '文字面试',
+                          label: '文字模拟',
                           icon: FileText,
                           desc: '推荐：更稳定，更适合系统化练习',
                           recommended: true,
                         },
                         {
                           value: 'voice' as InterviewMode,
-                          label: '语音面试',
+                          label: '语音模拟',
                           icon: Mic,
                           desc: '实时语音对话，偏临场模拟',
                           recommended: false,
@@ -515,11 +515,11 @@ export default function UnifiedInterviewModal({
                         </div>
                       )}
 
-                      {/* 语音面试 - 时长 */}
+                      {/* 语音模拟 - 时长 */}
                       {config.mode === 'voice' && (
                         <div className="bg-slate-50/80 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                           <div className="flex items-center justify-between mb-3">
-                            <p className="font-semibold text-sm text-slate-900 dark:text-white">计划面试时长</p>
+                            <p className="font-semibold text-sm text-slate-900 dark:text-white">计划模拟时长</p>
                             <div className="text-2xl font-bold tabular-nums text-primary-600 dark:text-primary-400">
                               {config.plannedDuration}
                               <span className="text-xs font-normal text-slate-400 ml-0.5">min</span>

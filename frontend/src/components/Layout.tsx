@@ -122,7 +122,7 @@ export default function Layout() {
       id: 'voice',
       title: '语音交互',
       items: [
-        { id: 'voice-simulation', path: '/voice', label: '语音对话', icon: AudioWaveform, description: '实时语音模拟对话' },
+        { id: 'voice-simulation', path: '/voice', label: '语音模拟', icon: AudioWaveform, description: '实时语音模拟对话' },
       ],
     },
   ];
@@ -259,7 +259,7 @@ export default function Layout() {
               <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                  Ruici AI v1.0
+                  Ruici AI v1.2.1
                 </p>
               </div>
             )}

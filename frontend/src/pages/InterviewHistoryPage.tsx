@@ -404,7 +404,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
             animate={{ opacity: 1, x: 0 }}
           >
             <Users className="w-7 h-7 text-primary-500" />
-            面试记录
+            模拟记录
           </motion.h1>
           <motion.p
             className="text-slate-500 dark:text-slate-400 mt-1"
@@ -412,7 +412,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
-            查看和管理所有模拟面试记录
+            查看和管理所有模拟记录
           </motion.p>
         </div>
 
@@ -435,7 +435,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <StatCard icon={Users} label="面试总数" value={stats.totalCount} color="bg-primary-500" />
+          <StatCard icon={Users} label="模拟总数" value={stats.totalCount} color="bg-primary-500" />
           <StatCard icon={CheckCircle} label="已完成" value={stats.completedCount} color="bg-emerald-500" />
           <StatCard icon={TrendingUp} label="平均分数" value={stats.averageScore} suffix="分" color="bg-indigo-500" />
         </div>
@@ -445,8 +445,8 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
       <div className="flex items-center gap-2 mb-6">
         {([
           { key: 'all', label: '全部' },
-          { key: 'text', label: '文字面试' },
-          { key: 'voice', label: '语音面试' },
+          { key: 'text', label: '文字模拟' },
+          { key: 'voice', label: '语音模拟' },
         ] as const).map(tab => (
           <button
             type="button"
@@ -478,8 +478,8 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
           animate={{ opacity: 1, scale: 1 }}
         >
           <Users className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">暂无面试记录</h3>
-          <p className="text-slate-500 dark:text-slate-400">开始一次模拟面试后，记录将显示在这里</p>
+          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">暂无模拟记录</h3>
+          <p className="text-slate-500 dark:text-slate-400">开始一次模拟后，记录将显示在这里</p>
         </motion.div>
       )}
 
@@ -606,7 +606,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                             type="button"
                             onClick={(e) => { e.stopPropagation(); onContinueInterview(item.sessionId); }}
                             className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                            title="继续面试"
+                            title="继续模拟"
                           >
                             <PlayCircle className="w-4 h-4" />
                           </button>
@@ -616,7 +616,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                             type="button"
                             onClick={(e) => { e.stopPropagation(); navigate('/voice', { state: { voiceSessionId: item.voiceSessionId } }); }}
                             className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                            title="继续面试"
+                            title="继续模拟"
                           >
                             <PlayCircle className="w-4 h-4" />
                           </button>
@@ -645,7 +645,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                               onRestartInterview(item.resumeId);
                             }}
                             className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
-                            title="重新面试"
+                            title="重新模拟"
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>
@@ -673,7 +673,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
       <DeleteConfirmDialog
         open={deleteItem !== null}
         item={deleteItem ? { id: 0, sessionId: deleteItem.sessionId } : null}
-        itemType="面试记录"
+        itemType="模拟记录"
         loading={deletingSessionId !== null}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteItem(null)}

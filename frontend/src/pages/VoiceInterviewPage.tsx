@@ -560,8 +560,8 @@ export default function VoiceInterviewPage() {
       <div className="min-h-[60vh] flex items-center justify-center p-6">
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-8 text-center max-w-md w-full">
           <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <p className="text-slate-700 dark:text-slate-200 text-lg font-semibold mb-2">未检测到语音面试配置</p>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">请从面试记录或"语音面试"入口开始</p>
+          <p className="text-slate-700 dark:text-slate-200 text-lg font-semibold mb-2">未检测到语音模拟配置</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">请从模拟记录或"语音模拟"入口开始</p>
           <button
             onClick={handleCloseModal}
             className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
@@ -577,7 +577,7 @@ export default function VoiceInterviewPage() {
     <div className="pb-10">
       <div className="max-w-7xl mx-auto">
         <InterviewPageHeader
-          title="语音模拟面试"
+          title="语音模拟"
           subtitle="实时语音对话，AI 会根据当前情景与你的回答持续追问"
           icon={<Mic className="w-6 h-6 text-white" />}
         />
@@ -597,7 +597,7 @@ export default function VoiceInterviewPage() {
                   <button
                     onClick={() => navigate('/simulation/history')}
                     className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center"
-                    title="返回面试记录"
+                    title="返回模拟记录"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
@@ -674,7 +674,7 @@ export default function VoiceInterviewPage() {
               <div className="flex items-center justify-center gap-6">
                 <button
                   onClick={() => {
-                    const choice = window.confirm('暂停面试？\n确定 = 短暂停（5分钟）\n取消 = 离开并保存');
+                    const choice = window.confirm('暂停模拟？\n确定 = 短暂停（5分钟）\n取消 = 离开并保存');
                     handlePause(choice ? 'short' : 'long');
                   }}
                   disabled={connectionStatus !== 'connected'}
@@ -712,7 +712,7 @@ export default function VoiceInterviewPage() {
                   onClick={handleEndInterview}
                   disabled={connectionStatus !== 'connected'}
                   className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
-                  title="结束面试"
+                  title="结束模拟"
                 >
                   <span className="inline-flex items-center gap-1">
                     <PhoneOff className="w-4 h-4" />
