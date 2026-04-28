@@ -11,15 +11,15 @@ export type SimulationDifficulty = 'EASY' | 'NORMAL' | 'SHARP';
 export type SimulationDirection = 'JOB_INTERVIEW' | 'PROFESSIONAL_QA' | 'WORKPLACE_COMMUNICATION';
 
 export const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; desc: string }[] = [
-  { value: 'junior', label: '校招', desc: '0-1 年' },
-  { value: 'mid', label: '中级', desc: '1-3 年' },
-  { value: 'senior', label: '高级', desc: '3 年+' },
+  { value: 'junior', label: '新手', desc: '更偏基础与入门场景' },
+  { value: 'mid', label: '普通', desc: '更偏常规实战与稳定输出' },
+  { value: 'senior', label: '老练', desc: '更偏复杂局面与高阶追问' },
 ];
 
 export const CUSTOM_SKILL_ID = 'custom';
 export const DEFAULT_SKILL_ID = 'java-backend';
 export const DEFAULT_LLM_PROVIDER = 'dashscope';
-export const MIN_JD_LENGTH = 50;
+export const MIN_JD_LENGTH = 5;
 export const DEFAULT_SIMULATION_DIRECTION: SimulationDirection = 'JOB_INTERVIEW';
 
 export const SIMULATION_DIRECTION_OPTIONS: {
@@ -106,8 +106,7 @@ export function useInterviewConfig(options?: {
 
   const isCustomSkill = skillId === CUSTOM_SKILL_ID;
   const jdNeedsReparse = parsedCustomJdText.length > 0 && customJdText !== parsedCustomJdText;
-  const isCustomStartDisabled = isCustomSkill
-    && (customCategories.length === 0 || jdNeedsReparse || parsingJd);
+  const isCustomStartDisabled = isCustomSkill && parsingJd;
 
   const loadSkills = useCallback(async () => {
     setLoadingSkills(true);
@@ -132,18 +131,20 @@ export function useInterviewConfig(options?: {
     }
   }, []);
 
-  const handleParseJd = useCallback(async () => {
+  const handleParseJd = useCallback(async (): Promise<CategoryDTO[] | null> => {
     if (!customJdText || customJdText.length < MIN_JD_LENGTH) {
       alert(`JD 内容太少（至少 ${MIN_JD_LENGTH} 字），请补充后重试`);
-      return;
+      return null;
     }
     setParsingJd(true);
     try {
       const categories = await skillApi.parseJd(customJdText);
       setCustomCategories(categories);
       setParsedCustomJdText(customJdText);
+      return categories;
     } catch {
       alert('JD 解析失败，请重试或选择预设主题');
+      return null;
     } finally {
       setParsingJd(false);
     }

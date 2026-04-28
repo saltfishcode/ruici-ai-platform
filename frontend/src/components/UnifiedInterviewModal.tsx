@@ -16,6 +16,7 @@ import {
 } from '../hooks/useInterviewConfig';
 import { getSkillIcon } from '../utils/skillIcons';
 import { formatDateOnly } from '../utils/date';
+import { getDifficultyDescription } from '../utils/simulation';
 
 // Re-export for backward compatibility
 export type { InterviewMode, Difficulty };
@@ -61,7 +62,7 @@ export default function UnifiedInterviewModal({
   defaultResumeId,
   hideModeSwitch = false,
   title = '开始情景模拟',
-  subtitle = '选择模拟模式、情景方向与练习主题，快速开始',
+  subtitle = '选择模拟模式、情景方向与岗位方向，快速开始',
   startButtonText = '开始模拟',
 }: UnifiedInterviewModalProps) {
   const config = useInterviewConfig({ defaultMode, defaultResumeId, autoLoad: false });
@@ -92,11 +93,21 @@ export default function UnifiedInterviewModal({
     config.setShowMore,
   ]);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const selectedSkill = config.selectedSkill;
 
     if (config.isCustomStartDisabled) {
       return;
+    }
+
+    let customCategories = config.customCategories;
+    let customJdText = config.customJdText.trim();
+    if (config.isCustomSkill && customJdText && (config.jdNeedsReparse || customCategories.length === 0)) {
+      const parsedCategories = await config.handleParseJd();
+      if (!parsedCategories) {
+        return;
+      }
+      customCategories = parsedCategories;
     }
 
     onStart({
@@ -114,8 +125,8 @@ export default function UnifiedInterviewModal({
       projectEnabled: true,
       hrEnabled: true,
       plannedDuration: config.plannedDuration,
-      customJdText: config.isCustomSkill ? config.parsedCustomJdText : undefined,
-      customCategories: config.isCustomSkill ? config.customCategories : undefined,
+      customJdText: config.isCustomSkill ? customJdText : undefined,
+      customCategories: config.isCustomSkill ? customCategories : undefined,
     });
   };
 
@@ -252,10 +263,10 @@ export default function UnifiedInterviewModal({
                   </div>
                 </div>
 
-                {/* 练习主题 */}
+                {/* 岗位选择 */}
                 <div>
                   <p className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    练习主题
+                    岗位选择
                   </p>
                   {config.loadingSkills ? (
                     <div className="flex items-center gap-2 py-4 text-slate-400">
@@ -341,7 +352,7 @@ export default function UnifiedInterviewModal({
                         <textarea
                           value={config.customJdText}
                           onChange={e => config.setCustomJdText(e.target.value)}
-                          placeholder="粘贴目标岗位的职位描述（JD），至少 50 字..."
+                          placeholder="粘贴目标岗位的职位描述（JD），至少 5 字；也可直接开始，系统会自动兜底生成岗位向问题..."
                           rows={4}
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700
                             bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white
@@ -357,7 +368,7 @@ export default function UnifiedInterviewModal({
                             disabled:cursor-not-allowed transition-colors"
                         >
                           {config.parsingJd ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                            解析练习主题
+                            提炼岗位要点
                           </button>
                         {config.customCategories.length > 0 && (
                           <div className="flex flex-wrap gap-2">
@@ -369,12 +380,15 @@ export default function UnifiedInterviewModal({
                                 {cat.label}
                                 <span className="ml-1 text-[10px] text-primary-500">({cat.priority})</span>
                               </span>
-                            ))}
+                         ))}
                           </div>
                         )}
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          若填写了 JD，开始模拟时会自动提炼岗位要点；不需要再手动二次选择。
+                        </p>
                         {config.jdNeedsReparse && (
                           <p className="text-xs text-amber-600 dark:text-amber-400">
-                       JD 已修改，请重新解析后再开始模拟。
+                       JD 已修改，开始模拟前会自动重新提炼岗位要点。
                           </p>
                         )}
                       </div>
@@ -404,10 +418,10 @@ export default function UnifiedInterviewModal({
                           <p className={`text-sm font-semibold ${selected ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-300'}`}>
                             {opt.label}
                           </p>
-                          <p className="text-[11px] text-slate-400">{opt.desc}</p>
-                        </button>
-                      );
-                    })}
+                            <p className="text-[11px] text-slate-400">{getDifficultyDescription(config.simulationDirection, opt.value)}</p>
+                          </button>
+                        );
+                      })}
                   </div>
                 </div>
 

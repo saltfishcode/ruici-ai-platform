@@ -25,6 +25,8 @@ import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,12 +56,6 @@ public class InterviewQuestionService {
         - 禁止出现“你在简历中提到...”等假设用户一定提供文档的表述
         - 问题应直接围绕场景目标展开，避免无关跳题
         """;
-
-    private static final Map<String, String> DIFFICULTY_DESCRIPTIONS = Map.of(
-        "junior", "校招/0-1年经验。考察基础概念和简单应用。",
-        "mid", "1-3年经验。考察原理理解和实战经验。",
-        "senior", "3年+经验。考察架构设计和深度调优。"
-    );
 
     private static final String[][] GENERIC_FALLBACK_QUESTIONS = {
         {"请描述一个你主导解决的技术难题，你的分析思路是什么？", "GENERAL", "综合能力"},
@@ -124,15 +120,15 @@ public class InterviewQuestionService {
             List<CategoryDTO> customCategories,
             String jdText) {
 
-        SkillDTO skill = resolveSkill(skillId, customCategories, jdText);
-        String difficultyDesc = resolveDifficulty(difficulty);
+        SkillDTO skill = resolveSkill(skillId, customCategories, jdText, scenarioType);
+        String difficultyDesc = resolveDifficulty(scenarioType, difficulty);
 
         boolean hasResume = resumeText != null && !resumeText.isBlank();
         String historicalSection = buildHistoricalSection(historicalQuestions);
         if (!hasResume) {
-            return generateDirectionOnly(
+            return ensureDistinctMainQuestions(generateDirectionOnly(
                 chatClient, scenarioType, skill, difficultyDesc, questionCount, historicalSection
-            );
+            ), questionCount, skill);
         }
 
         int resumeCount = Math.max(1, (int) Math.round(questionCount * RESUME_QUESTION_RATIO));
@@ -160,9 +156,9 @@ public class InterviewQuestionService {
         } catch (CompletionException e) {
             log.error("简历题生成失败，降级为全方向题", e.getCause());
             directionFuture.cancel(true);
-            return generateDirectionOnly(
+            return ensureDistinctMainQuestions(generateDirectionOnly(
                 chatClient, scenarioType, skill, difficultyDesc, questionCount, historicalSection
-            );
+            ), questionCount, skill);
         }
 
         try {
@@ -172,7 +168,7 @@ public class InterviewQuestionService {
             if (resumeQuestions.isEmpty()) {
                 return generateFallbackQuestions(skill, questionCount);
             }
-            return resumeQuestions;
+            return ensureDistinctMainQuestions(resumeQuestions, questionCount, skill);
         }
 
         if (resumeQuestions.isEmpty() && directionQuestions.isEmpty()) {
@@ -183,7 +179,7 @@ public class InterviewQuestionService {
         List<InterviewQuestionDTO> merged = mergeQuestionBatches(resumeQuestions, directionQuestions);
         log.info("并行出题成功: 简历题={}, 方向题={}, 合计={}",
             resumeQuestions.size(), directionQuestions.size(), merged.size());
-        return merged;
+        return ensureDistinctMainQuestions(merged, questionCount, skill);
     }
 
     private List<InterviewQuestionDTO> generateResumeQuestions(
@@ -199,6 +195,7 @@ public class InterviewQuestionService {
             variables.put("scenarioName", scenarioType.displayName());
             variables.put("scenarioObjective", scenarioType.objective());
             variables.put("scenarioQuestionStyle", scenarioType.questionStyle());
+            variables.put("aiRoleLabel", scenarioType.aiRoleLabel());
             variables.put("skillName", skill.name());
             variables.put("skillDescription", skill.description() != null ? skill.description() : "");
             variables.put("difficultyDescription", difficultyDesc);
@@ -247,6 +244,7 @@ public class InterviewQuestionService {
             variables.put("scenarioName", scenarioType.displayName());
             variables.put("scenarioObjective", scenarioType.objective());
             variables.put("scenarioQuestionStyle", scenarioType.questionStyle());
+            variables.put("aiRoleLabel", scenarioType.aiRoleLabel());
             variables.put("allocationTable", allocationTable);
             variables.put("historicalSection", historicalSection);
             variables.put("referenceSection", skillService.buildReferenceSection(skill, allocation));
@@ -299,18 +297,142 @@ public class InterviewQuestionService {
         return merged;
     }
 
-    private SkillDTO resolveSkill(String skillId, List<CategoryDTO> customCategories, String jdText) {
-        if (InterviewSkillService.CUSTOM_SKILL_ID.equals(skillId)
-                && customCategories != null && !customCategories.isEmpty()) {
-            return skillService.buildCustomSkill(customCategories, jdText != null ? jdText : "");
+    private SkillDTO resolveSkill(
+            String skillId,
+            List<CategoryDTO> customCategories,
+            String jdText,
+            SimulationScenarioType scenarioType) {
+        if (InterviewSkillService.CUSTOM_SKILL_ID.equals(skillId)) {
+            if (customCategories != null && !customCategories.isEmpty()) {
+                return skillService.buildCustomSkill(customCategories, jdText != null ? jdText : "");
+            }
+            return skillService.buildFallbackCustomSkill(scenarioType, jdText != null ? jdText : "");
         }
         return skillService.getSkill(skillId);
     }
 
-    private String resolveDifficulty(String difficulty) {
-        return DIFFICULTY_DESCRIPTIONS.getOrDefault(
-            difficulty != null ? difficulty : ScenarioDefaults.DIFFICULTY,
-            DIFFICULTY_DESCRIPTIONS.get(ScenarioDefaults.DIFFICULTY));
+    private String resolveDifficulty(SimulationScenarioType scenarioType, String difficulty) {
+        String effectiveDifficulty = difficulty != null ? difficulty : ScenarioDefaults.DIFFICULTY;
+        return switch (scenarioType) {
+            case PROFESSIONAL_QA, TCM_QA -> switch (effectiveDifficulty) {
+                case "junior" -> "新手级：优先考察基础概念理解、清晰讲解与入门场景说明。";
+                case "senior" -> "老练级：强调深度辨析、边界条件、反问追问与复杂情境解释。";
+                default -> "普通级：侧重原理拆解、案例分析、方案权衡与专业判断。";
+            };
+            case WORKPLACE_COMMUNICATION, NOVEL_EXPERT -> switch (effectiveDifficulty) {
+                case "junior" -> "新手级：聚焦日常协作、基础反馈与礼貌清晰表达。";
+                case "senior" -> "老练级：强调冲突处理、复杂博弈、向上沟通与结果推进。";
+                default -> "普通级：围绕会议沟通、跨团队协作、进度同步与反馈处理展开。";
+            };
+            default -> switch (effectiveDifficulty) {
+                case "junior" -> "新手级：重点考察基础能力、岗位理解与入门表达。";
+                case "senior" -> "老练级：重点考察复杂场景拆解、关键决策与高压追问。";
+                default -> "普通级：重点考察项目经验、方案权衡与岗位匹配度。";
+            };
+        };
+    }
+
+    private List<InterviewQuestionDTO> ensureDistinctMainQuestions(
+            List<InterviewQuestionDTO> questions, int targetMainCount, SkillDTO skill) {
+        Map<Integer, List<InterviewQuestionDTO>> grouped = new LinkedHashMap<>();
+        for (InterviewQuestionDTO question : questions) {
+            int mainIndex = question.isFollowUp() && question.parentQuestionIndex() != null
+                ? question.parentQuestionIndex()
+                : question.questionIndex();
+            grouped.computeIfAbsent(mainIndex, ignored -> new ArrayList<>()).add(question);
+        }
+
+        LinkedHashSet<String> seenKeys = new LinkedHashSet<>();
+        List<InterviewQuestionDTO> deduplicated = new ArrayList<>();
+        int nextIndex = 0;
+        for (List<InterviewQuestionDTO> group : grouped.values()) {
+            InterviewQuestionDTO mainQuestion = group.getFirst();
+            if (!seenKeys.add(buildQuestionDedupKey(mainQuestion))) {
+                continue;
+            }
+            int newMainIndex = nextIndex;
+            deduplicated.add(reindexQuestion(mainQuestion, newMainIndex, null));
+            nextIndex++;
+
+            for (InterviewQuestionDTO item : group) {
+                if (!item.isFollowUp()) {
+                    continue;
+                }
+                deduplicated.add(reindexQuestion(item, nextIndex, newMainIndex));
+                nextIndex++;
+            }
+        }
+
+        long mainCount = deduplicated.stream().filter(q -> !q.isFollowUp()).count();
+        if (mainCount >= targetMainCount) {
+            return deduplicated;
+        }
+
+        for (InterviewQuestionDTO fallbackQuestion : generateFallbackQuestions(skill, targetMainCount)) {
+            if (fallbackQuestion.isFollowUp()) {
+                continue;
+            }
+            if (!seenKeys.add(buildQuestionDedupKey(fallbackQuestion))) {
+                continue;
+            }
+            int mainIndex = nextIndex;
+            deduplicated.add(reindexQuestion(fallbackQuestion, mainIndex, null));
+            nextIndex++;
+            for (InterviewQuestionDTO fallbackFollowUp : generateFallbackFollowUps(fallbackQuestion, mainIndex, nextIndex)) {
+                deduplicated.add(fallbackFollowUp);
+                nextIndex++;
+            }
+            mainCount++;
+            if (mainCount >= targetMainCount) {
+                break;
+            }
+        }
+
+        return deduplicated;
+    }
+
+    private List<InterviewQuestionDTO> generateFallbackFollowUps(
+            InterviewQuestionDTO mainQuestion, int mainIndex, int nextIndexStart) {
+        List<InterviewQuestionDTO> followUps = new ArrayList<>();
+        int nextIndex = nextIndexStart;
+        for (int order = 1; order <= followUpCount; order++) {
+            followUps.add(InterviewQuestionDTO.create(
+                nextIndex++,
+                buildDefaultFollowUp(mainQuestion.question(), order),
+                mainQuestion.type(),
+                buildFollowUpCategory(mainQuestion.category(), order),
+                null,
+                true,
+                mainIndex
+            ));
+        }
+        return followUps;
+    }
+
+    private InterviewQuestionDTO reindexQuestion(
+            InterviewQuestionDTO question, int newIndex, Integer parentQuestionIndex) {
+        return InterviewQuestionDTO.create(
+            newIndex,
+            question.question(),
+            question.type(),
+            question.category(),
+            question.topicSummary(),
+            question.isFollowUp(),
+            parentQuestionIndex
+        );
+    }
+
+    private String buildQuestionDedupKey(InterviewQuestionDTO question) {
+        if (question.topicSummary() != null && !question.topicSummary().isBlank()) {
+            return normalizeDedupText(question.topicSummary());
+        }
+        return normalizeDedupText(question.question());
+    }
+
+    private String normalizeDedupText(String text) {
+        return text == null ? "" : text
+            .replaceAll("[\\p{Punct}\\p{IsPunctuation}\\s]+", "")
+            .toLowerCase();
     }
 
     private List<InterviewQuestionDTO> convertToQuestions(QuestionListDTO dto) {

@@ -2,15 +2,18 @@ package com.ruici.ai.modules.document.service;
 
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
+import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.infrastructure.export.PdfExportService;
 import com.ruici.ai.infrastructure.mapper.InterviewMapper;
 import com.ruici.ai.infrastructure.mapper.ResumeMapper;
 import com.ruici.ai.modules.document.model.DocumentAnalysisResponse;
-import com.ruici.ai.modules.simulation.service.InterviewPersistenceService;
+import com.ruici.ai.modules.document.model.DocumentSimulationStatus;
 import com.ruici.ai.modules.document.model.ResumeAnalysisEntity;
 import com.ruici.ai.modules.document.model.ResumeDetailDTO;
 import com.ruici.ai.modules.document.model.ResumeEntity;
 import com.ruici.ai.modules.document.model.ResumeListItemDTO;
+import com.ruici.ai.modules.simulation.model.InterviewSessionEntity;
+import com.ruici.ai.modules.simulation.service.InterviewPersistenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,7 +52,7 @@ public class ResumeHistoryService {
         return resumes.stream().map(resume -> {
             // 获取最新分析结果的分数
             Integer latestScore = null;
-            java.time.LocalDateTime lastAnalyzedAt = null;
+            LocalDateTime lastAnalyzedAt = null;
             Optional<ResumeAnalysisEntity> analysisOpt = resumePersistenceService.getLatestAnalysis(resume.getId());
             if (analysisOpt.isPresent()) {
                 ResumeAnalysisEntity analysis = analysisOpt.get();
@@ -56,8 +60,9 @@ public class ResumeHistoryService {
                 lastAnalyzedAt = analysis.getAnalyzedAt();
             }
 
-            // 获取面试次数
-            int interviewCount = interviewPersistenceService.findByResumeId(resume.getId()).size();
+            List<InterviewSessionEntity> sessions = interviewPersistenceService.findByResumeId(resume.getId());
+            int interviewCount = sessions.size();
+            DocumentSimulationStatus simulationStatus = resolveSimulationStatus(sessions);
 
             // 使用 MapStruct 映射
             return new ResumeListItemDTO(
@@ -71,10 +76,40 @@ public class ResumeHistoryService {
                 latestScore,
                 lastAnalyzedAt,
                 interviewCount,
+                simulationStatus,
                 resume.getAnalyzeStatus(),
                 resume.getAnalyzeError()
             );
         }).toList();
+    }
+
+    private DocumentSimulationStatus resolveSimulationStatus(List<InterviewSessionEntity> sessions) {
+        if (sessions.isEmpty()) {
+            return DocumentSimulationStatus.PENDING_SIMULATION;
+        }
+
+        InterviewSessionEntity latestSession = sessions.getFirst();
+        if (latestSession.getEvaluateStatus() == AsyncTaskStatus.FAILED) {
+            return DocumentSimulationStatus.FAILED;
+        }
+
+        if (latestSession.getEvaluateStatus() == AsyncTaskStatus.PENDING
+            || latestSession.getEvaluateStatus() == AsyncTaskStatus.PROCESSING
+            || latestSession.getStatus() == InterviewSessionEntity.SessionStatus.COMPLETED) {
+            return DocumentSimulationStatus.EVALUATING;
+        }
+
+        if (latestSession.getEvaluateStatus() == AsyncTaskStatus.COMPLETED
+            || latestSession.getStatus() == InterviewSessionEntity.SessionStatus.EVALUATED) {
+            return DocumentSimulationStatus.COMPLETED;
+        }
+
+        if (latestSession.getStatus() == InterviewSessionEntity.SessionStatus.CREATED
+            || latestSession.getStatus() == InterviewSessionEntity.SessionStatus.IN_PROGRESS) {
+            return DocumentSimulationStatus.IN_PROGRESS;
+        }
+
+        return DocumentSimulationStatus.PENDING_SIMULATION;
     }
 
     /**

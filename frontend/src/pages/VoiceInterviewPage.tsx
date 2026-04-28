@@ -578,7 +578,7 @@ export default function VoiceInterviewPage() {
       <div className="max-w-7xl mx-auto">
         <InterviewPageHeader
           title="语音模拟面试"
-          subtitle="实时语音对话，面试官会根据你的回答持续追问"
+          subtitle="实时语音对话，AI 会根据当前情景与你的回答持续追问"
           icon={<Mic className="w-6 h-6 text-white" />}
         />
 
@@ -721,7 +721,7 @@ export default function VoiceInterviewPage() {
                 </button>
               </div>
               <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-3">
-                {isAiSpeaking ? '面试官正在回答...' : isSubmitting ? '正在思考...' : isRecording ? '说完后点击"提交回答"' : '点击麦克风发言'}
+                {isAiSpeaking ? 'AI 正在回应...' : isSubmitting ? '正在思考...' : isRecording ? '说完后点击"提交回答"' : '点击麦克风发言'}
               </p>
             </div>
           </div>

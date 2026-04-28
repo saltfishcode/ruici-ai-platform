@@ -37,6 +37,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 public class KnowledgeBaseQueryService {
     private static final String NO_RESULT_RESPONSE = "抱歉，在选定的知识库中未检索到相关信息。请换一个更具体的关键词或补充上下文后再试。";
+    private static final String EMPTY_QUESTION_RESPONSE = "请输入具体问题后再试。";
+    private static final String GENERAL_ANSWER_SYSTEM_PROMPT = """
+        你是一位专业、可靠的中文问答助手。
+        请直接回答用户问题；如果当前没有知识库上下文或知识库未命中，请先用一句话说明这一点，
+        然后基于通用知识给出尽量准确、清晰、不过度夸大的回答。
+        不要假装引用了知识库，不要编造来源，不确定时要明确说明。
+        回答保持结构化、自然、实用。
+        """;
     private static final int STREAM_PROBE_CHARS = 120;
     private static final int MAX_REWRITE_HISTORY_CHAR = 200;
 
@@ -112,17 +120,24 @@ public class KnowledgeBaseQueryService {
      */
     public String answerQuestion(List<Long> knowledgeBaseIds, String question) {
         log.info("收到知识库提问: kbIds={}, question={}", knowledgeBaseIds, question);
-        if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty() || normalizeQuestion(question).isBlank()) {
-            return NO_RESULT_RESPONSE;
+        List<Long> normalizedKnowledgeBaseIds = normalizeKnowledgeBaseIds(knowledgeBaseIds);
+        String normalizedQuestion = normalizeQuestion(question);
+
+        if (normalizedQuestion.isBlank()) {
+            return EMPTY_QUESTION_RESPONSE;
         }
 
-        countService.updateQuestionCounts(knowledgeBaseIds);
+        if (normalizedKnowledgeBaseIds.isEmpty()) {
+            return answerWithoutKnowledgeBase(normalizedQuestion, "当前未选择知识库");
+        }
 
-        QueryContext queryContext = buildQueryContext(question, List.of());
-        List<Document> relevantDocs = retrieveRelevantDocs(queryContext, knowledgeBaseIds);
+        countService.updateQuestionCounts(normalizedKnowledgeBaseIds);
+
+        QueryContext queryContext = buildQueryContext(normalizedQuestion, List.of());
+        List<Document> relevantDocs = retrieveRelevantDocs(queryContext, normalizedKnowledgeBaseIds);
 
         if (!hasEffectiveHit(relevantDocs)) {
-            return NO_RESULT_RESPONSE;
+            return answerWithoutKnowledgeBase(normalizedQuestion, "当前知识库未检索到相关内容");
         }
 
         String context = relevantDocs.stream()
@@ -130,7 +145,7 @@ public class KnowledgeBaseQueryService {
                 .collect(Collectors.joining("\n\n---\n\n"));
 
         String systemPrompt = buildSystemPrompt();
-        String userPrompt = buildUserPrompt(context, question);
+        String userPrompt = buildUserPrompt(context, normalizedQuestion);
 
         try {
             String answer = useGatewayCompatibility()
@@ -142,7 +157,7 @@ public class KnowledgeBaseQueryService {
                     .content();
             answer = normalizeAnswer(answer);
 
-            log.info("知识库问答完成: kbIds={}", knowledgeBaseIds);
+            log.info("知识库问答完成: kbIds={}", normalizedKnowledgeBaseIds);
             return answer;
 
         } catch (Exception e) {
@@ -174,12 +189,16 @@ public class KnowledgeBaseQueryService {
     public QueryResponse queryKnowledgeBase(QueryRequest request) {
         String answer = answerQuestion(request.knowledgeBaseIds(), request.question());
 
+        List<Long> knowledgeBaseIds = normalizeKnowledgeBaseIds(request.knowledgeBaseIds());
+
         // 获取知识库名称（多个知识库用逗号分隔）
-        List<String> kbNames = listService.getKnowledgeBaseNames(request.knowledgeBaseIds());
+        List<String> kbNames = knowledgeBaseIds.isEmpty()
+            ? List.of()
+            : listService.getKnowledgeBaseNames(knowledgeBaseIds);
         String kbNamesStr = String.join("、", kbNames);
 
         // 使用第一个知识库ID作为主要标识（兼容前端）
-        Long primaryKbId = request.knowledgeBaseIds().getFirst();
+        Long primaryKbId = knowledgeBaseIds.isEmpty() ? null : knowledgeBaseIds.getFirst();
 
         return new QueryResponse(answer, primaryKbId, kbNamesStr);
     }
@@ -206,21 +225,28 @@ public class KnowledgeBaseQueryService {
     public Flux<String> answerQuestionStream(List<Long> knowledgeBaseIds, String question, List<Message> history) {
         log.info("收到知识库流式提问: kbIds={}, question={}, historySize={}", knowledgeBaseIds, question,
                 history != null ? history.size() : 0);
-        if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty() || normalizeQuestion(question).isBlank()) {
-            return Flux.just(NO_RESULT_RESPONSE);
+        List<Long> normalizedKnowledgeBaseIds = normalizeKnowledgeBaseIds(knowledgeBaseIds);
+        String normalizedQuestion = normalizeQuestion(question);
+        List<Message> effectiveHistory = sanitizeHistory(history);
+
+        if (normalizedQuestion.isBlank()) {
+            return Flux.just(EMPTY_QUESTION_RESPONSE);
+        }
+
+        if (normalizedKnowledgeBaseIds.isEmpty()) {
+            return streamGeneralAnswer(normalizedQuestion, effectiveHistory, "当前未选择知识库");
         }
 
         try {
             // 1. 验证知识库是否存在并更新问题计数
-            countService.updateQuestionCounts(knowledgeBaseIds);
+            countService.updateQuestionCounts(normalizedKnowledgeBaseIds);
 
             // 2. Query rewrite + 动态参数检索
-            List<Message> effectiveHistory = sanitizeHistory(history);
-            QueryContext queryContext = buildQueryContext(question, effectiveHistory);
-            List<Document> relevantDocs = retrieveRelevantDocs(queryContext, knowledgeBaseIds);
+            QueryContext queryContext = buildQueryContext(normalizedQuestion, effectiveHistory);
+            List<Document> relevantDocs = retrieveRelevantDocs(queryContext, normalizedKnowledgeBaseIds);
 
             if (!hasEffectiveHit(relevantDocs)) {
-                return Flux.just(NO_RESULT_RESPONSE);
+                return streamGeneralAnswer(normalizedQuestion, effectiveHistory, "当前知识库未检索到相关内容");
             }
 
             // 3. 构建上下文
@@ -232,18 +258,18 @@ public class KnowledgeBaseQueryService {
 
             // 4. 构建提示词
             String systemPrompt = buildSystemPrompt();
-            String userPrompt = buildUserPrompt(context, question);
+            String userPrompt = buildUserPrompt(context, normalizedQuestion);
 
             // 5. 流式调用（带历史上下文）+ 探测窗口归一化
             Flux<String> responseFlux = useGatewayCompatibility()
                 ? gatewayClient.streamText(providerId, systemPrompt, buildGatewayInput(userPrompt, effectiveHistory))
                 : buildDefaultStreamResponse(systemPrompt, userPrompt, effectiveHistory);
 
-            log.info("开始流式输出知识库回答(探测窗口): kbIds={}", knowledgeBaseIds);
+            log.info("开始流式输出知识库回答(探测窗口): kbIds={}", normalizedKnowledgeBaseIds);
             return normalizeStreamOutput(responseFlux)
-                .doOnComplete(() -> log.info("流式输出完成: kbIds={}", knowledgeBaseIds))
+                .doOnComplete(() -> log.info("流式输出完成: kbIds={}", normalizedKnowledgeBaseIds))
                 .onErrorResume(e -> {
-                    log.error("流式输出失败: kbIds={}, error={}", knowledgeBaseIds, e.getMessage(), e);
+                    log.error("流式输出失败: kbIds={}, error={}", normalizedKnowledgeBaseIds, e.getMessage(), e);
                     return Flux.just("【错误】知识库查询失败：AI服务暂时不可用，请稍后重试。");
                 });
 
@@ -269,6 +295,10 @@ public class KnowledgeBaseQueryService {
             return List.of();
         }
         return history;
+    }
+
+    private List<Long> normalizeKnowledgeBaseIds(List<Long> knowledgeBaseIds) {
+        return knowledgeBaseIds == null ? List.of() : knowledgeBaseIds;
     }
 
 //       清洗
@@ -363,6 +393,41 @@ public class KnowledgeBaseQueryService {
         return gatewayClient.supports(providerId);
     }
 
+    private String answerWithoutKnowledgeBase(String question, String reason) {
+        String userPrompt = buildGeneralAnswerPrompt(question, reason);
+        try {
+            String answer = useGatewayCompatibility()
+                ? gatewayClient.generateText(providerId, GENERAL_ANSWER_SYSTEM_PROMPT, userPrompt)
+                : chatClient.prompt()
+                    .system(GENERAL_ANSWER_SYSTEM_PROMPT)
+                    .user(userPrompt)
+                    .call()
+                    .content();
+            return normalizeGeneralAnswer(answer, reason);
+        } catch (Exception e) {
+            log.error("通用问答失败: reason={}, error={}", reason, e.getMessage(), e);
+            throw new BusinessException(ErrorCode.KNOWLEDGE_BASE_QUERY_FAILED, "知识库查询失败：" + e.getMessage());
+        }
+    }
+
+    private Flux<String> streamGeneralAnswer(String question, List<Message> history, String reason) {
+        String userPrompt = buildGeneralAnswerPrompt(question, reason);
+        Flux<String> responseFlux = useGatewayCompatibility()
+            ? gatewayClient.streamText(providerId, GENERAL_ANSWER_SYSTEM_PROMPT, buildGatewayInput(userPrompt, history))
+            : buildDefaultStreamResponse(GENERAL_ANSWER_SYSTEM_PROMPT, userPrompt, history);
+
+        return responseFlux.switchIfEmpty(Flux.just(reason + "，暂时无法生成回答，请稍后重试。"));
+    }
+
+    private String buildGeneralAnswerPrompt(String question, String reason) {
+        return """
+            当前状态：%s。
+
+            请先用一句中文自然说明这一点，然后继续回答下面的问题：
+            %s
+            """.formatted(reason, question);
+    }
+
     private Flux<String> buildDefaultStreamResponse(String systemPrompt,
                                                     String userPrompt,
                                                     List<Message> effectiveHistory) {
@@ -383,6 +448,13 @@ public class KnowledgeBaseQueryService {
 
     private boolean hasEffectiveHit(List<Document> docs) {
         return docs != null && !docs.isEmpty();
+    }
+
+    private String normalizeGeneralAnswer(String answer, String reason) {
+        if (answer == null || answer.isBlank()) {
+            return reason + "，暂时无法生成回答，请稍后重试。";
+        }
+        return answer.trim();
     }
 
     private String normalizeAnswer(String answer) {

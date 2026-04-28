@@ -261,7 +261,7 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
   };
 
   const handleSubmitQuestion = async () => {
-    if (!question.trim() || selectedKbIds.size === 0 || loading) return;
+    if (!question.trim() || loading) return;
 
     const userQuestion = question.trim();
     setQuestion('');
@@ -369,7 +369,7 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">问答助手</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">选择知识库，向 AI 提问</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">可选知识库增强回答，也可直接向 AI 提问</p>
         </div>
         <div className="flex gap-3">
           <motion.button
@@ -400,8 +400,7 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
               <h2 className="text-base font-semibold text-slate-800 dark:text-white">对话历史</h2>
               <motion.button
                 onClick={handleNewSession}
-                disabled={selectedKbIds.size === 0}
-                className="p-1.5 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 title="新建对话"
@@ -491,26 +490,33 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
         <div className="flex-1 min-w-0">
           <div
               className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex flex-col h-full border border-slate-100 dark:border-slate-700">
-            {selectedKbIds.size > 0 ? (
               <>
                 {/* 会话信息 */}
                 <div className="p-4 border-b border-slate-200 dark:border-slate-600">
                   <h2 className="text-base font-semibold text-slate-800 dark:text-white">
                     {currentSessionTitle || (selectedKbIds.size === 1
                       ? knowledgeBases.find(kb => kb.id === Array.from(selectedKbIds)[0])?.name || '新对话'
-                      : `${selectedKbIds.size} 个知识库 - 新对话`)}
+                      : selectedKbIds.size > 1
+                        ? `${selectedKbIds.size} 个知识库 - 新对话`
+                        : '通用对话')}
                   </h2>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {Array.from(selectedKbIds).map(kbId => {
-                      const kb = knowledgeBases.find(k => k.id === kbId);
-                      return kb ? (
-                          <span key={kbId}
-                                className="px-2 py-0.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs rounded-full">
-                          {kb.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
+                  {selectedKbIds.size > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {Array.from(selectedKbIds).map(kbId => {
+                        const kb = knowledgeBases.find(k => k.id === kbId);
+                        return kb ? (
+                            <span key={kbId}
+                                  className="px-2 py-0.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs rounded-full">
+                            {kb.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      当前未选择知识库，AI 会先说明这一点，再基于通用知识回答。
+                    </p>
+                  )}
                 </div>
 
                 {/* 消息列表 */}
@@ -520,6 +526,9 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
                           className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                       <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       <p className="text-sm">开始提问吧！</p>
+                      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                        {selectedKbIds.size > 0 ? '已选知识库会优先参与检索。' : '也可以不选知识库，直接进行通用问答。'}
+                      </p>
                     </div>
                   ) : (
                     <Virtuoso
@@ -602,7 +611,7 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
                     />
                     <motion.button
                       onClick={handleSubmitQuestion}
-                      disabled={!question.trim() || selectedKbIds.size === 0 || loading}
+                      disabled={!question.trim() || loading}
                       className="px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                       whileHover={{ scale: loading ? 1 : 1.02 }}
                       whileTap={{ scale: loading ? 1 : 0.98 }}
@@ -612,16 +621,6 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
                   </div>
                 </div>
               </>
-            ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">
-                <div className="text-center">
-                  <svg className="w-12 h-12 mx-auto mb-3 opacity-50" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p className="text-sm">请先在右侧选择知识库</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

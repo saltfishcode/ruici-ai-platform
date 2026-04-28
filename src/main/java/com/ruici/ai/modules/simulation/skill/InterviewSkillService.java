@@ -4,6 +4,7 @@ import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.ai.StructuredOutputInvoker;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
+import com.ruici.ai.modules.simulation.model.SimulationScenarioType;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -41,7 +42,7 @@ public class InterviewSkillService {
 
     public static final String CUSTOM_SKILL_ID = "custom";
 
-    private static final int MIN_JD_LENGTH = 50;
+    private static final int MIN_JD_LENGTH = 5;
 
     private static final Pattern FRONT_MATTER_PATTERN = Pattern.compile("(?s)^---\\s*\\n(.*?)\\n---\\s*\\n?(.*)$");
     private static final Pattern SKILL_ID_PATTERN = Pattern.compile(".*/skills/([^/]+)/SKILL\\.md$");
@@ -167,6 +168,37 @@ public class InterviewSkillService {
         return new SkillDTO(CUSTOM_SKILL_ID, "自定义面试（JD 解析）",
             "基于职位描述提取的面试方向", categories,
             false, jdText, null, null);
+    }
+
+    public SkillDTO buildFallbackCustomSkill(SimulationScenarioType scenarioType, String jdText) {
+        List<SkillCategoryDTO> categories = switch (scenarioType) {
+            case PROFESSIONAL_QA, TCM_QA -> List.of(
+                new SkillCategoryDTO("PROFESSIONAL_BASICS", "基础理解", "CORE", null, false),
+                new SkillCategoryDTO("PROFESSIONAL_EXPLANATION", "思路拆解", "CORE", null, false),
+                new SkillCategoryDTO("PROFESSIONAL_SCENARIO", "场景应用", "NORMAL", null, false)
+            );
+            case WORKPLACE_COMMUNICATION, NOVEL_EXPERT -> List.of(
+                new SkillCategoryDTO("COMMUNICATION_CONTEXT", "沟通场景", "CORE", null, false),
+                new SkillCategoryDTO("COLLABORATION_ADVANCE", "协作推进", "CORE", null, false),
+                new SkillCategoryDTO("FEEDBACK_HANDLING", "反馈处理", "NORMAL", null, false)
+            );
+            default -> List.of(
+                new SkillCategoryDTO("JOB_MATCH", "岗位匹配", "CORE", null, false),
+                new SkillCategoryDTO("PROJECT_EXPERIENCE", "项目经历", "CORE", null, false),
+                new SkillCategoryDTO("COMMUNICATION", "表达沟通", "NORMAL", null, false)
+            );
+        };
+
+        return new SkillDTO(
+            CUSTOM_SKILL_ID,
+            "自定义岗位",
+            "基于手动输入岗位信息生成的通用情景模拟",
+            categories,
+            false,
+            jdText,
+            null,
+            null
+        );
     }
 
     public List<CategoryDTO> parseJd(String jdText) {
