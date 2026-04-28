@@ -1,18 +1,17 @@
-import {useEffect, useMemo, useRef, useState, useTransition} from 'react';
-import {AnimatePresence, motion} from 'framer-motion';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {Virtuoso, type VirtuosoHandle} from 'react-virtuoso';
-import {knowledgeBaseApi, type KnowledgeBaseItem, type SortOption} from '../api/knowledgebase';
+import {knowledgeBaseApi, type KnowledgeBaseItem} from '../api/knowledgebase';
 import {ragChatApi, type RagChatSessionListItem} from '../api/ragChat';
 import {formatDateOnly} from '../utils/date';
 import DeleteConfirmDialog from '../components/DeleteConfirmDialog';
 import CodeBlock from '../components/CodeBlock';
-import {ChevronLeft, ChevronRight, Edit, MessageSquare, Pin, Plus, Trash2,} from 'lucide-react';
+import {Bot, ChevronDown, ChevronLeft, ChevronRight, Edit, Loader2, MessageSquare, Plus, Sparkles, Trash2,} from 'lucide-react';
 
 interface KnowledgeBaseQueryPageProps {
-  onBack: () => void;
-  onUpload: () => void;
+  onBack?: () => void;
+  onUpload?: () => void;
 }
 
 interface Message {
@@ -28,117 +27,62 @@ interface CategoryGroup {
   isExpanded: boolean;
 }
 
-export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBaseQueryPageProps) {
-  // 知识库状态
+export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBaseQueryPageProps) {
+  if (false) console.log(onUpload, onBack);
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseItem[]>([]);
   const [selectedKbIds, setSelectedKbIds] = useState<Set<number>>(new Set());
   const [loadingList, setLoadingList] = useState(true);
-
-  // 搜索和排序状态
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('time');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['未分类']));
-
-  // 右侧面板状态
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
-
-  // 会话状态
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [sessions, setSessions] = useState<RagChatSessionListItem[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [currentSessionTitle, setCurrentSessionTitle] = useState<string>('');
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [sessionDeleteConfirm, setSessionDeleteConfirm] = useState<{ id: number; title: string } | null>(null);
-  const [editingSessionTitle, setEditingSessionTitle] = useState<{ id: number; title: string } | null>(null);
-  const [newSessionTitle, setNewSessionTitle] = useState('');
-
-  // 消息状态
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // refs
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const rafRef = useRef<number>();
-
-  const [, startTransition] = useTransition();
 
   useEffect(() => {
     loadKnowledgeBases();
     loadSessions();
   }, []);
 
-  useEffect(() => {
-    if (!searchKeyword) {
-      loadKnowledgeBases();
-    }
-  }, [sortBy]);
-
   const loadKnowledgeBases = async () => {
     setLoadingList(true);
     try {
-      // 问答助手只显示向量化完成的知识库
-      const list = await knowledgeBaseApi.getAllKnowledgeBases(sortBy, 'COMPLETED');
+      const list = await knowledgeBaseApi.getAllKnowledgeBases('time', 'COMPLETED');
       setKnowledgeBases(list);
-    } catch (err) {
-      console.error('加载知识库列表失败', err);
-    } finally {
-      setLoadingList(false);
-    }
-  };
-
-  const handleSearch = async () => {
-    if (!searchKeyword.trim()) {
-      loadKnowledgeBases();
-      return;
-    }
-    setLoadingList(true);
-    try {
-      const list = await knowledgeBaseApi.search(searchKeyword.trim());
-      setKnowledgeBases(list);
-    } catch (err) {
-      console.error('搜索知识库失败', err);
-    } finally {
-      setLoadingList(false);
-    }
+    } catch (err) { console.error('Load KB failed:', err); }
+    finally { setLoadingList(false); }
   };
 
   const groupedKnowledgeBases = useMemo((): CategoryGroup[] => {
     const groups: Map<string, KnowledgeBaseItem[]> = new Map();
-
     knowledgeBases.forEach(kb => {
       const category = kb.category || '未分类';
-      if (!groups.has(category)) {
-        groups.set(category, []);
-      }
+      if (!groups.has(category)) groups.set(category, []);
       groups.get(category)!.push(kb);
     });
-
     const result: CategoryGroup[] = [];
     const sortedCategories = Array.from(groups.keys()).sort((a, b) => {
       if (a === '未分类') return 1;
       if (b === '未分类') return -1;
       return a.localeCompare(b);
     });
-
     sortedCategories.forEach(name => {
-      result.push({
-        name,
-        items: groups.get(name)!,
-        isExpanded: expandedCategories.has(name),
-      });
+      result.push({ name, items: groups.get(name)!, isExpanded: expandedCategories.has(name) });
     });
-
     return result;
   }, [knowledgeBases, expandedCategories]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
       const next = new Set(prev);
-      if (next.has(category)) {
-        next.delete(category);
-      } else {
-        next.add(category);
-      }
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
       return next;
     });
   };
@@ -150,25 +94,17 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
       setSessions(list);
       if (currentSessionId) {
         const currentSession = list.find(session => session.id === currentSessionId);
-        if (currentSession) {
-          setCurrentSessionTitle(currentSession.title);
-        }
+        if (currentSession) setCurrentSessionTitle(currentSession.title);
       }
-    } catch (err) {
-      console.error('加载会话列表失败', err);
-    } finally {
-      setLoadingSessions(false);
-    }
+    } catch (err) { console.error('Load sessions failed:', err); }
+    finally { setLoadingSessions(false); }
   };
 
   const handleToggleKb = (kbId: number) => {
     setSelectedKbIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(kbId)) {
-        newSet.delete(kbId);
-      } else {
-        newSet.add(kbId);
-      }
+      if (newSet.has(kbId)) newSet.delete(kbId);
+      else newSet.add(kbId);
       if (newSet.size !== prev.size && currentSessionId) {
         setCurrentSessionId(null);
         setCurrentSessionTitle('');
@@ -191,14 +127,9 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
       setCurrentSessionTitle(detail.title);
       setSelectedKbIds(new Set(detail.knowledgeBases.map(kb => kb.id)));
       setMessages(detail.messages.map(m => ({
-        id: m.id,
-        type: m.type,
-        content: m.content,
-        timestamp: new Date(m.createdAt),
+        id: m.id, type: m.type, content: m.content, timestamp: new Date(m.createdAt),
       })));
-    } catch (err) {
-      console.error('加载会话失败', err);
-    }
+    } catch (err) { console.error('Load session detail failed:', err); }
   };
 
   const handleDeleteSession = async () => {
@@ -206,642 +137,217 @@ export default function KnowledgeBaseQueryPage({ onBack, onUpload }: KnowledgeBa
     try {
       await ragChatApi.deleteSession(sessionDeleteConfirm.id);
       await loadSessions();
-      if (currentSessionId === sessionDeleteConfirm.id) {
-        handleNewSession();
-      }
+      if (currentSessionId === sessionDeleteConfirm.id) handleNewSession();
       setSessionDeleteConfirm(null);
-    } catch (err) {
-      console.error('删除会话失败', err);
-    }
+    } catch (err) { console.error('Delete session failed:', err); }
   };
 
-  const handleEditSessionTitle = (sessionId: number, currentTitle: string) => {
-    setEditingSessionTitle({ id: sessionId, title: currentTitle });
-    setNewSessionTitle(currentTitle);
-  };
-
-  const handleSaveSessionTitle = async () => {
-    if (!editingSessionTitle || !newSessionTitle.trim()) return;
-    try {
-      await ragChatApi.updateSessionTitle(editingSessionTitle.id, newSessionTitle.trim());
-      await loadSessions();
-      if (currentSessionId === editingSessionTitle.id) {
-        setCurrentSessionTitle(newSessionTitle.trim());
-      }
-      setEditingSessionTitle(null);
-      setNewSessionTitle('');
-    } catch (err) {
-      console.error('更新会话标题失败', err);
-    }
-  };
-
-  const handleTogglePin = async (sessionId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await ragChatApi.togglePin(sessionId);
-      await loadSessions();
-    } catch (err) {
-      console.error('切换置顶状态失败', err);
-    }
-  };
-
-  const formatMarkdown = (text: string): string => {
-    if (!text) return '';
-    return text
-      // 处理转义换行符
-      .replace(/\\n/g, '\n')
-      // 确保标题 # 后有空格
-      .replace(/^(#{1,6})([^\s#\n])/gm, '$1 $2')
-      // 确保有序列表数字后有空格（如 1.xxx -> 1. xxx）
-      .replace(/^(\s*)(\d+)\.([^\s\n])/gm, '$1$2. $3')
-      // 确保无序列表 - 或 * 后有空格
-      .replace(/^(\s*[-*])([^\s\n-])/gm, '$1 $2')
-      // 压缩多余空行
-      .replace(/\n{3,}/g, '\n\n');
-  };
-
-  const handleSubmitQuestion = async () => {
-    if (!question.trim() || loading) return;
-
+  const handleSend = async () => {
+    if (!question.trim() || selectedKbIds.size === 0 || loading) return;
     const userQuestion = question.trim();
     setQuestion('');
     setLoading(true);
-
-    let sessionId = currentSessionId;
-    if (!sessionId) {
-      try {
+    const userMessage: Message = { type: 'user', content: userQuestion, timestamp: new Date() };
+    setMessages(prev => [...prev, userMessage]);
+    const assistantMessage: Message = { type: 'assistant', content: '', timestamp: new Date() };
+    setMessages(prev => [...prev, assistantMessage]);
+    try {
+      let sessionId = currentSessionId;
+      if (!sessionId) {
         const session = await ragChatApi.createSession(Array.from(selectedKbIds));
         sessionId = session.id;
         setCurrentSessionId(sessionId);
         setCurrentSessionTitle(session.title);
-      } catch (err) {
-        console.error('创建会话失败', err);
-        setLoading(false);
-        return;
+        await loadSessions();
       }
-    }
-
-    const userMessage: Message = {
-      type: 'user',
-      content: userQuestion,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-
-    const assistantMessage: Message = {
-      type: 'assistant',
-      content: '',
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, assistantMessage]);
-
-    let fullContent = '';
-    const updateAssistantMessage = (content: string) => {
-      setMessages(prev => {
-        const newMessages = [...prev];
-        const lastIndex = newMessages.length - 1;
-        if (lastIndex >= 0 && newMessages[lastIndex].type === 'assistant') {
-          newMessages[lastIndex] = {
-            ...newMessages[lastIndex],
-            content: content,
-          };
-        }
-        return newMessages;
-      });
-    };
-
-    try {
+      let fullContent = '';
       await ragChatApi.sendMessageStream(
         sessionId,
         userQuestion,
-        (chunk: string) => {
+        (chunk) => {
           fullContent += chunk;
-          if (rafRef.current) {
-            cancelAnimationFrame(rafRef.current);
-          }
-          rafRef.current = requestAnimationFrame(() => {
-            startTransition(() => {
-              updateAssistantMessage(fullContent);
-            });
+          setMessages(prev => {
+            const next = [...prev];
+            next[next.length - 1] = { ...next[next.length - 1], content: fullContent };
+            return next;
           });
         },
         () => {
           setLoading(false);
           loadSessions();
         },
-        (error: Error) => {
-          console.error('流式查询失败:', error);
-          updateAssistantMessage(fullContent || error.message || '回答失败，请重试');
+        (err) => {
+          console.error('Stream error:', err);
           setLoading(false);
+          setMessages(prev => {
+            const next = [...prev];
+            next[next.length - 1] = { ...next[next.length - 1], content: fullContent + '\n\n*(发送错误，请重试)*' };
+            return next;
+          });
         }
       );
     } catch (err) {
-      console.error('发起流式查询失败:', err);
-      updateAssistantMessage(err instanceof Error ? err.message : '回答失败，请重试');
+      console.error('Send failed:', err);
       setLoading(false);
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  const formatTimeAgo = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes} 分钟前`;
-    if (hours < 24) return `${hours} 小时前`;
-    if (days < 7) return `${days} 天前`;
-    return formatDateOnly(dateStr);
-  };
-
   return (
-    <div className="max-w-7xl mx-auto pt-8 pb-10 px-4">
-      {/* 头部 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">问答助手</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">可选知识库增强回答，也可直接向 AI 提问</p>
+    <div className="h-[calc(100vh-80px)] flex flex-col lg:flex-row gap-6">
+      <aside className={`flex flex-col gap-4 transition-all duration-300 ${leftPanelOpen ? 'w-full lg:w-80' : 'w-full lg:w-20'}`}>
+        <div className="flex-1 dark-card flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            {leftPanelOpen && <h3 className="font-bold text-sm text-slate-800 dark:text-white uppercase tracking-wider">历史会话</h3>}
+            <button onClick={handleNewSession} className="p-2 rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors group">
+              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+            {loadingSessions ? (
+              <div className="flex justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-slate-300" /></div>
+            ) : (
+              sessions.map(s => (
+                <button key={s.id} onClick={() => handleLoadSession(s.id)} className={`w-full group flex items-center gap-3 p-3 rounded-xl transition-all ${currentSessionId === s.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                  <MessageSquare className={`w-4 h-4 flex-shrink-0 ${currentSessionId === s.id ? 'text-primary-500' : 'text-slate-400'}`} />
+                  {leftPanelOpen && (
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-sm font-medium truncate">{s.title}</p>
+                      <p className="text-[10px] text-slate-400">{formatDateOnly(s.updatedAt)}</p>
+                    </div>
+                  )}
+                  {currentSessionId === s.id && leftPanelOpen && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); setSessionDeleteConfirm({ id: s.id, title: s.title }); }} className="p-1 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
         </div>
-        <div className="flex gap-3">
-          <motion.button
-            onClick={onUpload}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            上传知识库
-          </motion.button>
-          <motion.button
-            onClick={onBack}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            返回
-          </motion.button>
-        </div>
-      </div>
 
-      <div className="flex gap-4 h-[calc(100vh-10rem)]">
-        {/* 左侧：对话历史 */}
-        <div className="w-64 flex-shrink-0">
-          <div
-              className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm h-full flex flex-col border border-slate-100 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-slate-800 dark:text-white">对话历史</h2>
-              <motion.button
-                onClick={handleNewSession}
-                className="p-1.5 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="新建对话"
-              >
-                <Plus className="w-5 h-5" />
-              </motion.button>
+        <div className="h-64 dark-card flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            {leftPanelOpen && <h3 className="font-bold text-sm text-slate-800 dark:text-white uppercase tracking-wider">选用资料</h3>}
+            <button onClick={() => setLeftPanelOpen(!leftPanelOpen)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors">
+              {leftPanelOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-4 custom-scrollbar">
+            {loadingList ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-slate-300" /></div> : groupedKnowledgeBases.map(group => (
+              <div key={group.name} className="space-y-1">
+                {leftPanelOpen && (
+                  <button onClick={() => toggleCategory(group.name)} className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-slate-600 transition-colors">
+                    {group.name}
+                    {group.isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                  </button>
+                )}
+                {group.isExpanded && group.items.map(kb => (
+                  <button key={kb.id} onClick={() => handleToggleKb(kb.id)} className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${selectedKbIds.has(kb.id) ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500'}`}>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedKbIds.has(kb.id) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                    {leftPanelOpen && <span className="text-xs font-semibold truncate flex-1 text-left">{kb.name}</span>}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      <section className="flex-1 flex flex-col dark-card overflow-hidden relative">
+        <header className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-400">
+              <Bot className="w-6 h-6" />
             </div>
+            <div className="min-w-0">
+              <h2 className="font-bold text-slate-900 dark:text-white truncate">{currentSessionTitle || '新会话'}</h2>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tight">
+                {selectedKbIds.size > 0 ? `已激活 ${selectedKbIds.size} 份知识资料` : '请选择知识资料以开始'}
+              </p>
+            </div>
+          </div>
+        </header>
 
-            <div className="flex-1 overflow-y-auto">
-              {loadingSessions ? (
-                <div className="text-center py-6">
-                  <motion.div
-                    className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  />
-                </div>
-              ) : sessions.length === 0 ? (
-                  <div className="text-center py-6 text-slate-400 dark:text-slate-500 text-sm">
-                  暂无对话历史
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {sessions.map((session) => (
-                    <div
-                      key={session.id}
-                      onClick={() => handleLoadSession(session.id)}
-                      className={`p-3 rounded-lg cursor-pointer transition-all group ${currentSessionId === session.id
-                          ? 'bg-primary-50 dark:bg-primary-900/30 border border-primary-500'
-                          : 'bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent'
-                        } ${session.isPinned ? 'border-l-4 border-l-primary-500' : ''}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            {session.isPinned && (
-                              <Pin className="w-3.5 h-3.5 text-primary-500 fill-primary-500 flex-shrink-0" />
-                            )}
-                            <p className="font-medium text-slate-800 dark:text-white text-sm truncate">{session.title}</p>
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            {session.messageCount} 条消息 · {formatTimeAgo(session.updatedAt)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                          <button
-                            onClick={(e) => handleTogglePin(session.id, e)}
-                            className={`p-1 rounded transition-colors ${session.isPinned
-                              ? 'text-primary-500 hover:text-primary-600'
-                              : 'text-slate-400 hover:text-primary-500'
-                              }`}
-                            title={session.isPinned ? '取消置顶' : '置顶'}
-                          >
-                            <Pin className={`w-4 h-4 ${session.isPinned ? 'fill-primary-500' : ''}`} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditSessionTitle(session.id, session.title);
-                            }}
-                            className="p-1 text-slate-400 hover:text-primary-500 rounded transition-colors"
-                            title="编辑标题"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSessionDeleteConfirm({ id: session.id, title: session.title });
-                            }}
-                            className="p-1 text-slate-400 hover:text-red-500 rounded transition-colors"
-                            title="删除"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+        <div className="flex-1 relative">
+          {messages.length === 0 ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-20 h-20 rounded-3xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mb-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                <Sparkles className="w-10 h-10 text-primary-400/50" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">准备好探索了吗？</h3>
+              <p className="max-w-xs text-slate-500 dark:text-slate-400 text-sm leading-relaxed">选择左侧的知识库资料，然后在下方输入问题。AI 将精准检索资料并为你提供深度见解。</p>
+            </div>
+          ) : (
+            <Virtuoso
+              ref={virtuosoRef}
+              data={messages}
+              className="custom-scrollbar"
+              initialTopMostItemIndex={messages.length - 1}
+              itemContent={(_index, message) => (
+                <div className={`p-6 md:px-10 ${message.type === 'assistant' ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''}`}>
+                  <div className="max-w-4xl mx-auto flex gap-6">
+                    <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm ${message.type === 'user' ? 'bg-slate-800 text-white' : 'bg-primary-500 text-white shadow-glow shadow-primary-500/20'}`}>
+                      {message.type === 'user' ? <Edit className="w-4 h-4" /> : <Bot className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{message.type === 'user' ? 'YOU' : 'RUICI AI'}</span>
+                      </div>
+                      <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({ inline, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              return !inline ? (
+                                <CodeBlock language={match ? match[1] : undefined}>
+                                  {String(children).replace(/\n$/, '')}
+                                </CodeBlock>
+                              ) : (
+                                <code className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-primary-600 dark:text-primary-400 font-mono text-[0.9em]" {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 中间：聊天区域 */}
-        <div className="flex-1 min-w-0">
-          <div
-              className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex flex-col h-full border border-slate-100 dark:border-slate-700">
-              <>
-                {/* 会话信息 */}
-                <div className="p-4 border-b border-slate-200 dark:border-slate-600">
-                  <h2 className="text-base font-semibold text-slate-800 dark:text-white">
-                    {currentSessionTitle || (selectedKbIds.size === 1
-                      ? knowledgeBases.find(kb => kb.id === Array.from(selectedKbIds)[0])?.name || '新对话'
-                      : selectedKbIds.size > 1
-                        ? `${selectedKbIds.size} 个知识库 - 新对话`
-                        : '通用对话')}
-                  </h2>
-                  {selectedKbIds.size > 0 ? (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {Array.from(selectedKbIds).map(kbId => {
-                        const kb = knowledgeBases.find(k => k.id === kbId);
-                        return kb ? (
-                            <span key={kbId}
-                                  className="px-2 py-0.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs rounded-full">
-                            {kb.name}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                      当前未选择知识库，AI 会先说明这一点，再基于通用知识回答。
-                    </p>
-                  )}
-                </div>
-
-                {/* 消息列表 */}
-                <div className="flex-1 min-h-0 relative dark:bg-slate-800">
-                  {messages.length === 0 ? (
-                      <div
-                          className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
-                      <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p className="text-sm">开始提问吧！</p>
-                      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                        {selectedKbIds.size > 0 ? '已选知识库会优先参与检索。' : '也可以不选知识库，直接进行通用问答。'}
-                      </p>
-                    </div>
-                  ) : (
-                    <Virtuoso
-                      ref={virtuosoRef}
-                      data={messages}
-                      initialTopMostItemIndex={messages.length - 1}
-                      followOutput="smooth"
-                      className="h-full w-full"
-                      itemContent={(index, msg) => (
-                          <div className="pb-4 px-4 first:pt-4 dark:bg-slate-800">
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${msg.type === 'user'
-                                ? 'bg-primary-600 text-white'
-                                  : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-600 text-slate-800 dark:text-slate-100'
-                              }`}
-                            >
-                              {msg.type === 'user' ? (
-                                <p className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</p>
-                              ) : (
-                                  <div className="prose prose-slate dark:prose-invert prose-sm max-w-none">
-                                  <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                      // 自定义代码块渲染
-                                      code: ({ className, children }) => {
-                                        const match = /language-(\w+)/.exec(className || '');
-                                        const isInline = !match;
-
-                                        if (isInline) {
-                                          return (
-                                              <code
-                                                  className="bg-slate-100 dark:bg-slate-600 text-primary-600 dark:text-primary-400 px-1.5 py-0.5 rounded-md text-sm font-normal">
-                                              {children}
-                                            </code>
-                                          );
-                                        }
-
-                                        // 代码块使用 CodeBlock 组件
-                                        return (
-                                          <CodeBlock language={match[1]}>
-                                            {String(children).replace(/\n$/, '')}
-                                          </CodeBlock>
-                                        );
-                                      },
-                                      // 禁用默认 pre 渲染，由 CodeBlock 处理
-                                      pre: ({ children }) => <>{children}</>,
-                                    }}
-                                  >
-                                    {formatMarkdown(msg.content)}
-                                  </ReactMarkdown>
-                                  {loading && index === messages.length - 1 && (
-                                    <span className="inline-block w-0.5 h-5 bg-primary-500 ml-1 animate-pulse" />
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </motion.div>
-                        </div>
-                      )}
-                    />
-                  )}
-                </div>
-
-                {/* 输入区域 */}
-                <div className="p-4 border-t border-slate-200 dark:border-slate-600">
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={question}
-                      onChange={(e) => setQuestion(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmitQuestion()}
-                      placeholder="输入您的问题..."
-                      className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
-                      disabled={loading}
-                    />
-                    <motion.button
-                      onClick={handleSubmitQuestion}
-                      disabled={!question.trim() || loading}
-                      className="px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                      whileHover={{ scale: loading ? 1 : 1.02 }}
-                      whileTap={{ scale: loading ? 1 : 0.98 }}
-                    >
-                      发送
-                    </motion.button>
                   </div>
                 </div>
-              </>
-          </div>
+              )}
+              followOutput="smooth"
+            />
+          )}
         </div>
 
-        {/* 右侧：知识库选择（简化版） */}
-        <AnimatePresence>
-          {rightPanelOpen && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex-shrink-0 overflow-hidden"
-            >
-              <div
-                  className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm h-full flex flex-col w-[280px] border border-slate-100 dark:border-slate-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base font-semibold text-slate-800 dark:text-white">选择知识库</h2>
-                  <button
-                    onClick={() => setRightPanelOpen(false)}
-                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* 搜索框 */}
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={searchKeyword}
-                    onChange={(e) => setSearchKeyword(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="搜索..."
-                    className="flex-1 px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
-                  />
-                  <button
-                    onClick={handleSearch}
-                    className="px-3 py-1.5 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-                  >
-                    搜索
-                  </button>
-                </div>
-
-                {/* 排序 */}
-                <div className="mb-3">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => {
-                      setSortBy(e.target.value as SortOption);
-                      setSearchKeyword('');
-                    }}
-                    className="w-full px-2 py-1 text-xs border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-                  >
-                    <option value="time">时间排序</option>
-                    <option value="size">大小排序</option>
-                    <option value="access">访问排序</option>
-                    <option value="question">提问排序</option>
-                  </select>
-                </div>
-
-                {/* 知识库列表 */}
-                <div className="flex-1 overflow-y-auto">
-                  {loadingList ? (
-                    <div className="text-center py-6">
-                      <motion.div
-                        className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                    </div>
-                  ) : knowledgeBases.length === 0 ? (
-                      <div className="text-center py-6 text-slate-500 dark:text-slate-400">
-                      <p className="mb-2 text-sm">{searchKeyword ? '未找到' : '暂无知识库'}</p>
-                      {!searchKeyword && (
-                        <button onClick={onUpload} className="text-primary-500 hover:text-primary-600 font-medium text-sm">
-                          立即上传
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {groupedKnowledgeBases.map((group) => (
-                          <div key={group.name}
-                               className="border border-slate-100 dark:border-slate-700 rounded-lg overflow-hidden">
-                          <button
-                            onClick={() => toggleCategory(group.name)}
-                            className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <ChevronRight
-                                className={`w-3.5 h-3.5 text-slate-400 transition-transform ${group.isExpanded ? 'rotate-90' : ''}`}
-                              />
-                              <span
-                                  className="font-medium text-slate-700 dark:text-slate-300 text-sm">{group.name}</span>
-                            </div>
-                            <span className="text-xs text-slate-400">{group.items.length}</span>
-                          </button>
-
-                          <AnimatePresence>
-                            {group.isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="p-2 space-y-1">
-                                  {group.items.map((kb) => (
-                                    <div
-                                      key={kb.id}
-                                      onClick={() => handleToggleKb(kb.id)}
-                                      className={`p-2 rounded-lg cursor-pointer transition-all ${selectedKbIds.has(kb.id)
-                                          ? 'bg-primary-50 dark:bg-primary-900/30 border border-primary-500'
-                                          : 'bg-white dark:bg-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700 border border-transparent'
-                                        }`}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedKbIds.has(kb.id)}
-                                          onChange={() => handleToggleKb(kb.id)}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="w-3.5 h-3.5 text-primary-500 rounded focus:ring-primary-500"
-                                        />
-                                        <span
-                                            className="font-medium text-slate-800 dark:text-white text-xs truncate flex-1">{kb.name}</span>
-                                      </div>
-                                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 ml-5">{formatFileSize(kb.fileSize)}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 收起状态下的展开按钮 */}
-        {!rightPanelOpen && (
-          <button
-            onClick={() => setRightPanelOpen(true)}
-            className="flex-shrink-0 w-10 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-            title="展开知识库面板"
-          >
-            <ChevronRight className="w-5 h-5 text-slate-400" />
-          </button>
-        )}
-      </div>
-
-      {/* 删除会话确认弹窗 */}
-      <DeleteConfirmDialog
-        open={!!sessionDeleteConfirm}
-        item={sessionDeleteConfirm ? { id: 0, title: sessionDeleteConfirm.title } : null}
-        itemType="对话"
-        onConfirm={handleDeleteSession}
-        onCancel={() => setSessionDeleteConfirm(null)}
-      />
-
-      {/* 编辑会话标题弹窗 */}
-      <AnimatePresence>
-        {editingSessionTitle && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                setEditingSessionTitle(null);
-                setNewSessionTitle('');
-              }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        <footer className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+          <div className="max-w-4xl mx-auto relative group">
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              placeholder="输入你的问题，按 Enter 发送..."
+              className="w-full pl-6 pr-16 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all resize-none min-h-[60px] max-h-48 custom-scrollbar shadow-inner"
+              rows={1}
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100 dark:border-slate-700"
+            <div className="absolute right-3 bottom-3">
+              <button
+                onClick={handleSend}
+                disabled={loading || !question.trim() || selectedKbIds.size === 0}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${loading || !question.trim() || selectedKbIds.size === 0 ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:-translate-y-0.5 active:scale-95'}`}
               >
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">编辑标题</h3>
-                <input
-                  type="text"
-                  value={newSessionTitle}
-                  onChange={(e) => setNewSessionTitle(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSaveSessionTitle()}
-                  placeholder="请输入新标题"
-                  className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
-                  autoFocus
-                />
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => {
-                      setEditingSessionTitle(null);
-                      setNewSessionTitle('');
-                    }}
-                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={handleSaveSessionTitle}
-                    disabled={!newSessionTitle.trim()}
-                    className="px-4 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
-                  >
-                    保存
-                  </button>
-                </div>
-              </motion.div>
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ChevronRight className="w-6 h-6" />}
+              </button>
             </div>
-          </>
-        )}
-      </AnimatePresence>
+          </div>
+        </footer>
+      </section>
+
+      <DeleteConfirmDialog open={sessionDeleteConfirm !== null} item={sessionDeleteConfirm} itemType="会话" onConfirm={handleDeleteSession} onCancel={() => setSessionDeleteConfirm(null)} />
     </div>
   );
 }

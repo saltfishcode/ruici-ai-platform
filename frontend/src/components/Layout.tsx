@@ -11,6 +11,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
+  Info,
   Sun,
   Zap,
 } from 'lucide-react';
@@ -102,27 +103,28 @@ export default function Layout() {
   const navGroups: NavGroup[] = [
     {
       id: 'workspace',
-      title: '工作台',
+      title: '主工作台',
       items: [
         { id: 'documents', path: '/documents', label: '文档分析', icon: FileSearch, description: '管理文档，AI 分析' },
-        { id: 'simulation', path: '/simulation', label: '情景模拟', icon: Zap, description: '多场景情景模拟练习' },
-        { id: 'simulation-history', path: '/simulation/history', label: '模拟记录', icon: History, description: '查看练习历史记录' },
+        { id: 'simulation', path: '/simulation', label: '情景模拟', icon: Zap, description: '多场景交互演练' },
       ],
     },
     {
       id: 'knowledge',
-      title: '知识与工具',
+      title: '知识与问答',
       items: [
         { id: 'kb-manage', path: '/knowledgebase', label: '知识库', icon: Library, description: '管理企业知识文档' },
         { id: 'chat', path: '/knowledgebase/chat', label: '问答助手', icon: Bot, description: '基于知识库智能问答' },
-        { id: 'schedule', path: '/schedule', label: '场景日程', icon: CalendarDays, description: '管理日程安排' },
       ],
     },
     {
-      id: 'voice',
-      title: '语音交互',
+      id: 'tools',
+      title: '辅助工具',
       items: [
-        { id: 'voice-simulation', path: '/voice', label: '语音模拟', icon: AudioWaveform, description: '实时语音模拟对话' },
+        { id: 'simulation-history', path: '/simulation/history', label: '练习历史', icon: History, description: '查看往期练习记录' },
+        { id: 'schedule', path: '/schedule', label: '日程管理', icon: CalendarDays, description: '管理日程安排' },
+        { id: 'voice-simulation', path: '/voice', label: '语音面试', icon: AudioWaveform, description: '实时语音对话模拟' },
+        { id: 'about', path: '/about', label: '关于', icon: Info, description: '了解项目初心与定位' },
       ],
     },
   ];
@@ -154,24 +156,18 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      {/* 左侧边栏 */}
+    <div className="flex min-h-screen bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-500 overflow-hidden">
+      {/* 侧边栏 */}
       <aside 
-        className={`fixed h-screen left-0 top-0 z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out shadow-xl ${
-          isCollapsed ? 'w-16' : 'w-64'
+        className={`fixed h-screen left-0 top-0 z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200/60 dark:border-slate-800/60 transition-all duration-300 ease-in-out shadow-[0_0_20px_rgba(0,0,0,0.03)] dark:shadow-none ${
+          isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
-        {/* 背景装饰 */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none overflow-hidden">
-          <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary-500 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 -right-24 w-48 h-48 bg-teal-500 rounded-full blur-3xl" />
-        </div>
-
-        {/* Logo */}
-        <div className={`p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/50 ${isCollapsed ? 'px-4' : ''}`}>
-          <Link to="/documents" className="flex items-center gap-3 overflow-hidden">
-            <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
-              <Sparkles className="w-5 h-5" />
+        {/* Logo 区 */}
+        <div className={`p-6 mb-2 flex items-center justify-between ${isCollapsed ? 'px-4 justify-center' : ''}`}>
+          <Link to="/documents" className="flex items-center gap-3.5 group">
+            <div className="flex-shrink-0 w-11 h-11 bg-gradient-to-tr from-primary-600 to-primary-400 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30 group-hover:scale-105 transition-transform duration-300">
+              <Sparkles className="w-6 h-6" />
             </div>
             {!isCollapsed && (
               <motion.div 
@@ -179,113 +175,121 @@ export default function Layout() {
                 animate={{ opacity: 1, x: 0 }}
                 className="flex flex-col"
               >
-                <span className="text-lg font-bold text-slate-800 dark:text-white tracking-tight leading-tight">Ruici AI</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-widest uppercase">智能分析平台</span>
+                <span className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none mb-1">Ruici AI</span>
+                <span className="text-[10px] text-primary-600 dark:text-primary-400 font-bold tracking-[0.15em] uppercase">Enterprise</span>
               </motion.div>
             )}
           </Link>
         </div>
 
-        {/* 折叠切换按钮 */}
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 shadow-sm hover:text-primary-500 transition-colors z-50"
-        >
-          {isCollapsed ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
-        </button>
-
-        {/* 导航菜单 */}
-        <nav className="flex-1 p-4 overflow-y-auto scrollbar-none relative z-10">
-          <div className="space-y-8">
-            {navGroups.map((group) => (
-              <div key={group.id}>
-                {!isCollapsed && (
-                  <div className="px-3 mb-3">
-                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                      {group.title}
-                    </span>
-                  </div>
-                )}
-                <div className="space-y-1.5">
-                  {group.items.map((item) => {
-                    const active = isActive(item.path);
-
-                    return (
-                      <Link
-                        key={item.id}
-                        to={item.path}
-                        title={isCollapsed ? item.label : undefined}
-                        className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
-                          ${active
-                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 shadow-sm shadow-primary-500/5'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
-                          }`}
-                      >
-                        <div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200
-                          ${active
-                            ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400'
-                            : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 group-hover:bg-white dark:group-hover:bg-slate-700 group-hover:text-primary-500 dark:group-hover:text-primary-400 group-hover:shadow-sm'
-                          }`}
-                        >
-                          <item.icon className={`w-5 h-5 ${active ? 'animate-pulse' : ''}`} />
-                        </div>
-                        {!isCollapsed && (
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-sm block ${active ? 'font-bold' : 'font-medium'}`}>
-                              {item.label}
-                            </span>
-                            {item.description && (
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate block font-medium mt-0.5">
-                                {item.description}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {active && !isCollapsed && <div className="w-1.5 h-1.5 rounded-full bg-primary-500 shadow-glow shadow-primary-500" />}
-                      </Link>
-                    );
-                  })}
+        {/* 导航 */}
+        <nav className="flex-1 px-4 py-2 overflow-y-auto scrollbar-none space-y-8">
+          {navGroups.map((group) => (
+            <div key={group.id} className="space-y-2">
+              {!isCollapsed && (
+                <div className="px-3">
+                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-3">
+                    {group.title}
+                  </span>
                 </div>
+              )}
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const active = isActive(item.path);
+
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.path}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`group flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-300 relative
+                        ${active
+                          ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                    >
+                      <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                        ${active
+                          ? 'bg-primary-500 text-white shadow-glow shadow-primary-500/40'
+                          : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 group-hover:bg-white dark:group-hover:bg-slate-700 group-hover:text-primary-500 dark:group-hover:text-primary-400 group-hover:shadow-sm'
+                        }`}
+                      >
+                        <item.icon className={`w-5 h-5 ${active ? 'animate-pulse' : ''}`} />
+                      </div>
+                      
+                      {!isCollapsed && (
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-[14px] block transition-colors ${active ? 'font-bold' : 'font-semibold'}`}>
+                            {item.label}
+                          </span>
+                          {item.description && (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate block mt-0.5 opacity-80 font-medium">
+                              {item.description}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {active && (
+                        <motion.div 
+                          layoutId="active-pill"
+                          className="absolute right-2 w-1 h-5 bg-primary-500 rounded-full"
+                          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </nav>
 
-        {/* 底部信息与设置 */}
-        <div className={`p-4 border-t border-slate-100 dark:border-slate-800/50 relative z-10 ${isCollapsed ? 'items-center' : ''}`}>
-          <div className="flex items-center justify-between gap-2">
+        {/* 底部功能区 */}
+        <div className="p-4 mt-auto border-t border-slate-100 dark:border-slate-800/50">
+          <div className={`flex items-center gap-3 ${isCollapsed ? 'flex-col' : 'justify-between'}`}>
             {!isCollapsed && (
-              <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                  Ruici AI v1.2.1
-                </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-slate-800 dark:text-white truncate uppercase tracking-tight">System Online</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase">v1.2.2 Stability</span>
+                </div>
               </div>
             )}
             
-        <button
-          type="button"
-          onClick={toggleTheme}
-              className={`flex items-center justify-center w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-primary-500 dark:hover:text-primary-400 border border-slate-100 dark:border-slate-700/50 transition-all shadow-sm ${isCollapsed ? 'mx-auto' : ''}`}
-              title={theme === 'dark' ? '切换为浅色模式' : '切换为深色模式'}
+            <button
+              onClick={toggleTheme}
+              className="w-11 h-11 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-primary-600 dark:hover:text-primary-400 border border-slate-100 dark:border-slate-800/50 transition-all flex items-center justify-center shadow-sm group active:scale-95"
             >
-              {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+              {theme === 'dark' ? <Sun className="w-5 h-5 group-hover:rotate-45 transition-transform" /> : <Moon className="w-5 h-5 group-hover:-rotate-12 transition-transform" />}
             </button>
           </div>
         </div>
+
+        {/* 折叠按钮 */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-600 shadow-md hover:text-primary-500 transition-colors z-50 group"
+        >
+          {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+        </button>
       </aside>
 
-      {/* 主内容区 */}
-      <main className={`flex-1 transition-all duration-300 min-h-screen flex flex-col ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <div className="flex-1 p-6 md:p-10 relative">
+      {/* 内容区 */}
+      <main className={`flex-1 transition-all duration-300 min-h-screen flex flex-col relative ${isCollapsed ? 'ml-20' : 'ml-64'}`}>
+        {/* 顶部背景装饰 */}
+        <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-primary-50/40 to-transparent dark:from-primary-950/20 pointer-events-none -z-10" />
+        
+        <div className="flex-1 p-6 lg:p-10 relative">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPath}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+              className="h-full"
             >
               <Outlet context={{ openInterviewModalWithResume }} />
             </motion.div>
@@ -293,7 +297,7 @@ export default function Layout() {
         </div>
       </main>
 
-      {/* 统一面试弹窗 */}
+      {/* 弹窗 */}
       <UnifiedInterviewModal
         isOpen={interviewModalPreset !== null}
         onClose={() => setInterviewModalPreset(null)}
