@@ -6,6 +6,19 @@ import {formatDateTime} from '../utils/date';
 import {AlertCircle, CheckCircle2, Clock, Download, Loader2, RefreshCw, Target, TrendingUp,} from 'lucide-react';
 import type {AnalyzeStatus} from '../types/document';
 
+function getAnalysisDifficultyLabel(analysisDifficulty?: string | null): string | null {
+  switch (analysisDifficulty) {
+    case 'EASY':
+      return '轻量分析';
+    case 'SHARP':
+      return '进阶分析';
+    case 'NORMAL':
+      return '标准分析';
+    default:
+      return null;
+  }
+}
+
 interface AnalysisPanelProps {
   analysis: any;
   analyzeStatus?: AnalyzeStatus;
@@ -185,6 +198,7 @@ export default function AnalysisPanel({
         )}
         {onReanalyze && (
           <motion.button
+            type="button"
             onClick={onReanalyze}
             disabled={reanalyzing}
             className="px-6 py-2.5 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
@@ -204,6 +218,10 @@ export default function AnalysisPanel({
   const contentScore = analysis.contentScore || 0;
   const structureScore = analysis.structureScore || 0;
   const expressionScore = analysis.expressionScore || 0;
+  const analysisDifficultyLabel = getAnalysisDifficultyLabel(analysis.analysisDifficulty);
+  const profession = typeof analysis.profession === 'string' && analysis.profession.trim().length > 0
+    ? analysis.profession.trim()
+    : null;
 
   return (
     <div className="space-y-6">
@@ -222,6 +240,7 @@ export default function AnalysisPanel({
               <span className="font-semibold">核心评价</span>
             </div>
             <motion.button
+              type="button"
               onClick={onExport}
               disabled={exporting}
               className="px-4 py-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-all disabled:opacity-50 flex items-center gap-2"
@@ -235,6 +254,20 @@ export default function AnalysisPanel({
 
           <div
               className="bg-gradient-to-br from-emerald-50 dark:from-emerald-900/30 to-green-50 dark:to-slate-800 rounded-xl p-6">
+            {(profession || analysisDifficultyLabel) && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {profession && (
+                  <span className="px-3 py-1.5 bg-white/80 dark:bg-slate-800/80 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm font-medium">
+                    分析方向：{profession}
+                  </span>
+                )}
+                {analysisDifficultyLabel && (
+                  <span className="px-3 py-1.5 bg-white/80 dark:bg-slate-800/80 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm font-medium">
+                    分析力度：{analysisDifficultyLabel}
+                  </span>
+                )}
+              </div>
+            )}
             <p className="text-lg text-slate-800 dark:text-white leading-relaxed mb-6">
               {analysis.summary || '候选人具备扎实的技术基础，有大型项目架构经验。'}
             </p>
@@ -260,8 +293,8 @@ export default function AnalysisPanel({
                   <span
                       className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 block mb-3">优势亮点</span>
                 <div className="flex flex-wrap gap-2">
-                  {analysis.strengths.map((s: string, i: number) => (
-                      <span key={i}
+                  {analysis.strengths.map((s: string) => (
+                      <span key={`strength-${s}`}
                             className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm font-medium">
                       {s}
                     </span>
@@ -436,7 +469,7 @@ function SuggestionSection({
       <div className="space-y-3">
         {suggestions.map((s: any, i: number) => (
             <motion.div
-            key={`${priority}-${i}`}
+            key={`${priority}-${s.category || '其他'}-${s.issue || s.recommendation || String(s)}`}
             className={`p-4 rounded-xl border-2 ${getPriorityColor(priority)}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}

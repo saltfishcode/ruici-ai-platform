@@ -65,8 +65,9 @@ public class InterviewController {
     @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 5)
     @RateLimit(dimension = RateLimit.Dimension.IP, count = 5)
     public Result<InterviewSessionDTO> createSession(@RequestBody CreateInterviewRequest request) {
-        log.info("创建情景模拟会话: scenarioType={}, questionCount={}",
-            request.scenarioType(), request.questionCount());
+        log.info("创建情景模拟会话: simulationDirection={}, scenarioType={}, simulationDifficulty={}, difficulty={}, questionCount={}, basedOnDocument={}",
+            request.simulationDirection(), request.scenarioType(), request.simulationDifficulty(),
+            request.difficulty(), request.questionCount(), request.basedOnDocument());
         InterviewSessionDTO session = sessionService.createSession(request);
         return Result.success(session);
     }

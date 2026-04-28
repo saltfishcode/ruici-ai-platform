@@ -11,6 +11,8 @@ import java.util.List;
 public record ResumeDetailDTO(
     Long id,
     String filename,
+    String profession,
+    String latestAnalysisDifficulty,
     Long fileSize,
     String contentType,
     String storageUrl,
@@ -27,6 +29,7 @@ public record ResumeDetailDTO(
      */
     public record AnalysisHistoryDTO(
         Long id,
+        String analysisDifficulty,
         Integer overallScore,
         Integer contentScore,
         Integer structureScore,

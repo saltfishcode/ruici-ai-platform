@@ -7,8 +7,13 @@ import java.util.List;
  */
 public record InterviewSessionDTO(
     String sessionId,
+    String simulationDirection,
     String scenarioType,
+    String simulationDifficulty,
     String resumeText,
+    Long resumeId,
+    boolean basedOnDocument,
+    String skillId,
     int totalQuestions,
     int currentQuestionIndex,
     List<InterviewQuestionDTO> questions,

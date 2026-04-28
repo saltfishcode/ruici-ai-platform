@@ -11,6 +11,8 @@ import java.util.List;
  * 可以在不依赖 simulation 模块的前提下继续演进。</p>
  */
 public record DocumentAnalysisResponse(
+    String profession,
+    String analysisDifficulty,
     int overallScore,
     ScoreDetail scoreDetail,
     String summary,

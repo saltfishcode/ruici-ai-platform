@@ -4,6 +4,7 @@ import com.ruici.ai.common.async.AbstractStreamProducer;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
 import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.infrastructure.redis.RedisService;
+import com.ruici.ai.modules.document.model.AnalysisDifficulty;
 import com.ruici.ai.modules.document.repository.ResumeRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,7 +20,7 @@ public class AnalyzeStreamProducer extends AbstractStreamProducer<AnalyzeStreamP
 
     private final ResumeRepository resumeRepository;
 
-    record AnalyzeTaskPayload(Long documentId, String content) {}
+    record AnalyzeTaskPayload(Long documentId, String content, String profession, String analysisDifficulty) {}
 
     public AnalyzeStreamProducer(RedisService redisService, ResumeRepository resumeRepository) {
         super(redisService);
@@ -32,15 +33,21 @@ public class AnalyzeStreamProducer extends AbstractStreamProducer<AnalyzeStreamP
      * @param documentId 文档ID（历史字段仍映射到 resumeId）
      * @param content    文档内容
      */
-    public void sendDocumentAnalyzeTask(Long documentId, String content) {
-        sendTask(new AnalyzeTaskPayload(documentId, content));
+    public void sendDocumentAnalyzeTask(Long documentId, String content, String profession,
+                                        AnalysisDifficulty analysisDifficulty) {
+        sendTask(new AnalyzeTaskPayload(
+            documentId,
+            content,
+            profession,
+            analysisDifficulty != null ? analysisDifficulty.name() : AnalysisDifficulty.NORMAL.name()
+        ));
     }
 
     /**
      * 兼容旧调用方：历史方法名仍保留，内部转调到通用文档分析入口。
      */
     public void sendAnalyzeTask(Long resumeId, String content) {
-        sendDocumentAnalyzeTask(resumeId, content);
+        sendDocumentAnalyzeTask(resumeId, content, null, AnalysisDifficulty.NORMAL);
     }
 
     @Override
@@ -58,6 +65,8 @@ public class AnalyzeStreamProducer extends AbstractStreamProducer<AnalyzeStreamP
         return Map.of(
             AsyncTaskStreamConstants.FIELD_DOCUMENT_ID, payload.documentId().toString(),
             AsyncTaskStreamConstants.FIELD_CONTENT, payload.content(),
+            AsyncTaskStreamConstants.FIELD_PROFESSION, payload.profession() != null ? payload.profession() : "",
+            AsyncTaskStreamConstants.FIELD_ANALYSIS_DIFFICULTY, payload.analysisDifficulty(),
             AsyncTaskStreamConstants.FIELD_RETRY_COUNT, "0"
         );
     }

@@ -34,6 +34,10 @@ interface UnifiedInterviewItem {
   type: 'text' | 'voice';
   title: string;
   sessionId: string;
+  simulationDirection?: string;
+  simulationDifficulty?: string;
+  basedOnDocument?: boolean;
+  questionCount?: number;
   status: string;
   evaluateStatus?: string;
   evaluateError?: string;
@@ -49,6 +53,32 @@ interface InterviewStats {
   totalCount: number;
   completedCount: number;
   averageScore: number;
+}
+
+function getSimulationDirectionLabel(simulationDirection?: string): string | null {
+  switch (simulationDirection) {
+    case 'PROFESSIONAL_QA':
+      return '专业答疑';
+    case 'WORKPLACE_COMMUNICATION':
+      return '职业沟通表达';
+    case 'JOB_INTERVIEW':
+      return '求职面试';
+    default:
+      return null;
+  }
+}
+
+function getSimulationDifficultyLabel(simulationDifficulty?: string): string | null {
+  switch (simulationDifficulty) {
+    case 'EASY':
+      return '轻量';
+    case 'NORMAL':
+      return '标准';
+    case 'SHARP':
+      return '进阶';
+    default:
+      return null;
+  }
 }
 
 function isCompletedStatus(status: string): boolean {
@@ -181,6 +211,52 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
   const skillsRef = useRef<SkillDTO[]>([]);
   const skillsLoadedRef = useRef(false);
 
+  const loadTextInterviews = useCallback(async (skills: SkillDTO[]): Promise<UnifiedInterviewItem[]> => {
+    try {
+      const sessions = await simulationApi.listSessions();
+      return sessions.map((session: TextSessionMeta) => ({
+        id: session.sessionId,
+        type: 'text' as const,
+        title: getTemplateName(session.skillId, skills),
+        sessionId: session.sessionId,
+        simulationDirection: session.simulationDirection,
+        simulationDifficulty: session.simulationDifficulty,
+        basedOnDocument: session.basedOnDocument,
+        questionCount: session.questionCount,
+        status: session.status,
+        evaluateStatus: session.evaluateStatus ?? undefined,
+        evaluateError: session.evaluateError ?? undefined,
+        overallScore: session.overallScore,
+        totalQuestions: session.totalQuestions,
+        createdAt: session.createdAt,
+        resumeId: session.resumeId ?? undefined,
+      }));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const loadVoiceInterviews = useCallback(async (): Promise<UnifiedInterviewItem[]> => {
+    try {
+      const sessions = await voiceApi.getAllSessions();
+      return sessions.map((session: SessionMeta) => ({
+        id: `voice-${session.sessionId}`,
+        type: 'voice' as const,
+        title: session.roleType,
+        sessionId: String(session.sessionId),
+        status: session.status,
+        evaluateStatus: session.evaluateStatus,
+        evaluateError: session.evaluateError,
+        overallScore: null,
+        actualDuration: session.actualDuration,
+        createdAt: session.createdAt,
+        voiceSessionId: session.sessionId,
+      }));
+    } catch {
+      return [];
+    }
+  }, []);
+
   const loadAll = useCallback(async (isPolling = false) => {
     if (!isPolling) setLoading(true);
 
@@ -229,51 +305,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
     } finally {
       if (!isPolling) setLoading(false);
     }
-  }, []);
-
-  // Load text interviews from dedicated API
-  async function loadTextInterviews(skills: SkillDTO[]): Promise<UnifiedInterviewItem[]> {
-    try {
-      const sessions = await simulationApi.listSessions();
-      return sessions.map((session: TextSessionMeta) => ({
-        id: session.sessionId,
-        type: 'text' as const,
-        title: getTemplateName(session.skillId, skills),
-        sessionId: session.sessionId,
-        status: session.status,
-        evaluateStatus: session.evaluateStatus ?? undefined,
-        evaluateError: session.evaluateError ?? undefined,
-        overallScore: session.overallScore,
-        totalQuestions: session.totalQuestions,
-        createdAt: session.createdAt,
-        resumeId: session.resumeId ?? undefined,
-      }));
-    } catch {
-      return [];
-    }
-  }
-
-  // Load voice interviews from voice API
-  async function loadVoiceInterviews(): Promise<UnifiedInterviewItem[]> {
-    try {
-      const sessions = await voiceApi.getAllSessions();
-      return sessions.map((session: SessionMeta) => ({
-        id: `voice-${session.sessionId}`,
-        type: 'voice' as const,
-        title: session.roleType,
-        sessionId: String(session.sessionId),
-        status: session.status,
-        evaluateStatus: session.evaluateStatus,
-        evaluateError: session.evaluateError,
-        overallScore: null,
-        actualDuration: session.actualDuration,
-        createdAt: session.createdAt,
-        voiceSessionId: session.sessionId,
-      }));
-    } catch {
-      return [];
-    }
-  }
+  }, [loadTextInterviews, loadVoiceInterviews]);
 
   useEffect(() => {
     loadAll();
@@ -417,6 +449,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
           { key: 'voice', label: '语音面试' },
         ] as const).map(tab => (
           <button
+            type="button"
             key={tab.key}
             onClick={() => setTypeFilter(tab.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -494,6 +527,25 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                         <div>
                           <p className="font-medium text-slate-800 dark:text-white">{item.title}</p>
                           <p className="text-xs text-slate-400 dark:text-slate-500">#{item.id.slice(-8)}</p>
+                          {item.type === 'text' && (item.simulationDirection || item.simulationDifficulty || item.basedOnDocument) && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {getSimulationDirectionLabel(item.simulationDirection) && (
+                                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-medium">
+                                  {getSimulationDirectionLabel(item.simulationDirection)}
+                                </span>
+                              )}
+                              {getSimulationDifficultyLabel(item.simulationDifficulty) && (
+                                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md text-xs font-medium">
+                                  {getSimulationDifficultyLabel(item.simulationDifficulty)}
+                                </span>
+                              )}
+                              {item.basedOnDocument && (
+                                <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-medium">
+                                  基于文档
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -526,9 +578,16 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                     </td>
                     <td className="px-6 py-4">
                       {item.type === 'text' && item.totalQuestions != null ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm">
-                          {item.totalQuestions} 题
-                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm">
+                            主问题 {item.questionCount ?? item.totalQuestions} 题
+                          </span>
+                          {item.totalQuestions !== (item.questionCount ?? item.totalQuestions) && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg text-sm">
+                              总题目 {item.totalQuestions} 题
+                            </span>
+                          )}
+                        </div>
                       ) : item.type === 'voice' ? (
                         <span className="text-sm text-slate-500 dark:text-slate-400">
                           {formatDuration(item.actualDuration)}
@@ -544,6 +603,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                       <div className="flex items-center justify-end gap-1">
                         {item.type === 'text' && !isCompletedStatus(item.status) && !isEvaluateCompleted(item) && onContinueInterview && (
                           <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); onContinueInterview(item.sessionId); }}
                             className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                             title="继续面试"
@@ -553,6 +613,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                         )}
                         {item.type === 'voice' && isLiveStatus(item.status) && item.voiceSessionId && (
                           <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); navigate('/voice', { state: { voiceSessionId: item.voiceSessionId } }); }}
                             className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                             title="继续面试"
@@ -562,6 +623,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                         )}
                         {isEvaluateCompleted(item) && item.type === 'text' && (
                           <button
+                            type="button"
                             onClick={(e) => handleExport(item.sessionId, e)}
                             disabled={exporting === item.sessionId}
                             className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-50"
@@ -576,7 +638,12 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                         )}
                         {isEvaluateCompleted(item) && item.type === 'text' && item.resumeId && onRestartInterview && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); onRestartInterview(item.resumeId!); }}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (item.resumeId == null) return;
+                              onRestartInterview(item.resumeId);
+                            }}
                             className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
                             title="重新面试"
                           >
@@ -584,6 +651,7 @@ export default function InterviewHistoryPage({ onBack: _onBack, onViewInterview,
                           </button>
                         )}
                         <button
+                            type="button"
                             onClick={(e) => handleDeleteClick(item, e)}
                             disabled={deletingSessionId === item.sessionId}
                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"

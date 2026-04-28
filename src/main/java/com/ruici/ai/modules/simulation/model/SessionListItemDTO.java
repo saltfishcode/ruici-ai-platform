@@ -10,10 +10,14 @@ import java.time.LocalDateTime;
  */
 public record SessionListItemDTO(
     String sessionId,
+    String simulationDirection,
     String scenarioType,
+    String simulationDifficulty,
     String skillId,
     String difficulty,
     Long resumeId,
+    Boolean basedOnDocument,
+    Integer questionCount,
     int totalQuestions,
     SessionStatus status,
     AsyncTaskStatus evaluateStatus,
@@ -22,13 +26,28 @@ public record SessionListItemDTO(
     LocalDateTime createdAt,
     LocalDateTime completedAt
 ) {
+    private static Boolean resolveBasedOnDocument(InterviewSessionEntity session) {
+        if (session.getBasedOnDocument() != null) {
+            return session.getBasedOnDocument();
+        }
+        return session.getResumeId() != null;
+    }
+
     public static SessionListItemDTO from(InterviewSessionEntity e) {
         return new SessionListItemDTO(
             e.getSessionId(),
+            e.getSimulationDirection() != null
+                ? e.getSimulationDirection()
+                : SimulationDirection.fromScenarioType(e.getScenarioType()).name(),
             SimulationScenarioType.fromNullable(e.getScenarioType()).id(),
+            e.getSimulationDifficulty() != null
+                ? e.getSimulationDifficulty()
+                : SimulationDifficulty.fromLegacy(e.getDifficulty()).name(),
             e.getSkillId(),
             e.getDifficulty(),
             e.getResumeId(),
+            resolveBasedOnDocument(e),
+            e.getTotalQuestions(),
             e.getTotalQuestions() != null ? e.getTotalQuestions() : 0,
             e.getStatus(),
             e.getEvaluateStatus(),

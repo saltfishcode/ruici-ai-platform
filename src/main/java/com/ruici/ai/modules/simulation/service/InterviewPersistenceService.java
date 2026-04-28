@@ -51,7 +51,10 @@ public class InterviewPersistenceService {
                                               List<InterviewQuestionDTO> questions,
                                               String llmProvider,
                                               String skillId,
-                                              String difficulty) {
+                                              String difficulty,
+                                              String simulationDirection,
+                                              String simulationDifficulty,
+                                              Boolean basedOnDocument) {
         try {
             InterviewSessionEntity session = new InterviewSessionEntity();
             session.setSessionId(sessionId);
@@ -63,6 +66,9 @@ public class InterviewPersistenceService {
             session.setLlmProvider(llmProvider != null ? llmProvider : ScenarioDefaults.LLM_PROVIDER);
             session.setSkillId(skillId != null ? skillId : ScenarioDefaults.SKILL_ID);
             session.setDifficulty(difficulty != null ? difficulty : ScenarioDefaults.DIFFICULTY);
+            session.setSimulationDirection(simulationDirection);
+            session.setSimulationDifficulty(simulationDifficulty);
+            session.setBasedOnDocument(basedOnDocument != null ? basedOnDocument : resumeId != null);
 
             // 简历可选：有 resumeId 则关联简历
             if (resumeId != null) {

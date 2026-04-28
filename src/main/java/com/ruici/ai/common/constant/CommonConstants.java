@@ -42,6 +42,7 @@ public final class CommonConstants {
         public static final String SKILL_ID = "java-backend";
         public static final String DIFFICULTY = "mid";
         public static final String LLM_PROVIDER = "third-party";
+        public static final int QUESTION_COUNT = 6;
 
         private ScenarioDefaults() {}
     }

@@ -4,6 +4,7 @@ import com.ruici.ai.common.async.AbstractStreamConsumer;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
 import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.infrastructure.redis.RedisService;
+import com.ruici.ai.modules.document.model.AnalysisDifficulty;
 import com.ruici.ai.modules.document.model.DocumentAnalysisResponse;
 import com.ruici.ai.modules.document.model.ResumeEntity;
 import com.ruici.ai.modules.document.repository.ResumeRepository;
@@ -39,7 +40,7 @@ public class AnalyzeStreamConsumer extends AbstractStreamConsumer<AnalyzeStreamC
         this.resumeRepository = resumeRepository;
     }
 
-    record AnalyzePayload(Long documentId, String content) {}
+    record AnalyzePayload(Long documentId, String content, String profession, AnalysisDifficulty analysisDifficulty) {}
 
     @Override
     protected String taskDisplayName() {
@@ -70,11 +71,18 @@ public class AnalyzeStreamConsumer extends AbstractStreamConsumer<AnalyzeStreamC
     protected AnalyzePayload parsePayload(StreamMessageId messageId, Map<String, String> data) {
         String resumeIdStr = data.get(AsyncTaskStreamConstants.FIELD_DOCUMENT_ID);
         String content = data.get(AsyncTaskStreamConstants.FIELD_CONTENT);
+        String profession = data.get(AsyncTaskStreamConstants.FIELD_PROFESSION);
+        String analysisDifficulty = data.get(AsyncTaskStreamConstants.FIELD_ANALYSIS_DIFFICULTY);
         if (resumeIdStr == null || content == null) {
             log.warn("消息格式错误，跳过: messageId={}", messageId);
             return null;
         }
-        return new AnalyzePayload(Long.parseLong(resumeIdStr), content);
+        return new AnalyzePayload(
+            Long.parseLong(resumeIdStr),
+            content,
+            profession,
+            AnalysisDifficulty.fromNullable(analysisDifficulty)
+        );
     }
 
     @Override
@@ -95,7 +103,11 @@ public class AnalyzeStreamConsumer extends AbstractStreamConsumer<AnalyzeStreamC
             return;
         }
 
-        DocumentAnalysisResponse analysis = gradingService.analyzeResume(payload.content());
+        DocumentAnalysisResponse analysis = gradingService.analyzeResume(
+            payload.content(),
+            payload.profession(),
+            payload.analysisDifficulty()
+        );
         ResumeEntity resume = resumeRepository.findById(resumeId).orElse(null);
         if (resume == null) {
             log.warn("文档在分析期间被删除，跳过保存结果: documentId={}", resumeId);
@@ -122,6 +134,8 @@ public class AnalyzeStreamConsumer extends AbstractStreamConsumer<AnalyzeStreamC
             Map<String, String> message = Map.of(
                 AsyncTaskStreamConstants.FIELD_DOCUMENT_ID, resumeId.toString(),
                 AsyncTaskStreamConstants.FIELD_CONTENT, content,
+                AsyncTaskStreamConstants.FIELD_PROFESSION, payload.profession() != null ? payload.profession() : "",
+                AsyncTaskStreamConstants.FIELD_ANALYSIS_DIFFICULTY, payload.analysisDifficulty().name(),
                 AsyncTaskStreamConstants.FIELD_RETRY_COUNT, String.valueOf(retryCount)
             );
 

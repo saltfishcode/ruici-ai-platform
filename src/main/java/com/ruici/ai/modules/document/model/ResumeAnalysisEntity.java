@@ -43,6 +43,10 @@ public class ResumeAnalysisEntity {
     // 改进建议列表 (JSON格式)
     @Column(columnDefinition = "TEXT")
     private String suggestionsJson;
+
+    // 本次分析使用的难度（2.0 新增字段）
+    @Column(length = 16)
+    private String analysisDifficulty;
     
     // 评测时间
     @Column(name = "analyzed_at", nullable = false)
@@ -140,6 +144,14 @@ public class ResumeAnalysisEntity {
     
     public void setSuggestionsJson(String suggestionsJson) {
         this.suggestionsJson = suggestionsJson;
+    }
+
+    public String getAnalysisDifficulty() {
+        return analysisDifficulty;
+    }
+
+    public void setAnalysisDifficulty(String analysisDifficulty) {
+        this.analysisDifficulty = analysisDifficulty;
     }
     
     public LocalDateTime getAnalyzedAt() {

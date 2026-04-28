@@ -114,6 +114,13 @@ public class PdfExportService {
         document.add(new Paragraph("文件名: " + resume.getOriginalFilename()));
         document.add(new Paragraph("上传时间: " + 
             (resume.getUploadedAt() != null ? DATE_FORMAT.format(resume.getUploadedAt()) : "未知")));
+        String profession = firstNonBlank(analysis.profession(), resume.getProfession());
+        if (profession != null) {
+            document.add(new Paragraph("分析方向: " + sanitizeText(profession)));
+        }
+        if (analysis.analysisDifficulty() != null && !analysis.analysisDifficulty().isBlank()) {
+            document.add(new Paragraph("分析力度: " + getAnalysisDifficultyText(analysis.analysisDifficulty())));
+        }
         
         // 总分
         document.add(new Paragraph("\n"));
@@ -216,8 +223,18 @@ public class PdfExportService {
         document.add(new Paragraph("\n"));
         document.add(createSectionTitle("场景信息"));
         document.add(new Paragraph("会话ID: " + session.getSessionId()));
+        document.add(new Paragraph("模拟方向: " + getSimulationDirectionText(session.getSimulationDirection())));
         document.add(new Paragraph("场景类型: " + getScenarioText(session.getScenarioType())));
         document.add(new Paragraph("主题模板: " + sanitizeText(session.getSkillId() != null ? session.getSkillId() : "默认模板")));
+        document.add(new Paragraph("模拟难度: " + getSimulationDifficultyText(session.getSimulationDifficulty(), session.getDifficulty())));
+        if (Boolean.TRUE.equals(session.getBasedOnDocument())) {
+            String basedOnDocumentText = session.getResumeId() != null
+                ? "是（文档ID: " + session.getResumeId() + "）"
+                : "是";
+            document.add(new Paragraph("基于文档: " + basedOnDocumentText));
+        } else if (session.getBasedOnDocument() != null) {
+            document.add(new Paragraph("基于文档: 否"));
+        }
         document.add(new Paragraph("题目数量: " + session.getTotalQuestions()));
         document.add(new Paragraph("当前状态: " + getStatusText(session.getStatus())));
         document.add(new Paragraph("开始时间: " + 
@@ -354,5 +371,47 @@ public class PdfExportService {
             case "novel-expert" -> "小说专家";
             default -> "求职面试";
         };
+    }
+
+    private String getSimulationDirectionText(String simulationDirection) {
+        return switch (simulationDirection != null ? simulationDirection : "JOB_INTERVIEW") {
+            case "PROFESSIONAL_QA" -> "专业答疑";
+            case "WORKPLACE_COMMUNICATION" -> "职业沟通表达";
+            default -> "求职面试";
+        };
+    }
+
+    private String getSimulationDifficultyText(String simulationDifficulty, String legacyDifficulty) {
+        String effectiveDifficulty = simulationDifficulty;
+        if (effectiveDifficulty == null || effectiveDifficulty.isBlank()) {
+            effectiveDifficulty = switch (legacyDifficulty != null ? legacyDifficulty : "mid") {
+                case "junior" -> "EASY";
+                case "senior" -> "SHARP";
+                default -> "NORMAL";
+            };
+        }
+        return switch (effectiveDifficulty) {
+            case "EASY" -> "轻量";
+            case "SHARP" -> "进阶";
+            default -> "标准";
+        };
+    }
+
+    private String getAnalysisDifficultyText(String analysisDifficulty) {
+        return switch (analysisDifficulty != null ? analysisDifficulty : "NORMAL") {
+            case "EASY" -> "轻量";
+            case "SHARP" -> "进阶";
+            default -> "标准";
+        };
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        if (second != null && !second.isBlank()) {
+            return second;
+        }
+        return null;
     }
 }

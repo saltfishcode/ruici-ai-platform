@@ -8,6 +8,7 @@ import com.ruici.ai.infrastructure.file.FileStorageService;
 import com.ruici.ai.infrastructure.file.FileValidationService;
 import com.ruici.ai.modules.document.model.DocumentAnalysisResponse;
 import com.ruici.ai.modules.document.listener.AnalyzeStreamProducer;
+import com.ruici.ai.modules.document.model.AnalysisDifficulty;
 import com.ruici.ai.modules.document.model.ResumeEntity;
 import com.ruici.ai.modules.document.repository.ResumeRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,11 @@ public class ResumeUploadService {
      * @param file 职业文档文件
      * @return 上传结果（分析将异步进行）
      */
-    public Map<String, Object> uploadAndAnalyze(org.springframework.web.multipart.MultipartFile file) {
+    public Map<String, Object> uploadAndAnalyze(
+        org.springframework.web.multipart.MultipartFile file,
+        String profession,
+        AnalysisDifficulty analysisDifficulty
+    ) {
         long startTime = System.currentTimeMillis();
 
         // 1. 验证文件
@@ -85,10 +90,21 @@ public class ResumeUploadService {
             fileKey, System.currentTimeMillis() - storageStart);
 
         // 6. 保存文档到数据库（状态为 PENDING）
-        ResumeEntity savedResume = persistenceService.saveResume(file, resumeText, fileKey, fileUrl);
+        ResumeEntity savedResume = persistenceService.saveResume(
+            file,
+            resumeText,
+            fileKey,
+            fileUrl,
+            profession
+        );
 
         // 7. 发送分析任务到 Redis Stream（异步处理）
-        analyzeStreamProducer.sendDocumentAnalyzeTask(savedResume.getId(), resumeText);
+        analyzeStreamProducer.sendDocumentAnalyzeTask(
+            savedResume.getId(),
+            resumeText,
+            savedResume.getProfession(),
+            analysisDifficulty
+        );
 
         long totalTime = System.currentTimeMillis() - startTime;
         log.info("职业文档上传处理完成: {}, documentId={} - 总耗时: {}ms (解析+存储+入库)",
@@ -171,7 +187,7 @@ public class ResumeUploadService {
      * @param resumeId 简历ID
      */
     @Transactional
-    public void reanalyze(Long resumeId) {
+    public void reanalyze(Long resumeId, String profession, AnalysisDifficulty analysisDifficulty) {
         ResumeEntity resume = resumeRepository.findById(resumeId)
             .orElseThrow(() -> new BusinessException(ErrorCode.RESUME_NOT_FOUND, "简历不存在"));
 
@@ -188,13 +204,22 @@ public class ResumeUploadService {
             resume.setResumeText(resumeText);
         }
 
+        if (profession != null && !profession.isBlank()) {
+            resume.setProfession(profession.trim());
+        }
+
         // 更新状态为 PENDING
         resume.setAnalyzeStatus(AsyncTaskStatus.PENDING);
         resume.setAnalyzeError(null);
         resumeRepository.save(resume);
 
         // 发送分析任务到 Stream
-        analyzeStreamProducer.sendDocumentAnalyzeTask(resumeId, resumeText);
+        analyzeStreamProducer.sendDocumentAnalyzeTask(
+            resumeId,
+            resumeText,
+            resume.getProfession(),
+            analysisDifficulty
+        );
 
         log.info("重新分析任务已发送: resumeId={}", resumeId);
     }

@@ -4,6 +4,7 @@ import com.ruici.ai.common.ai.StructuredOutputInvoker;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
+import com.ruici.ai.modules.document.model.AnalysisDifficulty;
 import com.ruici.ai.modules.document.model.DocumentAnalysisResponse;
 import com.ruici.ai.modules.document.model.DocumentAnalysisResponse.ScoreDetail;
 import com.ruici.ai.modules.document.model.DocumentAnalysisResponse.Suggestion;
@@ -84,7 +85,11 @@ public class ResumeGradingService {
      * @param resumeText 简历文本内容
      * @return 分析结果
      */
-    public DocumentAnalysisResponse analyzeResume(String resumeText) {
+    public DocumentAnalysisResponse analyzeResume(
+        String resumeText,
+        String profession,
+        AnalysisDifficulty analysisDifficulty
+    ) {
         log.info("开始分析简历，文本长度: {} 字符", resumeText.length());
         
         try {
@@ -93,6 +98,8 @@ public class ResumeGradingService {
             
             // 加载用户提示词并填充变量
             Map<String, Object> variables = new HashMap<>();
+            variables.put("profession", profession != null && !profession.isBlank() ? profession : "通用技术岗位");
+            variables.put("analysisDifficulty", normalizeDifficulty(analysisDifficulty));
             variables.put("resumeText", resumeText);
             String userPrompt = userPromptTemplate.render(variables);
             
@@ -119,21 +126,26 @@ public class ResumeGradingService {
             }
             
             // 转换为业务对象
-            DocumentAnalysisResponse result = convertToResponse(dto, resumeText);
+            DocumentAnalysisResponse result = convertToResponse(dto, resumeText, profession, analysisDifficulty);
             log.info("简历分析完成，总分: {}", result.overallScore());
             
             return result;
             
         } catch (Exception e) {
             log.error("简历分析失败: {}", e.getMessage(), e);
-            return createErrorResponse(resumeText, e.getMessage());
+            return createErrorResponse(resumeText, profession, analysisDifficulty, e.getMessage());
         }
     }
     
     /**
      * 转换DTO为业务对象
      */
-    private DocumentAnalysisResponse convertToResponse(ResumeAnalysisResponseDTO dto, String originalText) {
+    private DocumentAnalysisResponse convertToResponse(
+        ResumeAnalysisResponseDTO dto,
+        String originalText,
+        String profession,
+        AnalysisDifficulty analysisDifficulty
+    ) {
         ScoreDetail scoreDetail = new ScoreDetail(
             dto.scoreDetail().contentScore(),
             dto.scoreDetail().structureScore(),
@@ -147,6 +159,8 @@ public class ResumeGradingService {
             .toList();
         
         return new DocumentAnalysisResponse(
+            profession,
+            normalizeDifficulty(analysisDifficulty),
             dto.overallScore(),
             scoreDetail,
             dto.summary(),
@@ -159,8 +173,15 @@ public class ResumeGradingService {
     /**
      * 创建错误响应
      */
-    private DocumentAnalysisResponse createErrorResponse(String originalText, String errorMessage) {
+    private DocumentAnalysisResponse createErrorResponse(
+        String originalText,
+        String profession,
+        AnalysisDifficulty analysisDifficulty,
+        String errorMessage
+    ) {
         return new DocumentAnalysisResponse(
+            profession,
+            normalizeDifficulty(analysisDifficulty),
             0,
             new ScoreDetail(0, 0, 0, 0, 0),
             "分析过程中出现错误: " + errorMessage,
@@ -173,5 +194,9 @@ public class ResumeGradingService {
             )),
             originalText
         );
+    }
+
+    private String normalizeDifficulty(AnalysisDifficulty analysisDifficulty) {
+        return (analysisDifficulty != null ? analysisDifficulty : AnalysisDifficulty.NORMAL).name();
     }
 }

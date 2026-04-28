@@ -10,9 +10,18 @@ export const documentApi = {
   /**
    * 上传简历并获取分析结果
    */
-  async uploadAndAnalyze(file: File): Promise<UploadResponse> {
+  async uploadAndAnalyze(
+    file: File,
+    options?: { profession?: string; analysisDifficulty?: 'EASY' | 'NORMAL' | 'SHARP' }
+  ): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
+    if (options?.profession) {
+      formData.append('profession', options.profession);
+    }
+    if (options?.analysisDifficulty) {
+      formData.append('analysisDifficulty', options.analysisDifficulty);
+    }
     return request.upload<UploadResponse>('/api/documents/upload', formData);
   },
 
@@ -35,8 +44,19 @@ export const documentApi = {
     return request.delete(`/api/documents/${id}`);
   },
 
-  async reanalyze(id: number): Promise<void> {
-    return request.post(`/api/documents/${id}/reanalyze`);
+  async reanalyze(
+    id: number,
+    options?: { profession?: string; analysisDifficulty?: 'EASY' | 'NORMAL' | 'SHARP' }
+  ): Promise<void> {
+    const search = new URLSearchParams();
+    if (options?.profession) {
+      search.set('profession', options.profession);
+    }
+    if (options?.analysisDifficulty) {
+      search.set('analysisDifficulty', options.analysisDifficulty);
+    }
+    const query = search.toString();
+    return request.post(`/api/documents/${id}/reanalyze${query ? `?${query}` : ''}`);
   },
 
   async exportPdf(id: number): Promise<Blob> {

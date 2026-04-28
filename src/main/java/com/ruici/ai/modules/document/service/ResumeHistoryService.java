@@ -63,6 +63,8 @@ public class ResumeHistoryService {
             return new ResumeListItemDTO(
                 resume.getId(),
                 resume.getOriginalFilename(),
+                resume.getProfession(),
+                analysisOpt.map(ResumeAnalysisEntity::getAnalysisDifficulty).orElse(null),
                 resume.getFileSize(),
                 resume.getUploadedAt(),
                 resume.getAccessCount(),
@@ -102,6 +104,8 @@ public class ResumeHistoryService {
         return new ResumeDetailDTO(
             resume.getId(),
             resume.getOriginalFilename(),
+            resume.getProfession(),
+            analyses.isEmpty() ? null : analyses.getFirst().getAnalysisDifficulty(),
             resume.getFileSize(),
             resume.getContentType(),
             resume.getStorageUrl(),

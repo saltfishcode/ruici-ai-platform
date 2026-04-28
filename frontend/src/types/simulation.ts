@@ -4,9 +4,14 @@ import type { CategoryDTO } from '../api/skill';
 
 export interface TextSessionMeta {
   sessionId: string;
+  simulationDirection?: string;
+  scenarioType: string;
+  simulationDifficulty?: string;
   skillId: string;
   difficulty: string;
   resumeId: number | null;
+  basedOnDocument?: boolean;
+  questionCount?: number;
   totalQuestions: number;
   status: string;
   evaluateStatus: string | null;
@@ -18,7 +23,13 @@ export interface TextSessionMeta {
 
 export interface InterviewSession {
   sessionId: string;
+  simulationDirection?: string;
+  scenarioType?: string;
+  simulationDifficulty?: string;
   resumeText: string;
+  resumeId?: number | null;
+  basedOnDocument?: boolean;
+  skillId?: string;
   totalQuestions: number;
   currentQuestionIndex: number;
   questions: InterviewQuestion[];
@@ -38,9 +49,12 @@ export interface InterviewQuestion {
 }
 
 export interface CreateInterviewRequest {
+  simulationDirection?: 'JOB_INTERVIEW' | 'PROFESSIONAL_QA' | 'WORKPLACE_COMMUNICATION';
+  simulationDifficulty?: 'EASY' | 'NORMAL' | 'SHARP';
   resumeText: string;
-  questionCount: number;
+  questionCount?: number;
   resumeId?: number;
+  basedOnDocument?: boolean;
   forceCreate?: boolean;
   llmProvider?: string;
   skillId: string;
@@ -119,6 +133,14 @@ export interface AnswerItem {
 export interface InterviewItem {
   id: number;
   sessionId: string;
+  simulationDirection?: string;
+  scenarioType?: string;
+  simulationDifficulty?: string;
+  difficulty?: string;
+  skillId?: string;
+  resumeId?: number | null;
+  basedOnDocument?: boolean;
+  questionCount?: number;
   totalQuestions: number;
   status: string;
   evaluateStatus?: EvaluateStatus;

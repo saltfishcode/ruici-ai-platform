@@ -36,6 +36,10 @@ public class InterviewSessionEntity {
     // 情景模拟类型（默认回退到内置求职面试场景）
     @Column(name = "scenario_type", length = 32)
     private String scenarioType = SimulationScenarioType.JOB_INTERVIEW.id();
+
+    // 对外统一方向字段（2.0 新增，避免直接暴露旧 scenarioType 的历史语义）
+    @Column(name = "simulation_direction", length = 40)
+    private String simulationDirection;
     
     // 场景模板 / 主题 ID
     @Column(name = "skill_id", length = 64)
@@ -45,6 +49,10 @@ public class InterviewSessionEntity {
     @Column(length = 16)
     private String difficulty = ScenarioDefaults.DIFFICULTY;
 
+    // 对外统一模拟难度字段（2.0 新增）
+    @Column(name = "simulation_difficulty", length = 16)
+    private String simulationDifficulty;
+
     // 文档ID（当前仍映射到历史 resume_id 列，避免 LAZY 加载触发额外查询）
     @Column(name = "resume_id", insertable = false, updatable = false)
     private Long resumeId;
@@ -53,6 +61,10 @@ public class InterviewSessionEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "resume_id")
     private ResumeEntity resume;
+
+    // 是否明确基于文档开启模拟（2.0 新增）
+    @Column(name = "based_on_document")
+    private Boolean basedOnDocument;
     
     // 问题总数
     private Integer totalQuestions;
@@ -148,6 +160,14 @@ public class InterviewSessionEntity {
 
     public void setScenarioType(String scenarioType) {
         this.scenarioType = scenarioType;
+    }
+
+    public String getSimulationDirection() {
+        return simulationDirection;
+    }
+
+    public void setSimulationDirection(String simulationDirection) {
+        this.simulationDirection = simulationDirection;
     }
     
     public Long getResumeId() {
@@ -304,6 +324,22 @@ public class InterviewSessionEntity {
 
     public void setDifficulty(String difficulty) {
         this.difficulty = difficulty;
+    }
+
+    public String getSimulationDifficulty() {
+        return simulationDifficulty;
+    }
+
+    public void setSimulationDifficulty(String simulationDifficulty) {
+        this.simulationDifficulty = simulationDifficulty;
+    }
+
+    public Boolean getBasedOnDocument() {
+        return basedOnDocument;
+    }
+
+    public void setBasedOnDocument(Boolean basedOnDocument) {
+        this.basedOnDocument = basedOnDocument;
     }
 
     public void addAnswer(InterviewAnswerEntity answer) {

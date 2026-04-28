@@ -7,6 +7,7 @@ import type { UploadKnowledgeBaseResponse } from './api/knowledgebase';
 import type { Difficulty } from './components/UnifiedInterviewModal';
 import type { CategoryDTO } from './api/skill';
 import type { InterviewDetail } from './types/simulation';
+import type { SimulationDirection } from './hooks/useInterviewConfig';
 import { Loader2 } from 'lucide-react';
 import { ROUTES } from './constants/routes';
 
@@ -84,12 +85,16 @@ function DocumentDetailWrapper() {
 
 interface SimulationEntryState {
   documentId?: number;
+  resumeId?: number;
   resumeText?: string;
   sessionIdToResume?: string;
   interviewConfig?: {
+    simulationDirection?: SimulationDirection;
     skillId?: string;
     difficulty?: Difficulty;
+    simulationDifficulty?: 'EASY' | 'NORMAL' | 'SHARP';
     questionCount?: number;
+    basedOnDocument?: boolean;
     llmProvider?: string;
     customCategories?: CategoryDTO[];
     jdText?: string;
@@ -104,7 +109,9 @@ function SimulationSessionWrapper() {
   const entryState = (location.state as SimulationEntryState | undefined) ?? {};
   const [resumeText, setResumeText] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const effectiveDocumentId = documentId ? parseInt(documentId, 10) : entryState.documentId;
+  const effectiveDocumentId = documentId
+    ? parseInt(documentId, 10)
+    : (entryState.documentId ?? entryState.resumeId);
 
   useEffect(() => {
     // 优先从location state获取resumeText
@@ -284,6 +291,7 @@ function SimulationDetailPageWrapper() {
         <div className="text-center">
           <p className="text-red-500 mb-4">{error || '模拟记录不存在'}</p>
           <button
+            type="button"
             onClick={() => navigate('/simulation/history')}
             className="px-5 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
           >
@@ -298,10 +306,12 @@ function SimulationDetailPageWrapper() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <button
+          type="button"
           onClick={() => navigate('/simulation/history')}
           className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <title>返回模拟记录</title>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>

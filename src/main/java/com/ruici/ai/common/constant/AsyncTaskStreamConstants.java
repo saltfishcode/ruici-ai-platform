@@ -27,6 +27,16 @@ public final class AsyncTaskStreamConstants {
      */
     public static final String FIELD_CONTENT = "content";
 
+    /**
+     * 文档专业方向字段。
+     */
+    public static final String FIELD_PROFESSION = "profession";
+
+    /**
+     * 文档分析难度字段。
+     */
+    public static final String FIELD_ANALYSIS_DIFFICULTY = "analysisDifficulty";
+
     // ========== 通用消费者配置 ==========
 
     /**

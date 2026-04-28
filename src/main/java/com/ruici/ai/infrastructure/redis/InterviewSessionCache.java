@@ -51,10 +51,14 @@ public class InterviewSessionCache {
     @Data
     public static class CachedSession implements Serializable {
         private String sessionId;
+        private String simulationDirection;
         private String scenarioType;
         private String skillId;
+        private String difficulty;
+        private String simulationDifficulty;
         private String resumeText;
         private Long resumeId;
+        private Boolean basedOnDocument;
         private String questionsJson;  // 序列化的问题列表
         private int currentIndex;
         private SessionStatus status;
@@ -62,14 +66,19 @@ public class InterviewSessionCache {
         public CachedSession() {
         }
 
-        public CachedSession(String sessionId, String scenarioType, String skillId, String resumeText, Long resumeId,
-                             List<InterviewQuestionDTO> questions, int currentIndex,
+        public CachedSession(String sessionId, String simulationDirection, String scenarioType, String skillId,
+                             String difficulty, String simulationDifficulty, String resumeText, Long resumeId,
+                             Boolean basedOnDocument, List<InterviewQuestionDTO> questions, int currentIndex,
                              SessionStatus status, ObjectMapper objectMapper) {
             this.sessionId = sessionId;
+            this.simulationDirection = simulationDirection;
             this.scenarioType = scenarioType;
             this.skillId = skillId;
+            this.difficulty = difficulty;
+            this.simulationDifficulty = simulationDifficulty;
             this.resumeText = resumeText;
             this.resumeId = resumeId;
+            this.basedOnDocument = basedOnDocument;
             this.currentIndex = currentIndex;
             this.status = status;
             try {
@@ -91,12 +100,14 @@ public class InterviewSessionCache {
     /**
      * 保存会话到缓存。
      */
-    public void saveSession(String sessionId, String scenarioType, String skillId, String resumeText, Long resumeId,
-                            List<InterviewQuestionDTO> questions, int currentIndex,
+    public void saveSession(String sessionId, String simulationDirection, String scenarioType, String skillId,
+                            String difficulty, String simulationDifficulty, String resumeText, Long resumeId,
+                            Boolean basedOnDocument, List<InterviewQuestionDTO> questions, int currentIndex,
                             SessionStatus status) {
         String key = buildSessionKey(sessionId);
         CachedSession cachedSession = new CachedSession(
-            sessionId, scenarioType, skillId, resumeText, resumeId, questions, currentIndex, status, objectMapper
+            sessionId, simulationDirection, scenarioType, skillId, difficulty, simulationDifficulty, resumeText,
+            resumeId, basedOnDocument, questions, currentIndex, status, objectMapper
         );
 
         redisService.set(key, cachedSession, SESSION_TTL);
@@ -219,7 +230,23 @@ public class InterviewSessionCache {
             }
             redisService.delete(scopedKey);
         }
-        return findUnfinishedSessionId(resumeId);
+
+        Optional<String> legacySessionIdOpt = findUnfinishedSessionId(resumeId);
+        if (legacySessionIdOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Optional<CachedSession> legacySessionOpt = getSession(legacySessionIdOpt.get());
+        if (legacySessionOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        CachedSession legacySession = legacySessionOpt.get();
+        boolean sameScenario = normalizeKeyPart(legacySession.getScenarioType())
+            .equals(normalizeKeyPart(scenarioType));
+        boolean sameSkill = normalizeKeyPart(legacySession.getSkillId())
+            .equals(normalizeKeyPart(skillId));
+        return sameScenario && sameSkill ? legacySessionIdOpt : Optional.empty();
     }
 
     /**

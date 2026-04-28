@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 public record ResumeListItemDTO(
     Long id,
     String filename,
+    String profession,
+    String analysisDifficulty,
     Long fileSize,
     LocalDateTime uploadedAt,
     Integer accessCount,

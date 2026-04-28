@@ -67,7 +67,8 @@ public class ResumePersistenceService {
      */
     @Transactional(rollbackFor = Exception.class)
     public ResumeEntity saveResume(MultipartFile file, String resumeText,
-                                   String storageKey, String storageUrl) {
+                                   String storageKey, String storageUrl,
+                                   String profession) {
         try {
             String fileHash = fileHashService.calculateHash(file);
             
@@ -79,6 +80,7 @@ public class ResumePersistenceService {
             resume.setStorageKey(storageKey);
             resume.setStorageUrl(storageUrl);
             resume.setResumeText(resumeText);
+            resume.setProfession(profession);
             
             ResumeEntity saved = resumeRepository.save(resume);
             log.info("简历已保存: id={}, hash={}", saved.getId(), fileHash);
@@ -99,6 +101,7 @@ public class ResumePersistenceService {
             // 使用 MapStruct 映射基础字段
             ResumeAnalysisEntity entity = resumeMapper.toAnalysisEntity(analysis);
             entity.setResume(resume);
+            entity.setAnalysisDifficulty(analysis.analysisDifficulty());
 
             // JSON 字段需要手动序列化
             entity.setStrengthsJson(objectMapper.writeValueAsString(analysis.strengths()));
@@ -161,6 +164,8 @@ public class ResumePersistenceService {
             );
 
             return new DocumentAnalysisResponse(
+                entity.getResume().getProfession(),
+                entity.getAnalysisDifficulty(),
                 entity.getOverallScore(),
                 resumeMapper.toScoreDetail(entity),  // 使用MapStruct自动映射
                 entity.getSummary(),

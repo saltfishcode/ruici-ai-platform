@@ -4,7 +4,16 @@ import {
   X, Sparkles, FileText, Mic,
   FileStack, ChevronDown, ChevronUp, Loader2
 } from 'lucide-react';
-import { useInterviewConfig, CUSTOM_SKILL_ID, DIFFICULTY_OPTIONS, type InterviewMode, type Difficulty } from '../hooks/useInterviewConfig';
+import {
+  useInterviewConfig,
+  CUSTOM_SKILL_ID,
+  SIMULATION_DIRECTION_OPTIONS,
+  DIFFICULTY_OPTIONS,
+  toSimulationDifficulty,
+  type InterviewMode,
+  type Difficulty,
+  type SimulationDirection,
+} from '../hooks/useInterviewConfig';
 import { getSkillIcon } from '../utils/skillIcons';
 import { formatDateOnly } from '../utils/date';
 
@@ -14,10 +23,13 @@ export { DIFFICULTY_OPTIONS };
 
 export interface UnifiedInterviewConfig {
   mode: InterviewMode;
+  simulationDirection: SimulationDirection;
   skillId: string;
   skillName: string;
   difficulty: Difficulty;
+  simulationDifficulty: 'EASY' | 'NORMAL' | 'SHARP';
   resumeId?: number;
+  basedOnDocument: boolean;
   resumeText?: string;
   llmProvider: string;
   questionCount: number;
@@ -48,9 +60,9 @@ export default function UnifiedInterviewModal({
   defaultMode = 'text',
   defaultResumeId,
   hideModeSwitch = false,
-  title = '开始模拟面试',
-  subtitle = '选择面试模式和主题，快速开始',
-  startButtonText = '开始面试',
+  title = '开始情景模拟',
+  subtitle = '选择模拟模式、情景方向与练习主题，快速开始',
+  startButtonText = '开始模拟',
 }: UnifiedInterviewModalProps) {
   const config = useInterviewConfig({ defaultMode, defaultResumeId, autoLoad: false });
 
@@ -59,13 +71,26 @@ export default function UnifiedInterviewModal({
       config.setMode(defaultMode);
       if (defaultResumeId != null) {
         config.setResumeId(defaultResumeId);
+        config.setBasedOnDocument(true);
         config.setShowMore(true);
+      } else {
+        config.setResumeId(undefined);
+        config.setBasedOnDocument(false);
       }
       config.loadSkills();
       config.loadResumes();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, defaultMode, defaultResumeId]);
+  }, [
+    defaultMode,
+    defaultResumeId,
+    isOpen,
+    config.loadResumes,
+    config.loadSkills,
+    config.setBasedOnDocument,
+    config.setMode,
+    config.setResumeId,
+    config.setShowMore,
+  ]);
 
   const handleStart = () => {
     const selectedSkill = config.selectedSkill;
@@ -76,10 +101,13 @@ export default function UnifiedInterviewModal({
 
     onStart({
       mode: config.mode,
+      simulationDirection: config.simulationDirection,
       skillId: config.skillId,
       skillName: selectedSkill?.name || '自定义',
       difficulty: config.difficulty,
-      resumeId: config.resumeId,
+      simulationDifficulty: toSimulationDifficulty(config.difficulty),
+      resumeId: config.basedOnDocument ? config.resumeId : undefined,
+      basedOnDocument: config.basedOnDocument,
       llmProvider: config.llmProvider,
       questionCount: config.questionCount,
       techEnabled: true,
@@ -129,6 +157,7 @@ export default function UnifiedInterviewModal({
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={onClose}
                     className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                   >
@@ -141,9 +170,9 @@ export default function UnifiedInterviewModal({
               <div className="px-6 py-5 space-y-5">
                 {!hideModeSwitch && (
                   <div>
-                    <label className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <p className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
                       面试模式
-                    </label>
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       {([
                         {
@@ -166,6 +195,7 @@ export default function UnifiedInterviewModal({
                         return (
                           <button
                             key={opt.value}
+                            type="button"
                             onClick={() => config.setMode(opt.value)}
                             className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left
                               ${selected
@@ -192,11 +222,41 @@ export default function UnifiedInterviewModal({
                   </div>
                 )}
 
-                {/* 面试方向 */}
+                {/* 情景方向 */}
                 <div>
-                  <label className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    面试方向
-                  </label>
+                  <p className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    情景方向
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                    {SIMULATION_DIRECTION_OPTIONS.map(option => {
+                      const selected = config.simulationDirection === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => config.setSimulationDirection(option.value)}
+                          className={`p-3 rounded-xl border-2 transition-all duration-200 text-left ${selected
+                            ? 'border-primary-500 bg-primary-50/80 dark:bg-primary-900/20'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                          }`}
+                        >
+                          <p className={`text-sm font-semibold ${selected ? 'text-primary-700 dark:text-primary-300' : 'text-slate-800 dark:text-white'}`}>
+                            {option.label}
+                          </p>
+                          <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                            {option.desc}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 练习主题 */}
+                <div>
+                  <p className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    练习主题
+                  </p>
                   {config.loadingSkills ? (
                     <div className="flex items-center gap-2 py-4 text-slate-400">
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -209,9 +269,10 @@ export default function UnifiedInterviewModal({
                         const IconComponent = getSkillIcon(skill.id);
                         const fallbackEmoji = skill.display?.icon || '📋';
                         return (
-                          <button
-                            key={skill.id}
-                            onClick={() => config.setSkillId(skill.id)}
+                           <button
+                             key={skill.id}
+                             type="button"
+                             onClick={() => config.setSkillId(skill.id)}
                             className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left
                               ${selected
                                 ? 'border-primary-500 bg-primary-50/80 dark:bg-primary-900/20'
@@ -239,6 +300,7 @@ export default function UnifiedInterviewModal({
                       })}
                       {/* 自定义按钮 */}
                       <button
+                        type="button"
                         onClick={() => config.setSkillId(CUSTOM_SKILL_ID)}
                         className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed transition-all duration-200 text-left
                           ${config.isCustomSkill
@@ -287,6 +349,7 @@ export default function UnifiedInterviewModal({
                             focus:ring-primary-500/50 focus:border-primary-400 transition-shadow"
                         />
                         <button
+                          type="button"
                           onClick={config.handleParseJd}
                           disabled={config.parsingJd || !config.customJdText}
                           className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
@@ -294,15 +357,15 @@ export default function UnifiedInterviewModal({
                             disabled:cursor-not-allowed transition-colors"
                         >
                           {config.parsingJd ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          解析面试方向
-                        </button>
+                            解析练习主题
+                          </button>
                         {config.customCategories.length > 0 && (
                           <div className="flex flex-wrap gap-2">
-                            {config.customCategories.map((cat, i) => (
-                              <span
-                                key={i}
-                                className="px-3 py-1 text-xs font-medium rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
-                              >
+                            {config.customCategories.map(cat => (
+                               <span
+                                 key={`${cat.label}-${cat.priority}`}
+                                 className="px-3 py-1 text-xs font-medium rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
+                               >
                                 {cat.label}
                                 <span className="ml-1 text-[10px] text-primary-500">({cat.priority})</span>
                               </span>
@@ -311,7 +374,7 @@ export default function UnifiedInterviewModal({
                         )}
                         {config.jdNeedsReparse && (
                           <p className="text-xs text-amber-600 dark:text-amber-400">
-                            JD 已修改，请重新解析后再开始面试。
+                       JD 已修改，请重新解析后再开始模拟。
                           </p>
                         )}
                       </div>
@@ -321,15 +384,16 @@ export default function UnifiedInterviewModal({
 
                 {/* 难度 */}
                 <div>
-                  <label className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <p className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
                     难度
-                  </label>
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     {DIFFICULTY_OPTIONS.map(opt => {
                       const selected = config.difficulty === opt.value;
                       return (
                         <button
                           key={opt.value}
+                          type="button"
                           onClick={() => config.setDifficulty(opt.value)}
                           className={`py-2.5 px-3 rounded-xl border-2 transition-all duration-200 text-center
                             ${selected
@@ -349,6 +413,7 @@ export default function UnifiedInterviewModal({
 
                 {/* 更多选项 */}
                 <button
+                  type="button"
                   onClick={() => config.setShowMore(!config.showMore)}
                   className="w-full flex items-center gap-2 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                 >
@@ -370,15 +435,37 @@ export default function UnifiedInterviewModal({
                         <div className="flex items-center gap-3 mb-3">
                           <FileStack className="w-5 h-5 text-primary-500" />
                           <p className="font-semibold text-sm text-primary-900 dark:text-primary-100">
-                            基于简历面试（可选）
+                            文档联动（可选）
                           </p>
                         </div>
+                        <label className="flex items-center justify-between gap-4 mb-3 p-3 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-primary-100 dark:border-primary-800/40">
+                          <div>
+                            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">基于文档开启模拟</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">关闭后将使用通用场景，不绑定当前文档内容</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => config.setBasedOnDocument(!config.basedOnDocument)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.basedOnDocument ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                          >
+                            <span
+                              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${config.basedOnDocument ? 'translate-x-5' : 'translate-x-1'}`}
+                            />
+                          </button>
+                        </label>
                         <select
                           value={config.resumeId || ''}
-                          onChange={e => config.setResumeId(e.target.value ? parseInt(e.target.value) : undefined)}
+                          onChange={e => {
+                              const nextResumeId = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                            config.setResumeId(nextResumeId);
+                            if (nextResumeId != null) {
+                              config.setBasedOnDocument(true);
+                            }
+                          }}
+                          disabled={!config.basedOnDocument}
                           className="w-full px-4 py-2.5 rounded-lg border border-primary-200 dark:border-primary-700/50
                             bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-200
-                            focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-shadow"
+                            disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-shadow"
                         >
                           <option value="" className="dark:bg-slate-800">不使用简历（通用提问）</option>
                           {config.resumes.map(r => (
@@ -392,13 +479,14 @@ export default function UnifiedInterviewModal({
                       {/* 文字面试 - 题目数 */}
                       {config.mode === 'text' && (
                         <div>
-                          <label className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                          <p className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
                             题目数量
-                          </label>
+                          </p>
                           <div className="flex gap-2">
                             {[6, 8, 10, 12].map(n => (
                               <button
                                 key={n}
+                                type="button"
                                 onClick={() => config.setQuestionCount(n)}
                                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all
                                   ${config.questionCount === n
@@ -429,7 +517,7 @@ export default function UnifiedInterviewModal({
                             max="60"
                             step="5"
                             value={config.plannedDuration}
-                            onChange={e => config.setPlannedDuration(parseInt(e.target.value))}
+                            onChange={e => config.setPlannedDuration(parseInt(e.target.value, 10))}
                             className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer
                               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4
                               [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full

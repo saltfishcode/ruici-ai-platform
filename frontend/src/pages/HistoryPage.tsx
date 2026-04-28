@@ -32,6 +32,19 @@ function getAnalyzeStatusText(status?: string): string {
   return '待分析';
 }
 
+function getAnalysisDifficultyLabel(analysisDifficulty?: string | null): string | null {
+  switch (analysisDifficulty) {
+    case 'EASY':
+      return '轻量分析';
+    case 'NORMAL':
+      return '标准分析';
+    case 'SHARP':
+      return '进阶分析';
+    default:
+      return null;
+  }
+}
+
 function resumesEqual(a: ResumeListItem[], b: ResumeListItem[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
@@ -114,24 +127,26 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
             <FileStack className="w-7 h-7 text-primary-500" />
-            简历管理
+            文档管理
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">管理您的简历，AI 智能分析与评分</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">管理职业文档，查看分析结果并衔接后续情景模拟</p>
         </div>
         <div className="flex gap-3">
           <button
+            type="button"
             onClick={() => navigate(ROUTES.documentUpload)}
             className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Upload className="w-4 h-4" />
-            上传简历
+            上传文档
           </button>
           <button
+            type="button"
             onClick={() => navigate('/simulation')}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            模拟面试
+            情景模拟
           </button>
         </div>
       </div>
@@ -140,12 +155,13 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
       <div className="mb-6">
         <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 max-w-md focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
           <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none">
+            <title>搜索文档</title>
             <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
             <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
           <input
             type="text"
-            placeholder="搜索简历..."
+            placeholder="搜索文档..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 bg-transparent"
@@ -173,8 +189,8 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
           animate={{opacity: 1, scale: 1}}
         >
           <div className="text-6xl mb-6">📄</div>
-          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">暂无简历记录</h3>
-          <p className="text-slate-500 dark:text-slate-400">上传简历开始您的第一次 AI 面试分析</p>
+          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">暂无文档记录</h3>
+          <p className="text-slate-500 dark:text-slate-400">上传文档开始您的第一次 AI 分析</p>
         </motion.div>
       )}
 
@@ -189,7 +205,8 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
           <table className="w-full">
             <thead>
             <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-600">
-              <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">简历名称</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">文档名称</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">分析配置</th>
               <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">上传日期</th>
               <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">分析状态</th>
               <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">AI 评分</th>
@@ -213,6 +230,7 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
                       <div
                         className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center text-primary-500 dark:text-primary-400">
                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                          <title>文档图标</title>
                           <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
                                 stroke="currentColor" strokeWidth="2" strokeLinecap="round"
                                 strokeLinejoin="round"/>
@@ -221,6 +239,22 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
                         </svg>
                       </div>
                       <span className="font-medium text-slate-800 dark:text-white">{resume.filename}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex flex-wrap gap-2">
+                      {resume.profession ? (
+                        <span className="px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium">
+                          {resume.profession}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-slate-400 dark:text-slate-500">未指定方向</span>
+                      )}
+                      {getAnalysisDifficultyLabel(resume.analysisDifficulty) && (
+                        <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-medium">
+                          {getAnalysisDifficultyLabel(resume.analysisDifficulty)}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-5 text-slate-500 dark:text-slate-400">{formatDateOnly(resume.uploadedAt)}</td>
@@ -260,6 +294,7 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
                       <span
                         className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900 text-emerald-600 rounded-full text-sm font-medium">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                          <title>已完成</title>
                           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
                           <polyline points="9,12 11,14 15,10" stroke="currentColor" strokeWidth="2"
                                     strokeLinecap="round" strokeLinejoin="round"/>
@@ -274,6 +309,7 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
                   <td className="px-4">
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={(e) => handleDeleteClick(resume.id, resume.filename, e)}
                         disabled={deletingId === resume.id}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -287,6 +323,7 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
                           />
                         ) : (
                           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                            <title>删除文档</title>
                             <path d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z"
                                   stroke="currentColor" strokeWidth="2" strokeLinecap="round"
                                   strokeLinejoin="round"/>
@@ -298,6 +335,7 @@ export default function HistoryList({onSelectResume}: HistoryListProps) {
                       <svg
                         className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-all"
                         viewBox="0 0 24 24" fill="none">
+                        <title>查看文档详情</title>
                         <polyline points="9,18 15,12 9,6" stroke="currentColor" strokeWidth="2"
                                   strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>

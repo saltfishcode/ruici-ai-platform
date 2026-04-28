@@ -8,6 +8,32 @@ import {simulationApi} from '../api/simulation';
 import ConfirmDialog from './ConfirmDialog';
 import {Calendar, ChevronRight, Download, MessageSquare, Mic, Trash2, TrendingUp} from 'lucide-react';
 
+function getSimulationDirectionLabel(simulationDirection?: string): string | null {
+  switch (simulationDirection) {
+    case 'PROFESSIONAL_QA':
+      return '专业答疑';
+    case 'WORKPLACE_COMMUNICATION':
+      return '职业沟通表达';
+    case 'JOB_INTERVIEW':
+      return '求职面试';
+    default:
+      return null;
+  }
+}
+
+function getSimulationDifficultyLabel(simulationDifficulty?: string): string | null {
+  switch (simulationDifficulty) {
+    case 'EASY':
+      return '轻量';
+    case 'NORMAL':
+      return '标准';
+    case 'SHARP':
+      return '进阶';
+    default:
+      return null;
+  }
+}
+
 interface InterviewPanelProps {
   interviews: InterviewItem[];
   onStartInterview: () => void;
@@ -220,6 +246,10 @@ function InterviewItemCard({
   onExport: () => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
+  const simulationDirectionLabel = getSimulationDirectionLabel(interview.simulationDirection);
+  const simulationDifficultyLabel = getSimulationDifficultyLabel(interview.simulationDifficulty);
+  const mainQuestionCount = interview.questionCount ?? interview.totalQuestions;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -249,15 +279,35 @@ function InterviewItemCard({
           </span>
           <span className="flex items-center gap-1">
             <MessageSquare className="w-4 h-4" />
-            {interview.totalQuestions} 题
+            {mainQuestionCount} 题
           </span>
         </div>
+        {(simulationDirectionLabel || simulationDifficultyLabel || interview.basedOnDocument) && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {simulationDirectionLabel && (
+              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-medium">
+                {simulationDirectionLabel}
+              </span>
+            )}
+            {simulationDifficultyLabel && (
+              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md text-xs font-medium">
+                {simulationDifficultyLabel}
+              </span>
+            )}
+            {interview.basedOnDocument && (
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-medium">
+                基于文档
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 操作按钮 */}
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
       {/* 导出按钮 */}
       <motion.button
+        type="button"
         onClick={(e) => { e.stopPropagation(); onExport(); }}
         disabled={exporting}
         className="px-3 py-2 text-slate-400 hover:text-primary-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-all"
@@ -269,6 +319,7 @@ function InterviewItemCard({
 
         {/* 删除按钮 */}
         <button
+          type="button"
           onClick={onDelete}
           disabled={deleting}
           className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

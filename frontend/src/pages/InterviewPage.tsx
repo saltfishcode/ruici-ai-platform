@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {motion} from 'framer-motion';
 import {simulationApi} from '../api/simulation';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -7,7 +7,7 @@ import InterviewPageHeader from '../components/InterviewPageHeader';
 import type {InterviewQuestion, InterviewSession} from '../types/simulation';
 import type {Difficulty} from '../components/UnifiedInterviewModal';
 import type {CategoryDTO} from '../api/skill';
-import { CUSTOM_SKILL_ID } from '../hooks/useInterviewConfig';
+import { CUSTOM_SKILL_ID, type SimulationDirection } from '../hooks/useInterviewConfig';
 
 interface Message {
   type: 'interviewer' | 'user';
@@ -21,10 +21,13 @@ interface InterviewProps {
   resumeId?: number;
   sessionIdToResume?: string;
   initialConfig?: {
+    simulationDirection?: SimulationDirection;
     questionCount?: number;
     llmProvider?: string;
     skillId?: string;
     difficulty?: Difficulty;
+    simulationDifficulty?: 'EASY' | 'NORMAL' | 'SHARP';
+    basedOnDocument?: boolean;
     customCategories?: CategoryDTO[];
     jdText?: string;
   };
@@ -54,70 +57,11 @@ export default function Interview({
   const llmProvider = initialConfig?.llmProvider ?? 'dashscope';
   const skillId = initialConfig?.skillId ?? 'java-backend';
   const difficulty = initialConfig?.difficulty ?? 'mid';
+  const simulationDirection = initialConfig?.simulationDirection ?? 'JOB_INTERVIEW';
   const customCategories = initialConfig?.customCategories;
   const jdText = initialConfig?.jdText;
 
-  // 自动开始面试（恢复已有会话 或 创建新会话）
-  useEffect(() => {
-    if (!startedRef.current) {
-      startedRef.current = true;
-      if (sessionIdToResume) {
-        resumeExistingSession(sessionIdToResume);
-      } else {
-        startInterview();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const startInterview = async () => {
-    setIsCreating(true);
-    setError('');
-
-    try {
-      const newSession = await simulationApi.createSession({
-        resumeText,
-        questionCount,
-        resumeId,
-        forceCreate: true,
-        llmProvider,
-        skillId,
-        difficulty,
-        customCategories: skillId === CUSTOM_SKILL_ID ? customCategories : undefined,
-        jdText: skillId === CUSTOM_SKILL_ID ? jdText : undefined,
-      });
-
-      initSession(newSession);
-    } catch (err) {
-      setError('创建面试失败，请重试');
-      console.error(err);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const resumeExistingSession = async (sessionId: string) => {
-    setIsCreating(true);
-    setError('');
-
-    try {
-      const existingSession = await simulationApi.getSession(sessionId);
-      initSession(existingSession);
-
-      // 恢复已填写的答案
-      const currentQ = existingSession.questions[existingSession.currentQuestionIndex];
-      if (currentQ?.userAnswer) {
-        setAnswer(currentQ.userAnswer);
-      }
-    } catch (err) {
-      setError('恢复面试失败，请重试');
-      console.error(err);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const initSession = (s: InterviewSession) => {
+  const initSession = useCallback((s: InterviewSession) => {
     setSession(s);
 
     if (s.questions.length > 0) {
@@ -144,7 +88,82 @@ export default function Interview({
       }
       setMessages(restoredMessages);
     }
-  };
+  }, []);
+
+  const startInterview = useCallback(async () => {
+    setIsCreating(true);
+    setError('');
+
+    try {
+      const newSession = await simulationApi.createSession({
+        simulationDirection,
+        resumeText,
+        questionCount,
+        resumeId,
+        basedOnDocument: initialConfig?.basedOnDocument ?? (resumeId != null),
+        forceCreate: true,
+        llmProvider,
+        skillId,
+        difficulty,
+        simulationDifficulty: initialConfig?.simulationDifficulty,
+        customCategories: skillId === CUSTOM_SKILL_ID ? customCategories : undefined,
+        jdText: skillId === CUSTOM_SKILL_ID ? jdText : undefined,
+      });
+
+      initSession(newSession);
+    } catch (err) {
+      setError('创建面试失败，请重试');
+      console.error(err);
+    } finally {
+      setIsCreating(false);
+    }
+  }, [
+    customCategories,
+    difficulty,
+    initialConfig?.basedOnDocument,
+    initialConfig?.simulationDifficulty,
+    initSession,
+    jdText,
+    llmProvider,
+    questionCount,
+    resumeId,
+    resumeText,
+    simulationDirection,
+    skillId,
+  ]);
+
+  const resumeExistingSession = useCallback(async (sessionId: string) => {
+    setIsCreating(true);
+    setError('');
+
+    try {
+      const existingSession = await simulationApi.getSession(sessionId);
+      initSession(existingSession);
+
+      // 恢复已填写的答案
+      const currentQ = existingSession.questions[existingSession.currentQuestionIndex];
+      if (currentQ?.userAnswer) {
+        setAnswer(currentQ.userAnswer);
+      }
+    } catch (err) {
+      setError('恢复面试失败，请重试');
+      console.error(err);
+    } finally {
+      setIsCreating(false);
+    }
+  }, [initSession]);
+
+  // 自动开始面试（恢复已有会话 或 创建新会话）
+  useEffect(() => {
+    if (!startedRef.current) {
+      startedRef.current = true;
+      if (sessionIdToResume) {
+        resumeExistingSession(sessionIdToResume);
+      } else {
+        startInterview();
+      }
+    }
+  }, [resumeExistingSession, sessionIdToResume, startInterview]);
 
   const handleSubmitAnswer = async () => {
     if (!answer.trim() || !session || !currentQuestion) return;
@@ -226,12 +245,14 @@ export default function Interview({
           <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
           <div className="flex gap-3 justify-center">
             <button
+              type="button"
               onClick={startInterview}
               className="px-5 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
             >
               重试
             </button>
             <button
+              type="button"
               onClick={onBack}
               className="px-5 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600"
             >
@@ -252,6 +273,7 @@ export default function Interview({
         subtitle="认真回答每个问题，展示您的实力"
         icon={(
           <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none">
+            <title>语音图标</title>
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

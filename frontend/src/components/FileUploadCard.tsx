@@ -1,4 +1,4 @@
-import {ChangeEvent, DragEvent, useCallback, useState} from 'react';
+import {type ChangeEvent, type DragEvent, type ReactNode, useCallback, useState} from 'react';
 import {AnimatePresence, motion} from 'framer-motion';
 import {AlertCircle, FileText, Loader2, Upload, X} from 'lucide-react';
 
@@ -33,6 +33,8 @@ export interface FileUploadCardProps {
   onUpload: (file: File, name?: string) => void;
   /** 返回回调 */
   onBack?: () => void;
+  /** 额外内容 */
+  extraContent?: ReactNode;
 }
 
 export default function FileUploadCard({
@@ -51,6 +53,7 @@ export default function FileUploadCard({
   onFileSelect,
   onUpload,
   onBack,
+  extraContent,
 }: FileUploadCardProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -122,6 +125,17 @@ export default function FileUploadCard({
         </motion.p>
       </div>
 
+      {extraContent && (
+        <motion.div
+          className="mb-6 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-900/50"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          {extraContent}
+        </motion.div>
+      )}
+
       {/* 上传区域 */}
       <motion.div
           className={`relative bg-white dark:bg-slate-800 rounded-2xl p-12 cursor-pointer transition-all duration-300
@@ -172,6 +186,7 @@ export default function FileUploadCard({
                     <p className="text-sm text-slate-500 dark:text-slate-400">{formatFileSize(selectedFile.size)}</p>
                   </div>
                   <button
+                      type="button"
                       className="w-8 h-8 bg-red-100 dark:bg-red-900/50 text-red-500 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/70 transition-colors flex items-center justify-center"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -204,6 +219,7 @@ export default function FileUploadCard({
                   </p>
                 </div>
                 <motion.button
+                  type="button"
                   className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-8 py-3.5 rounded-xl font-semibold shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transition-all"
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
@@ -227,7 +243,7 @@ export default function FileUploadCard({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{nameLabel}</label>
+          <p className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{nameLabel}</p>
           <input
             type="text"
             value={name}
@@ -259,6 +275,7 @@ export default function FileUploadCard({
       <div className="mt-8 flex gap-4 justify-center">
         {onBack && (
           <motion.button
+            type="button"
             onClick={onBack}
             className="px-6 py-3 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
             whileHover={{ scale: 1.02 }}
@@ -269,6 +286,7 @@ export default function FileUploadCard({
         )}
         {selectedFile && (
           <motion.button
+            type="button"
             onClick={handleUpload}
             disabled={uploading}
             className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"

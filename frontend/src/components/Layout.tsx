@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import {useTheme} from '../hooks/useTheme';
 import {useState} from 'react';
-import UnifiedInterviewModal, {UnifiedInterviewConfig} from './UnifiedInterviewModal';
+import UnifiedInterviewModal, {type UnifiedInterviewConfig} from './UnifiedInterviewModal';
 
 interface NavItem {
   id: string;
@@ -61,12 +61,17 @@ export default function Layout() {
     if (config.mode === 'text') {
       navigate('/simulation/session', {
         state: {
-          documentId: config.resumeId,
+          documentId: config.basedOnDocument ? config.resumeId : undefined,
           interviewConfig: {
+            simulationDirection: config.simulationDirection,
             skillId: config.skillId,
             difficulty: config.difficulty,
+            simulationDifficulty: config.simulationDifficulty,
             questionCount: config.questionCount,
+            basedOnDocument: config.basedOnDocument,
             llmProvider: config.llmProvider,
+            customCategories: config.customCategories,
+            jdText: config.customJdText,
           },
         },
       });
@@ -83,13 +88,13 @@ export default function Layout() {
           skillId: config.skillId,
           difficulty: config.difficulty,
           techEnabled: true,
-          projectEnabled: true,
-          hrEnabled: true,
-          plannedDuration: config.plannedDuration,
-          resumeId: config.resumeId,
-          llmProvider: config.llmProvider,
+            projectEnabled: true,
+            hrEnabled: true,
+            plannedDuration: config.plannedDuration,
+            resumeId: config.basedOnDocument ? config.resumeId : undefined,
+            llmProvider: config.llmProvider,
+          },
         },
-      },
     });
   };
 
@@ -183,6 +188,7 @@ export default function Layout() {
 
         {/* 折叠切换按钮 */}
         <button
+          type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 shadow-sm hover:text-primary-500 transition-colors z-50"
         >
@@ -258,8 +264,9 @@ export default function Layout() {
               </div>
             )}
             
-            <button
-              onClick={toggleTheme}
+        <button
+          type="button"
+          onClick={toggleTheme}
               className={`flex items-center justify-center w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-primary-500 dark:hover:text-primary-400 border border-slate-100 dark:border-slate-700/50 transition-all shadow-sm ${isCollapsed ? 'mx-auto' : ''}`}
               title={theme === 'dark' ? '切换为浅色模式' : '切换为深色模式'}
             >

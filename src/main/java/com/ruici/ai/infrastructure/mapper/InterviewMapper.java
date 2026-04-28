@@ -17,6 +17,17 @@ import java.util.List;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface InterviewMapper {
 
+    @Named("resolveBasedOnDocument")
+    static Boolean resolveBasedOnDocument(InterviewSessionEntity session) {
+        if (session == null) {
+            return null;
+        }
+        if (session.getBasedOnDocument() != null) {
+            return session.getBasedOnDocument();
+        }
+        return session.getResumeId() != null;
+    }
+
     // ========== QuestionEvaluation 映射 ==========
 
     /**
@@ -68,6 +79,14 @@ public interface InterviewMapper {
     @Mapping(target = "status", expression = "java(session.getStatus().toString())")
     @Mapping(target = "evaluateStatus", expression = "java(session.getEvaluateStatus() != null ? session.getEvaluateStatus().name() : null)")
     @Mapping(target = "evaluateError", source = "session.evaluateError")
+    @Mapping(target = "simulationDirection", expression = "java(session.getSimulationDirection() != null ? session.getSimulationDirection() : com.ruici.ai.modules.simulation.model.SimulationDirection.fromScenarioType(session.getScenarioType()).name())")
+    @Mapping(target = "scenarioType", source = "session.scenarioType")
+    @Mapping(target = "simulationDifficulty", expression = "java(session.getSimulationDifficulty() != null ? session.getSimulationDifficulty() : com.ruici.ai.modules.simulation.model.SimulationDifficulty.fromLegacy(session.getDifficulty()).name())")
+    @Mapping(target = "difficulty", source = "session.difficulty")
+    @Mapping(target = "skillId", source = "session.skillId")
+    @Mapping(target = "resumeId", source = "session.resumeId")
+    @Mapping(target = "basedOnDocument", expression = "java(com.ruici.ai.infrastructure.mapper.InterviewMapper.resolveBasedOnDocument(session))")
+    @Mapping(target = "questionCount", source = "session.totalQuestions")
     @Mapping(target = "questions", source = "questions")
     @Mapping(target = "strengths", source = "strengths")
     @Mapping(target = "improvements", source = "improvements")
@@ -113,6 +132,18 @@ public interface InterviewMapper {
         java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
         map.put("id", session.getId());
         map.put("sessionId", session.getSessionId());
+        map.put("simulationDirection", session.getSimulationDirection() != null
+            ? session.getSimulationDirection()
+            : com.ruici.ai.modules.simulation.model.SimulationDirection.fromScenarioType(session.getScenarioType()).name());
+        map.put("scenarioType", session.getScenarioType());
+        map.put("simulationDifficulty", session.getSimulationDifficulty() != null
+            ? session.getSimulationDifficulty()
+            : com.ruici.ai.modules.simulation.model.SimulationDifficulty.fromLegacy(session.getDifficulty()).name());
+        map.put("difficulty", session.getDifficulty());
+        map.put("skillId", session.getSkillId());
+        map.put("resumeId", session.getResumeId());
+        map.put("basedOnDocument", resolveBasedOnDocument(session));
+        map.put("questionCount", session.getTotalQuestions());
         map.put("totalQuestions", session.getTotalQuestions());
         map.put("status", session.getStatus().toString());
         map.put("evaluateStatus", session.getEvaluateStatus() != null ? session.getEvaluateStatus().name() : null);

@@ -1,5 +1,7 @@
 // 简历分析响应类型
 export interface ResumeAnalysisResponse {
+  profession?: string | null;
+  analysisDifficulty?: string | null;
   overallScore: number;
   scoreDetail: ScoreDetail;
   summary: string;
@@ -49,6 +51,8 @@ export type AnalyzeStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 export interface ResumeListItem {
   id: number;
   filename: string;
+  profession?: string | null;
+  analysisDifficulty?: string | null;
   fileSize: number;
   uploadedAt: string;
   accessCount: number;
@@ -68,6 +72,7 @@ export interface ResumeStats {
 
 export interface AnalysisItem {
   id: number;
+  analysisDifficulty?: string | null;
   overallScore: number;
   contentScore: number;
   structureScore: number;
@@ -83,6 +88,14 @@ export interface AnalysisItem {
 export interface InterviewItem {
   id: number;
   sessionId: string;
+  simulationDirection?: string;
+  scenarioType?: string;
+  simulationDifficulty?: string;
+  difficulty?: string;
+  skillId?: string;
+  resumeId?: number | null;
+  basedOnDocument?: boolean;
+  questionCount?: number;
   totalQuestions: number;
   status: string;
   evaluateStatus?: EvaluateStatus;
@@ -114,6 +127,8 @@ export interface AnswerItem {
 export interface ResumeDetail {
   id: number;
   filename: string;
+  profession?: string | null;
+  latestAnalysisDifficulty?: string | null;
   fileSize: number;
   contentType: string;
   storageUrl: string;

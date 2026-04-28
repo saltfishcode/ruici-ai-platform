@@ -47,6 +47,10 @@ public class ResumeEntity {
     // 解析后的文档文本（历史字段名保留为 resumeText）
     @Column(columnDefinition = "TEXT")
     private String resumeText;
+
+    // 文档分析视角对应的职业/岗位/专业方向（2.0 新增字段）
+    @Column(length = 120)
+    private String profession;
     
     // 上传时间
     @Column(name = "uploaded_at", nullable = false)
@@ -137,6 +141,14 @@ public class ResumeEntity {
     
     public void setResumeText(String resumeText) {
         this.resumeText = resumeText;
+    }
+
+    public String getProfession() {
+        return profession;
+    }
+
+    public void setProfession(String profession) {
+        this.profession = profession;
     }
 
     /**

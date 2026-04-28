@@ -19,6 +19,26 @@ interface ResumeDetailPageProps {
 
 type TabType = 'analysis' | 'interview';
 type DetailViewType = 'list' | 'interviewDetail';
+type AnalysisDifficulty = 'EASY' | 'NORMAL' | 'SHARP';
+
+const ANALYSIS_DIFFICULTY_OPTIONS: { value: AnalysisDifficulty; label: string }[] = [
+  { value: 'EASY', label: '轻量分析' },
+  { value: 'NORMAL', label: '标准分析' },
+  { value: 'SHARP', label: '进阶分析' },
+];
+
+function getAnalysisDifficultyLabel(analysisDifficulty?: string | null): string | null {
+  switch (analysisDifficulty) {
+    case 'EASY':
+      return '轻量分析';
+    case 'SHARP':
+      return '进阶分析';
+    case 'NORMAL':
+      return '标准分析';
+    default:
+      return null;
+  }
+}
 
 export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }: ResumeDetailPageProps) {
   const location = useLocation();
@@ -31,6 +51,8 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
   const [selectedInterview, setSelectedInterview] = useState<InterviewDetail | null>(null);
   const [loadingInterview, setLoadingInterview] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyzeProfession, setReanalyzeProfession] = useState('');
+  const [reanalyzeDifficulty, setReanalyzeDifficulty] = useState<AnalysisDifficulty>('NORMAL');
 
   // 静默加载数据（用于轮询）
   const loadResumeDetailSilent = useCallback(async () => {
@@ -58,6 +80,15 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
     loadResumeDetail();
   }, [loadResumeDetail]);
 
+  useEffect(() => {
+    if (!resume) {
+      return;
+    }
+
+    setReanalyzeProfession(resume.profession ?? '');
+    setReanalyzeDifficulty((resume.latestAnalysisDifficulty as AnalysisDifficulty | null) ?? 'NORMAL');
+  }, [resume]);
+
   // 轮询：当分析状态为待处理时，每5秒刷新一次
   // 待处理判断：显式的 PENDING/PROCESSING 状态，或状态未定义且无分析结果
   useEffect(() => {
@@ -80,7 +111,10 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
   const handleReanalyze = async () => {
     try {
       setReanalyzing(true);
-      await documentApi.reanalyze(resumeId);
+      await documentApi.reanalyze(resumeId, {
+        profession: reanalyzeProfession.trim() || undefined,
+        analysisDifficulty: reanalyzeDifficulty,
+      });
       await loadResumeDetailSilent();
     } catch (err) {
       console.error('重新分析失败', err);
@@ -217,12 +251,15 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
     return (
       <div className="text-center py-20">
         <p className="text-red-500 mb-4">加载失败，请返回重试</p>
-        <button onClick={onBack} className="px-6 py-2 bg-primary-500 text-white rounded-lg">返回列表</button>
+        <button type="button" onClick={onBack} className="px-6 py-2 bg-primary-500 text-white rounded-lg">返回列表</button>
       </div>
     );
   }
 
   const latestAnalysis = resume.analyses?.[0];
+  const analysisDifficultyLabel = getAnalysisDifficultyLabel(
+    latestAnalysis?.analysisDifficulty ?? resume.latestAnalysisDifficulty
+  );
   const tabs = [
     { id: 'analysis' as const, label: '简历分析', icon: CheckSquare },
     { id: 'interview' as const, label: '面试记录', icon: MessageSquare, count: resume.interviews?.length || 0 },
@@ -238,6 +275,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
       <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
         <div className="flex items-center gap-4">
             <motion.button
+            type="button"
             onClick={detailView === 'interviewDetail' ? handleBackToInterviewList : onBack}
             className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all shadow-sm"
             whileHover={{ scale: 1.05 }}
@@ -256,12 +294,27 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
                 : `上传于 ${formatDateOnly(resume.uploadedAt)}`
               }
             </p>
+            {detailView !== 'interviewDetail' && (resume.profession || analysisDifficultyLabel) && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {resume.profession && (
+                  <span className="px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium">
+                    {resume.profession}
+                  </span>
+                )}
+                {analysisDifficultyLabel && (
+                  <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-medium">
+                    {analysisDifficultyLabel}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex gap-3">
           {detailView === 'interviewDetail' && selectedInterview && (
             <motion.button
+              type="button"
               onClick={() => handleExportInterviewPdf(selectedInterview.sessionId)}
               disabled={exporting === selectedInterview.sessionId}
               className="px-5 py-2.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 transition-all disabled:opacity-50 flex items-center gap-2"
@@ -274,23 +327,59 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
           )}
           {detailView !== 'interviewDetail' && (
             <motion.button
+              type="button"
               onClick={() => onStartInterview(resumeId)}
               className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium shadow-lg shadow-primary-500/30 hover:shadow-xl transition-all flex items-center gap-2"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
             >
               <Mic className="w-4 h-4" />
-              开始模拟面试
+              开始情景模拟
             </motion.button>
           )}
         </div>
       </div>
+
+      {detailView !== 'interviewDetail' && activeTab === 'analysis' && (
+        <div className="mb-6 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">重新分析方向</p>
+              <input
+                type="text"
+                value={reanalyzeProfession}
+                onChange={(event) => setReanalyzeProfession(event.target.value)}
+                placeholder="例如：Java 后端、产品经理、职业沟通表达"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              />
+            </div>
+            <div className="lg:w-64">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">重新分析力度</p>
+              <select
+                value={reanalyzeDifficulty}
+                onChange={(event) => setReanalyzeDifficulty(event.target.value as AnalysisDifficulty)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              >
+                {ANALYSIS_DIFFICULTY_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 lg:max-w-xs">
+              这里的配置会直接传给后端重新分析接口，用来覆盖当前文档的分析方向与分析力度。
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 标签页切换 - 仅在非面试详情时显示 */}
       {detailView !== 'interviewDetail' && (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 mb-6 inline-flex gap-1">
           {tabs.map((tab) => (
             <motion.button
+              type="button"
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               className={`relative px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-colors
@@ -335,7 +424,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
             >
               {activeTab === 'analysis' ? (
                 <AnalysisPanel
-                  analysis={latestAnalysis}
+                  analysis={latestAnalysis ? { ...latestAnalysis, profession: resume.profession } : latestAnalysis}
                   analyzeStatus={resume.analyzeStatus}
                   analyzeError={resume.analyzeError}
                   onExport={handleExportAnalysisPdf}

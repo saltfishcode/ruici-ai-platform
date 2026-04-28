@@ -7,6 +7,7 @@ import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.infrastructure.redis.InterviewSessionCache;
 import com.ruici.ai.infrastructure.redis.InterviewSessionCache.CachedSession;
+import com.ruici.ai.modules.document.service.ResumePersistenceService;
 import com.ruici.ai.modules.simulation.listener.EvaluateStreamProducer;
 import com.ruici.ai.modules.simulation.model.CreateInterviewRequest;
 import com.ruici.ai.modules.simulation.model.HistoricalQuestion;
@@ -15,6 +16,8 @@ import com.ruici.ai.modules.simulation.model.InterviewQuestionDTO;
 import com.ruici.ai.modules.simulation.model.InterviewReportDTO;
 import com.ruici.ai.modules.simulation.model.InterviewSessionDTO;
 import com.ruici.ai.modules.simulation.model.InterviewSessionEntity;
+import com.ruici.ai.modules.simulation.model.SimulationDirection;
+import com.ruici.ai.modules.simulation.model.SimulationDifficulty;
 import com.ruici.ai.modules.simulation.model.SimulationScenarioType;
 import com.ruici.ai.modules.simulation.model.SubmitAnswerRequest;
 import com.ruici.ai.modules.simulation.model.SubmitAnswerResponse;
@@ -47,6 +50,7 @@ public class InterviewSessionService {
     private final ObjectMapper objectMapper;
     private final EvaluateStreamProducer evaluateStreamProducer;
     private final LlmProviderRegistry llmProviderRegistry;
+    private final ResumePersistenceService resumePersistenceService;
 
     /**
      * 创建新的面试会话
@@ -54,33 +58,58 @@ public class InterviewSessionService {
      * 前端应该先调用 findUnfinishedSession 检查，或者使用 forceCreate 参数强制创建
      */
     public InterviewSessionDTO createSession(CreateInterviewRequest request) {
-        SimulationScenarioType scenarioType = SimulationScenarioType.fromNullable(request.scenarioType());
+        SimulationDirection simulationDirection = request.simulationDirection() != null
+            ? request.simulationDirection()
+            : SimulationDirection.fromScenarioType(request.scenarioType());
+        SimulationScenarioType scenarioType = SimulationScenarioType.fromNullable(simulationDirection.scenarioTypeId());
+        SimulationDifficulty simulationDifficulty = request.simulationDifficulty() != null
+            ? request.simulationDifficulty()
+            : SimulationDifficulty.fromLegacy(request.difficulty());
         String skillId = request.skillId() != null ? request.skillId() : ScenarioDefaults.SKILL_ID;
-        validateResumeTextUsable(request.resumeText());
+        boolean basedOnDocument = request.basedOnDocument() != null
+            ? request.basedOnDocument()
+            : request.resumeId() != null || (request.resumeText() != null && !request.resumeText().isBlank());
+        Long effectiveResumeId = basedOnDocument ? request.resumeId() : null;
+        String effectiveResumeText = basedOnDocument
+            ? resolveResumeText(request.resumeId(), request.resumeText())
+            : null;
+        int effectiveQuestionCount = request.questionCount() != null
+            ? request.questionCount()
+            : ScenarioDefaults.QUESTION_COUNT;
+        if (basedOnDocument && (effectiveResumeText == null || effectiveResumeText.isBlank())) {
+            throw new BusinessException(
+                ErrorCode.BAD_REQUEST,
+                "基于文档的情景模拟必须提供可用的文档内容"
+            );
+        }
+        validateResumeTextUsable(effectiveResumeText);
 
         // 如果指定了resumeId且未强制创建，检查是否有未完成的会话
-        if (request.resumeId() != null && !Boolean.TRUE.equals(request.forceCreate())) {
+        if (effectiveResumeId != null && !Boolean.TRUE.equals(request.forceCreate())) {
             Optional<InterviewSessionDTO> unfinishedOpt = findUnfinishedSession(
-                request.resumeId(),
+                effectiveResumeId,
                 scenarioType.id(),
                 skillId
             );
             if (unfinishedOpt.isPresent()) {
                 log.info("检测到未完成的面试会话，返回现有会话: resumeId={}, sessionId={}",
-                    request.resumeId(), unfinishedOpt.get().sessionId());
+                    effectiveResumeId, unfinishedOpt.get().sessionId());
                 return unfinishedOpt.get();
             }
         }
 
         String sessionId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-        String difficulty = request.difficulty() != null ? request.difficulty() : ScenarioDefaults.DIFFICULTY;
+        String difficulty = request.difficulty() != null
+            ? request.difficulty()
+            : simulationDifficulty.toLegacyDifficulty();
 
-        log.info("创建新面试会话: {}, scenarioType={}, skill={}, difficulty={}, questionCount={}, resumeId={}",
-            sessionId, scenarioType.id(), skillId, difficulty, request.questionCount(), request.resumeId());
+        log.info("创建新面试会话: {}, simulationDirection={}, scenarioType={}, skill={}, difficulty={}, simulationDifficulty={}, questionCount={}, resumeId={}, basedOnDocument={}",
+            sessionId, simulationDirection.name(), scenarioType.id(), skillId, difficulty, simulationDifficulty.name(),
+            effectiveQuestionCount, effectiveResumeId, basedOnDocument);
 
         // 获取历史问题（通用模式按 skillId 查询，有简历时按 resumeId + skillId 精确匹配）
         List<HistoricalQuestion> historicalQuestions =
-            persistenceService.getHistoricalQuestions(scenarioType.id(), skillId, request.resumeId());
+            persistenceService.getHistoricalQuestions(scenarioType.id(), skillId, effectiveResumeId);
 
         // 获取 LLM 客户端
         ChatClient chatClient = llmProviderRegistry.getChatClientOrDefault(request.llmProvider());
@@ -91,8 +120,8 @@ public class InterviewSessionService {
             scenarioType,
             skillId,
             difficulty,
-            request.resumeText(),
-            request.questionCount(),
+            effectiveResumeText,
+            effectiveQuestionCount,
             historicalQuestions,
             request.customCategories(),
             request.jdText()
@@ -102,10 +131,14 @@ public class InterviewSessionService {
         int totalMainQuestions = countMainQuestions(questions);
         sessionCache.saveSession(
             sessionId,
+            simulationDirection.name(),
             scenarioType.id(),
             skillId,
-            request.resumeText() != null ? request.resumeText() : "",
-            request.resumeId(),
+            difficulty,
+            simulationDifficulty.name(),
+            effectiveResumeText != null ? effectiveResumeText : "",
+            effectiveResumeId,
+            basedOnDocument,
             questions,
             0,
             SessionStatus.CREATED
@@ -113,8 +146,19 @@ public class InterviewSessionService {
 
         // 保存到数据库
         try {
-            persistenceService.saveSession(sessionId, scenarioType.id(), request.resumeId(),
-                totalMainQuestions, questions, request.llmProvider(), skillId, difficulty);
+            persistenceService.saveSession(
+                sessionId,
+                scenarioType.id(),
+                effectiveResumeId,
+                totalMainQuestions,
+                questions,
+                request.llmProvider(),
+                skillId,
+                difficulty,
+                simulationDirection.name(),
+                simulationDifficulty.name(),
+                basedOnDocument
+            );
         } catch (Exception e) {
             sessionCache.deleteSession(sessionId);
             log.error("保存情景模拟会话到数据库失败，已回滚缓存: sessionId={}", sessionId, e);
@@ -123,8 +167,13 @@ public class InterviewSessionService {
 
         return new InterviewSessionDTO(
             sessionId,
+            simulationDirection.name(),
             scenarioType.id(),
-            request.resumeText() != null ? request.resumeText() : "",
+            simulationDifficulty.name(),
+            effectiveResumeText != null ? effectiveResumeText : "",
+            effectiveResumeId,
+            basedOnDocument,
+            skillId,
             totalMainQuestions,
             0,
             questions,
@@ -265,10 +314,14 @@ public class InterviewSessionService {
             String resumeText = entity.getResume() != null ? entity.getResume().getResumeText() : "";
             sessionCache.saveSession(
                 entity.getSessionId(),
+                entity.getSimulationDirection(),
                 SimulationScenarioType.fromNullable(entity.getScenarioType()).id(),
                 entity.getSkillId(),
+                entity.getDifficulty(),
+                entity.getSimulationDifficulty(),
                 resumeText,
                 documentId,
+                entity.getBasedOnDocument(),
                 questions,
                 entity.getCurrentQuestionIndex(),
                 status
@@ -452,6 +505,24 @@ public class InterviewSessionService {
         }
     }
 
+    private String resolveResumeText(Long resumeId, String requestedResumeText) {
+        if (requestedResumeText != null && !requestedResumeText.isBlank()) {
+            return requestedResumeText;
+        }
+
+        if (resumeId == null) {
+            return null;
+        }
+
+        return resumePersistenceService.findById(resumeId)
+            .map(resume -> resume.getResumeText())
+            .filter(text -> text != null && !text.isBlank())
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.BAD_REQUEST,
+                "当前文档缺少可用正文，请重新分析文档后再开启基于文档的情景模拟"
+            ));
+    }
+
     /**
      * 暂存答案（不进入下一题）
      */
@@ -592,9 +663,18 @@ public class InterviewSessionService {
         List<InterviewQuestionDTO> questions = session.getQuestions(objectMapper);
         return new InterviewSessionDTO(
             session.getSessionId(),
+            session.getSimulationDirection() != null
+                ? session.getSimulationDirection()
+                : SimulationDirection.fromScenarioType(session.getScenarioType()).name(),
             SimulationScenarioType.fromNullable(session.getScenarioType()).id(),
+            session.getSimulationDifficulty() != null
+                ? session.getSimulationDifficulty()
+                : SimulationDifficulty.fromLegacy(session.getDifficulty()).name(),
             session.getResumeText(),
-            questions.size(),
+            session.getResumeId(),
+            session.getBasedOnDocument() != null ? session.getBasedOnDocument() : session.getResumeId() != null,
+            session.getSkillId(),
+            countMainQuestions(questions),
             session.getCurrentIndex(),
             questions,
             session.getStatus()

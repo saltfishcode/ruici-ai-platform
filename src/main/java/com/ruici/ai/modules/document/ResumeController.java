@@ -4,6 +4,7 @@ import com.ruici.ai.common.annotation.RateLimit;
 import com.ruici.ai.common.result.Result;
 import com.ruici.ai.modules.document.model.ResumeDetailDTO;
 import com.ruici.ai.modules.document.model.ResumeListItemDTO;
+import com.ruici.ai.modules.document.model.AnalysisDifficulty;
 import com.ruici.ai.modules.document.service.ResumeDeleteService;
 import com.ruici.ai.modules.document.service.ResumeHistoryService;
 import com.ruici.ai.modules.document.service.ResumeUploadService;
@@ -49,8 +50,12 @@ public class ResumeController {
     @PostMapping(value = "/api/documents/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 5)
     @RateLimit(dimension = RateLimit.Dimension.IP, count = 5)
-    public Result<Map<String, Object>> uploadAndAnalyze(@RequestParam("file") MultipartFile file) {
-        Map<String, Object> result = uploadService.uploadAndAnalyze(file);
+    public Result<Map<String, Object>> uploadAndAnalyze(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam(value = "profession", required = false) String profession,
+        @RequestParam(value = "analysisDifficulty", required = false) AnalysisDifficulty analysisDifficulty
+    ) {
+        Map<String, Object> result = uploadService.uploadAndAnalyze(file, profession, analysisDifficulty);
         boolean isDuplicate = (Boolean) result.get("duplicate");
         if (isDuplicate) {
             return Result.success("检测到相同文档，已返回历史分析结果", result);
@@ -110,8 +115,12 @@ public class ResumeController {
     @PostMapping("/api/documents/{id}/reanalyze")
     @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 2)
     @RateLimit(dimension = RateLimit.Dimension.IP, count = 2)
-    public Result<Void> reanalyze(@PathVariable Long id) {
-        uploadService.reanalyze(id);
+    public Result<Void> reanalyze(
+        @PathVariable Long id,
+        @RequestParam(value = "profession", required = false) String profession,
+        @RequestParam(value = "analysisDifficulty", required = false) AnalysisDifficulty analysisDifficulty
+    ) {
+        uploadService.reanalyze(id, profession, analysisDifficulty);
         return Result.success(null);
     }
 

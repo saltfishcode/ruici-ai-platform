@@ -15,10 +15,12 @@
 ## 当前兼容约定
 
 - `simulation` 模块仍保留部分 `Interview*` 类名，但对外语义已经按“多场景情景模拟”理解。
+- 当前前端 2.0 主流程已经显式透传 `simulationDirection`、`simulationDifficulty`、`questionCount`、`basedOnDocument` 等统一字段。
 - `voice` 模块同时支持 `/api/voice` 与 `/api/voice-interview` 两套入口，推荐新前端优先使用 `/api/voice`。
 - `schedule` 模块同时支持 `/api/schedule` 与 `/api/simulation-schedule` 两套入口，推荐新前端优先使用 `/api/schedule`。
 - `schedule` 结构化返回体当前仍复用历史字段名 `interviewTime` / `interviewType`，这是兼容层，不代表只服务于面试场景。
 - `documents` 模块对外已经统一走 `/api/documents`，但内部类名仍保留 `Resume*` 历史命名。
+- `documents` 模块当前前端已显式使用 `profession` 与 `analysisDifficulty` 两个 2.0 字段做上传与重分析。
 
 ## 返回约定
 
