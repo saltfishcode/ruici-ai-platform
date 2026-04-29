@@ -10,6 +10,8 @@ RUN mvn -B -DskipTests package
 
 FROM ${RUNTIME_IMAGE}
 WORKDIR /app
+ENV TZ=Asia/Shanghai
+ENV JAVA_TOOL_OPTIONS="-Duser.timezone=Asia/Shanghai"
 
 COPY --from=builder /workspace/target/ruici-ai-platform-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080

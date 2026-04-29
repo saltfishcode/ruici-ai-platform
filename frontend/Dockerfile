@@ -6,6 +6,9 @@ ARG BUILDER_IMAGE=node:20-alpine
 ARG RUNTIME_IMAGE=nginx:alpine
 
 FROM ${BUILDER_IMAGE} AS builder
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+ARG FRONTEND_NODE_OPTIONS=--max-old-space-size=1024
+ENV NODE_OPTIONS=${FRONTEND_NODE_OPTIONS}
 WORKDIR /app
 
 # 1. 优先复制依赖定义文件
@@ -17,7 +20,15 @@ COPY package.json pnpm-lock.yaml ./
 # npm install -g pnpm: 全局安装 pnpm 包管理器
 # pnpm install: 安装所有依赖（包括 devDependencies，构建需要 TypeScript、Vite 等）
 # 注意：不使用 --prod 标志，因为构建阶段需要完整的开发环境
-RUN npm install -g pnpm && pnpm install
+RUN npm config set registry "${NPM_REGISTRY}" \
+  && npm install -g pnpm \
+  && pnpm config set registry "${NPM_REGISTRY}" \
+  && pnpm config set fetch-retries 5 \
+  && pnpm config set fetch-retry-factor 2 \
+  && pnpm config set fetch-retry-mintimeout 10000 \
+  && pnpm config set fetch-retry-maxtimeout 120000 \
+  && pnpm config set network-timeout 120000 \
+  && pnpm install
 
 # 3. 复制源代码并构建
 COPY . .

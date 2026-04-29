@@ -30,6 +30,8 @@ spring:
     import: optional:file:.env[.properties],optional:classpath:voice-interview-opening.yml
   application:
     name: Ruici-AI-Platform
+  jackson:
+    time-zone: Asia/Shanghai
 
   # 启用虚拟线程 (Java 21+)
   # 显著提升 I/O 密集型场景的并发能力，特别适合 AI 调用和 SSE 长连接
@@ -188,7 +190,7 @@ app:
   # 新手注意：
   # - endpoint 指向对象存储服务
   # - bucket 必须提前存在，应用不会自动创建 bucket
-  # - 根目录 docker-compose.yml 会自动创建 bucket；docker-compose.dev.yml 仍需手动创建
+  # - docker-compose.dev.yml 与根目录 docker-compose.yml 都会通过初始化容器自动创建 bucket
   storage:
     endpoint: ${APP_STORAGE_ENDPOINT:http://localhost:9000}
     access-key: ${APP_STORAGE_ACCESS_KEY:minioadmin}

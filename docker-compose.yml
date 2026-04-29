@@ -65,32 +65,31 @@ services:
       retries: 5
 
   # =========================================
-  # 3. RustFS 对象存储服务
+  # 3. MinIO 对象存储服务
   # -----------------------------------------
   # 作用：
   #   - 存储非结构化数据：用户上传的简历(PDF/Word)、头像、知识库文档等
   #
   # 教程知识点：
-  #   - RustFS 兼容 AWS S3 协议，这意味着代码中使用 S3 SDK 即可无缝切换到云厂商的对象存储。
+  #   - MinIO 兼容 AWS S3 协议，这意味着代码中使用 S3 SDK 即可无缝切换到云厂商的对象存储。
   #   - 端口说明：
   #     - 9000: API 端口，代码通过此端口上传/下载文件
   #     - 9001: 控制台端口，浏览器访问此端口管理文件
   # =========================================
-  rustfs:
-    image: ${RUSTFS_IMAGE:-rustfs/rustfs:latest}
-    container_name: ruici-rustfs
-    command: ["/data"]
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio}
+    container_name: ruici-minio
+    command: ["server", "/data", "--console-address", ":9001"]
     env_file:
       - .env
     environment:
-      RUSTFS_ACCESS_KEY: ${APP_STORAGE_ACCESS_KEY:-rustfsadmin}
-      RUSTFS_SECRET_KEY: ${APP_STORAGE_SECRET_KEY:-rustfsadmin}
-      RUSTFS_CONSOLE_ENABLE: "true"
+      MINIO_ROOT_USER: ${APP_STORAGE_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${APP_STORAGE_SECRET_KEY:-minioadmin}
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - rustfs_data:/data
+      - minio_data:/data
 
   # =========================================
   # 4. 对象存储初始化任务 (Init Container Pattern)
@@ -108,11 +107,11 @@ services:
     env_file:
       - .env
     depends_on:
-      - rustfs
+      - minio
     entrypoint: >
       /bin/sh -c "
       # 1. 配置 S3 客户端别名连接对象存储
-      /usr/bin/mc alias set mys3 http://rustfs:9000 ${APP_STORAGE_ACCESS_KEY:-rustfsadmin} ${APP_STORAGE_SECRET_KEY:-rustfsadmin};
+      /usr/bin/mc alias set mys3 http://minio:9000 ${APP_STORAGE_ACCESS_KEY:-minioadmin} ${APP_STORAGE_SECRET_KEY:-minioadmin};
       # 2. 创建名为 ruici-ai-platform 的存储桶
       /usr/bin/mc mb --ignore-existing mys3/${APP_STORAGE_BUCKET:-ruici-ai-platform};
       # 3. 设置该存储桶为公共读权限（方便前端直接访问图片等资源）
@@ -141,7 +140,7 @@ services:
     depends_on:
       - postgres
       - redis
-      - rustfs
+      - minio
     volumes:
       - ./.env:/app/.env:ro
     ports:
@@ -160,6 +159,8 @@ services:
       args:
         BUILDER_IMAGE: ${FRONTEND_BUILDER_IMAGE:-node:20-alpine}
         RUNTIME_IMAGE: ${FRONTEND_RUNTIME_IMAGE:-nginx:alpine}
+        NPM_REGISTRY: ${FRONTEND_NPM_REGISTRY:-https://registry.npmjs.org/}
+        FRONTEND_NODE_OPTIONS: ${FRONTEND_NODE_OPTIONS:---max-old-space-size=512}
     container_name: ruici-frontend
     depends_on:
       - app
@@ -175,4 +176,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  rustfs_data:
+  minio_data:

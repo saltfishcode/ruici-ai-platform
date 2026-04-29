@@ -58,7 +58,7 @@
 | Java | 21 | 开发语言，启用虚拟线程 |
 | Spring AI | 2.0.0-M4 | OpenAI-compatible 集成与向量能力 |
 | PostgreSQL + pgvector | 16+ | 关系数据库与向量检索 |
-| Redis + Redisson | 7+ / 4.0.0 | 缓存、限流、Redis Stream |
+| Redis + Redisson | 6.2.14 / 4.0.0 | 缓存、限流、Redis Stream |
 | Apache Tika | 2.9.2 | 文档解析 |
 | iText 8 | 8.0.5 | PDF 导出 |
 | MapStruct | 1.6.3 | 对象映射 |
@@ -81,7 +81,7 @@ React 18 + TypeScript + Vite + TailwindCSS 4，位于 `frontend/` 目录。
 
 - 支持基于 Skill 的题目/话术生成、多轮追问、评估与报告导出。
 - 当前默认能力仍以求职面试为主，但平台目标是承载更多场景模板。
-- 三个默认专项可通过 `知识库 + prompts + skills` 继续扩展。
+- 三个默认专项可通过内置的 `知识库 + prompts + skills` 继续扩展。
 
 ### 3. 知识库问答
 
@@ -148,14 +148,14 @@ ruici-ai-platform/
 | JDK | 21+ | 是 | 后端运行环境 |
 | Maven | 3.8.8+ | 是 | 后端构建工具 |
 | Node.js | 18+ | 是 | 前端开发环境 |
-| Docker | 最新版 | 推荐 | 本地启动 PostgreSQL / Redis / MinIO |
+| Docker | 最新版 | 推荐 | 本地启动 PostgreSQL / Redis / RustFS / MinIO |
 
 在真正启动前，先记住 4 个最容易混淆的初始化职责：
 
 - **API Key**：由你自己在 `.env` 或环境变量里配置。
 - **数据库 `ruici_ai_platform`**：`docker compose` 会自动创建；手动安装 PostgreSQL 时需要自己创建。
 - **数据表**：由 `spring.jpa.hibernate.ddl-auto=update` 在开发环境自动补齐。
-- **对象存储 bucket**：完整 `docker-compose.yml` 会自动创建；`docker-compose.dev.yml` 需要你手动创建 `ruici-ai-platform`。
+- **对象存储 bucket**：`docker-compose.dev.yml` 与完整 `docker-compose.yml` 都会自动创建默认 bucket `ruici-ai-platform`。
 
 ### 2. 配置环境变量
 
@@ -237,7 +237,7 @@ docker compose -f docker-compose.dev.yml up -d
 
 ```sql
 CREATE DATABASE ruici_ai_platform;
-\c ruici_ai_platform
+
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
@@ -251,8 +251,8 @@ CREATE EXTENSION IF NOT EXISTS vector;
 如果你使用的是 `docker-compose.dev.yml`：
 
 - 访问 `http://localhost:9001`
-- 登录对象存储控制台
-- **手动创建** bucket：`ruici-ai-platform`
+- 登录对象存储控制台确认对象存储服务已启动
+- `docker-compose.dev.yml` 默认会自动创建 bucket：`ruici-ai-platform`
 
 如果你使用的是根目录完整编排 `docker-compose.yml`，项目里的 `createbuckets` 初始化容器会自动创建这个 bucket。
 
@@ -305,9 +305,25 @@ pnpm dev
 
 - PostgreSQL + pgvector
 - Redis
-- MinIO
+- MinIO（完整编排 / ECS）
+- RustFS（开发编排）
 - Spring Boot 后端
 - React 前端
+
+### Compose 文件作用与异同
+
+| 文件 | 主要用途 | 包含服务 | 对象存储 | 网络模式 | 端口暴露方式 |
+| --- | --- | --- | --- | --- | --- |
+| `docker-compose.dev.yml` | 本地开发（只起依赖） | `postgres`、`redis`、`rustfs`、`createbuckets` | RustFS | bridge | `ports` 显式映射（5432/6379/9000/9001） |
+| `docker-compose.yml` | 标准环境一体化部署 | `postgres`、`redis`、`minio`、`createbuckets`、`app`、`frontend` | MinIO | bridge | `ports` 显式映射（80/8080/5432/6379/9000/9001） |
+| `docker-compose.ecs.yml` | ECS 老环境兼容部署 | `postgres`、`redis`、`minio`、`createbuckets`、`app`、`frontend` | MinIO | `network_mode: host` | 走宿主机端口（不依赖 `ports` 映射） |
+
+选择建议：
+
+- 仅在本机调试后端（`mvn spring-boot:run`）时，用 `docker-compose.dev.yml`。
+- 需要本地一键起完整前后端时，用 `docker-compose.yml`。
+- 当前阿里云 ECS 老环境（bridge 异常场景）优先用 `docker-compose.ecs.yml`。
+- 三套编排都会通过 `createbuckets` 自动创建 `APP_STORAGE_BUCKET`（默认 `ruici-ai-platform`）。
 
 启动方式：
 
