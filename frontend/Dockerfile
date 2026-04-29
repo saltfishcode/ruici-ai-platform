@@ -2,7 +2,10 @@
 # 第一阶段：构建环境 (Builder Stage)
 # 作用：使用 Node.js 环境来安装依赖并编译前端代码
 # ==============================================================================
-FROM node:20-alpine AS builder
+ARG BUILDER_IMAGE=node:20-alpine
+ARG RUNTIME_IMAGE=nginx:alpine
+
+FROM ${BUILDER_IMAGE} AS builder
 WORKDIR /app
 
 # 1. 优先复制依赖定义文件
@@ -26,7 +29,7 @@ RUN pnpm build
 # 作用：使用 Nginx 来托管构建好的静态文件 (HTML/CSS/JS)
 # 区别：后端运行需要 JRE，前端运行只需要一个 Web 服务器（如 Nginx）
 # ==============================================================================
-FROM nginx:alpine
+FROM ${RUNTIME_IMAGE}
 
 # 从第一阶段 (builder) 复制构建产物 (dist 目录) 到 Nginx 的默认服务目录
 COPY --from=builder /app/dist /usr/share/nginx/html

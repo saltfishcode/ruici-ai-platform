@@ -1,3 +1,5 @@
+version: "2.1"
+
 services:
   # =========================================
   # 1. PostgreSQL 数据库服务
@@ -12,7 +14,7 @@ services:
   # =========================================
   postgres:
     # 使用带有 pgvector 插件的 PostgreSQL 16 镜像
-    image: pgvector/pgvector:pg16
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector:pg16}
     container_name: ruici-postgres
     env_file:
       - .env
@@ -47,7 +49,7 @@ services:
   #   - 在轻量级架构中，Redis Stream 是 Kafka/RabbitMQ 的优秀替代方案，运维成本更低。
   # =========================================
   redis:
-    image: redis:6.2.14
+    image: ${REDIS_IMAGE:-redis:6.2.14}
     container_name: ruici-redis
     env_file:
       - .env
@@ -75,7 +77,7 @@ services:
   #     - 9001: 控制台端口，浏览器访问此端口管理文件
   # =========================================
   rustfs:
-    image: rustfs/rustfs:latest
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:latest}
     container_name: ruici-rustfs
     command: ["/data"]
     env_file:
@@ -89,11 +91,6 @@ services:
       - "9001:9001"
     volumes:
       - rustfs_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "timeout 3 sh -c 'cat < /dev/null > /dev/tcp/localhost/9000' || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
 
   # =========================================
   # 4. 对象存储初始化任务 (Init Container Pattern)
@@ -107,12 +104,11 @@ services:
   #   - 解决了"谁来创建 Bucket"的问题，实现了基础设施的自动化配置，无需手动操作。
   # =========================================
   createbuckets:
-    image: minio/mc
+    image: ${MINIO_MC_IMAGE:-minio/mc}
     env_file:
       - .env
     depends_on:
-      rustfs:
-        condition: service_healthy # 必须等待对象存储服务健康（不仅仅是启动）
+      - rustfs
     entrypoint: >
       /bin/sh -c "
       # 1. 配置 S3 客户端别名连接对象存储
@@ -135,19 +131,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        BUILDER_IMAGE: ${BACKEND_BUILDER_IMAGE:-maven:3.9.11-eclipse-temurin-21}
+        RUNTIME_IMAGE: ${BACKEND_RUNTIME_IMAGE:-eclipse-temurin:21-jre}
     container_name: ruici-app
     env_file:
       - .env
     # 依赖管理：确保基础设施准备好后再启动后端
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rustfs:
-        condition: service_healthy
-      createbuckets:
-        condition: service_completed_successfully # 等待初始化任务完成
+      - postgres
+      - redis
+      - rustfs
     volumes:
       - ./.env:/app/.env:ro
     ports:
@@ -161,7 +155,11 @@ services:
   #   - 反向代理 API 请求（通常在 Nginx 配置中处理）
   # =========================================
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        BUILDER_IMAGE: ${FRONTEND_BUILDER_IMAGE:-node:20-alpine}
+        RUNTIME_IMAGE: ${FRONTEND_RUNTIME_IMAGE:-nginx:alpine}
     container_name: ruici-frontend
     depends_on:
       - app

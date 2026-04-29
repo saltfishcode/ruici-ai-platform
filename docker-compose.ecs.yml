@@ -1,0 +1,104 @@
+version: "2.1"
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector:pg16}
+    container_name: ruici-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-302304}
+      POSTGRES_DB: ${POSTGRES_DB:-ruici_ai_platform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:6.2.14}
+    container_name: ruici-redis
+    env_file:
+      - .env
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-302304}"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-302304} ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  rustfs:
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:latest}
+    container_name: ruici-rustfs
+    command: ["/data"]
+    env_file:
+      - .env
+    environment:
+      RUSTFS_ACCESS_KEY: ${APP_STORAGE_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${APP_STORAGE_SECRET_KEY:-rustfsadmin}
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs_data:/data
+
+  createbuckets:
+    image: ${MINIO_MC_IMAGE:-minio/mc}
+    env_file:
+      - .env
+    depends_on:
+      - rustfs
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set mys3 http://rustfs:9000 ${APP_STORAGE_ACCESS_KEY:-rustfsadmin} ${APP_STORAGE_SECRET_KEY:-rustfsadmin};
+      /usr/bin/mc mb --ignore-existing mys3/${APP_STORAGE_BUCKET:-ruici-ai-platform};
+      /usr/bin/mc anonymous set public mys3/${APP_STORAGE_BUCKET:-ruici-ai-platform};
+      exit 0;
+      "
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILDER_IMAGE: ${BACKEND_BUILDER_IMAGE:-maven:3.9.11-eclipse-temurin-21}
+        RUNTIME_IMAGE: ${BACKEND_RUNTIME_IMAGE:-eclipse-temurin:21-jre}
+    container_name: ruici-app
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+      - rustfs
+    volumes:
+      - ./.env:/app/.env:ro
+    network_mode: host
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BUILDER_IMAGE: ${FRONTEND_BUILDER_IMAGE:-node:20-alpine}
+        RUNTIME_IMAGE: ${FRONTEND_RUNTIME_IMAGE:-nginx:alpine}
+    container_name: ruici-frontend
+    depends_on:
+      - app
+    volumes:
+      - ./frontend/nginx.ecs.conf:/etc/nginx/conf.d/default.conf:ro
+    network_mode: host
+
+volumes:
+  postgres_data:
+  redis_data:
+  rustfs_data:
