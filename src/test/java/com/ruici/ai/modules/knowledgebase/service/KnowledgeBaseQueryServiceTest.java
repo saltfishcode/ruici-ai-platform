@@ -1,5 +1,6 @@
 package com.ruici.ai.modules.knowledgebase.service;
 
+import com.ruici.ai.common.ai.EmbeddingProviderRegistry;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.ai.OpenAiCompatibleGatewayClient;
 import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -39,6 +41,9 @@ class KnowledgeBaseQueryServiceTest {
 
     @Mock
     private LlmProviderRegistry llmProviderRegistry;
+
+    @Mock
+    private EmbeddingProviderRegistry embeddingProviderRegistry;
 
     @Mock
     private OpenAiCompatibleGatewayClient gatewayClient;
@@ -57,6 +62,7 @@ class KnowledgeBaseQueryServiceTest {
         properties.setLlmProvider("third-party");
         return new KnowledgeBaseQueryService(
             llmProviderRegistry,
+            embeddingProviderRegistry,
             gatewayClient,
             vectorService,
             listService,
@@ -80,6 +86,20 @@ class KnowledgeBaseQueryServiceTest {
         );
     }
 
+    private AiRuntimeConfigSnapshot embeddingSnapshot() {
+        return new AiRuntimeConfigSnapshot(
+            "AI_EMBEDDING_MODEL",
+            AiRuntimeDomain.EMBEDDING,
+            AiRuntimeScene.KNOWLEDGEBASE,
+            "dashscope",
+            "text-embedding-v3",
+            null,
+            7L,
+            AiRuntimeConfigSource.DB_RUNTIME_CONFIG,
+            false
+        );
+    }
+
     private void stubRuntimeSnapshot(AiRuntimeConfigSnapshot runtimeSnapshot) {
         given(llmProviderRegistry.resolveChatSnapshot(
             eq("third-party"),
@@ -90,6 +110,11 @@ class KnowledgeBaseQueryServiceTest {
             eq("default"),
             eq(false)
         )).willReturn(runtimeSnapshot);
+    }
+
+    private void stubEmbeddingSnapshot(AiRuntimeConfigSnapshot runtimeSnapshot) {
+        given(embeddingProviderRegistry.resolveEmbeddingSnapshot(AiRuntimeScene.KNOWLEDGEBASE))
+            .willReturn(runtimeSnapshot);
     }
 
     @Test
@@ -159,10 +184,12 @@ class KnowledgeBaseQueryServiceTest {
         void shouldNormalizeNoResultLikeGatewayStreamToFixedResponse() throws Exception {
             KnowledgeBaseQueryService service = createService();
             AiRuntimeConfigSnapshot runtimeSnapshot = runtimeSnapshot();
+            AiRuntimeConfigSnapshot embeddingSnapshot = embeddingSnapshot();
 
             stubRuntimeSnapshot(runtimeSnapshot);
+            stubEmbeddingSnapshot(embeddingSnapshot);
             given(gatewayClient.supports("third-party")).willReturn(true);
-            given(vectorService.similaritySearch(anyString(), eq(List.of(10L)), anyInt(), anyDouble()))
+            given(vectorService.similaritySearch(anyString(), eq(List.of(10L)), anyInt(), anyDouble(), any()))
                 .willReturn(List.of(new Document("命中的知识片段")));
             given(gatewayClient.streamText(eq(runtimeSnapshot), anyString(), anyString()))
                 .willReturn(Flux.just("没有找到相关信息", "，请换一个问题"));
@@ -173,7 +200,7 @@ class KnowledgeBaseQueryServiceTest {
 
             assertThat(chunks).containsExactly("抱歉，在选定的知识库中未检索到相关信息。请换一个更具体的关键词或补充上下文后再试。");
             verify(countService).updateQuestionCounts(List.of(10L));
-            verify(vectorService).similaritySearch("岗位要求是什么？", List.of(10L), 12, 0.28);
+            verify(vectorService).similaritySearch("岗位要求是什么？", List.of(10L), 12, 0.28, embeddingSnapshot);
             verify(gatewayClient).streamText(eq(runtimeSnapshot), anyString(), anyString());
         }
     }

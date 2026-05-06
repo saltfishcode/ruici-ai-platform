@@ -1,5 +1,7 @@
 package com.ruici.ai.modules.knowledgebase.service;
 
+import com.ruici.ai.common.ai.EmbeddingProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.modules.knowledgebase.repository.VectorRepository;
@@ -28,11 +30,11 @@ public class KnowledgeBaseVectorService {
      * 阿里云 DashScope Embedding API 批量大小限制
      */
     private static final int MAX_BATCH_SIZE = 10;
-    private final VectorStore vectorStore;
+    private final EmbeddingProviderRegistry embeddingProviderRegistry;
     private final TextSplitter textSplitter;
     private final VectorRepository vectorRepository;
-    public KnowledgeBaseVectorService(VectorStore vectorStore, VectorRepository vectorRepository) {
-        this.vectorStore = vectorStore;
+    public KnowledgeBaseVectorService(EmbeddingProviderRegistry embeddingProviderRegistry, VectorRepository vectorRepository) {
+        this.embeddingProviderRegistry = embeddingProviderRegistry;
         this.vectorRepository = vectorRepository;
         // 使用 TokenTextSplitter 默认配置，每个 chunk 约 800 tokens，基于标点边界切分（无重叠）
         this.textSplitter = TokenTextSplitter.builder().build();
@@ -43,9 +45,12 @@ public class KnowledgeBaseVectorService {
      * @param content 知识库文本内容
      */
     @Transactional
-    public void vectorizeAndStore(Long knowledgeBaseId, String content) {
-        log.info("开始向量化知识库: kbId={}, contentLength={}", knowledgeBaseId, content.length());
+    public void vectorizeAndStore(Long knowledgeBaseId, String content, AiRuntimeConfigSnapshot embeddingSnapshot) {
+        log.info("开始向量化知识库: kbId={}, contentLength={}, provider={}, model={}, version={}",
+            knowledgeBaseId, content.length(), embeddingSnapshot.providerId(), embeddingSnapshot.modelName(),
+            embeddingSnapshot.configVersion());
         try {
+            VectorStore vectorStore = embeddingProviderRegistry.getVectorStore(embeddingSnapshot);
             // 1. 先删除该知识库的旧向量数据
             deleteByKnowledgeBaseId(knowledgeBaseId);
             
@@ -88,11 +93,19 @@ public class KnowledgeBaseVectorService {
      * @param topK 返回top K个结果
      * @return 相关文档列表
      */
-    public List<Document> similaritySearch(String query, List<Long> knowledgeBaseIds, int topK, double minScore) {
-        log.info("向量相似度搜索: query={}, kbIds={}, topK={}, minScore={}",
-            query, knowledgeBaseIds, topK, minScore);
+    public List<Document> similaritySearch(
+        String query,
+        List<Long> knowledgeBaseIds,
+        int topK,
+        double minScore,
+        AiRuntimeConfigSnapshot embeddingSnapshot
+    ) {
+        log.info("向量相似度搜索: query={}, kbIds={}, topK={}, minScore={}, provider={}, model={}, version={}",
+            query, knowledgeBaseIds, topK, minScore, embeddingSnapshot.providerId(), embeddingSnapshot.modelName(),
+            embeddingSnapshot.configVersion());
         
         try {
+            VectorStore vectorStore = embeddingProviderRegistry.getVectorStore(embeddingSnapshot);
             SearchRequest.Builder builder = SearchRequest.builder()
                 .query(query)
                 .topK(Math.max(topK, 1));
@@ -120,12 +133,19 @@ public class KnowledgeBaseVectorService {
             
         } catch (Exception e) {
             log.warn("向量搜索前置过滤失败，回退到本地过滤: {}", e.getMessage());
-            return similaritySearchFallback(query, knowledgeBaseIds, topK, minScore);
+            return similaritySearchFallback(query, knowledgeBaseIds, topK, minScore, embeddingSnapshot);
         }
     }
 
-    private List<Document> similaritySearchFallback(String query, List<Long> knowledgeBaseIds, int topK, double minScore) {
+    private List<Document> similaritySearchFallback(
+        String query,
+        List<Long> knowledgeBaseIds,
+        int topK,
+        double minScore,
+        AiRuntimeConfigSnapshot embeddingSnapshot
+    ) {
         try {
+            VectorStore vectorStore = embeddingProviderRegistry.getVectorStore(embeddingSnapshot);
             // 回退检索仍保留 topK/minScore，避免兜底路径引入过多弱相关命中
             SearchRequest.Builder builder = SearchRequest.builder()
                 .query(query)

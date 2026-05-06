@@ -1,5 +1,6 @@
 package com.ruici.ai.modules.knowledgebase.service;
 
+import com.ruici.ai.common.ai.EmbeddingProviderRegistry;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.ai.OpenAiCompatibleGatewayClient;
 import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
@@ -52,6 +53,7 @@ public class KnowledgeBaseQueryService {
 
     private final OpenAiCompatibleGatewayClient gatewayClient;
     private final LlmProviderRegistry llmProviderRegistry;
+    private final EmbeddingProviderRegistry embeddingProviderRegistry;
     private final String providerId;
     private final KnowledgeBaseVectorService vectorService;
     private final KnowledgeBaseListService listService;
@@ -69,6 +71,7 @@ public class KnowledgeBaseQueryService {
 
     public KnowledgeBaseQueryService(
             LlmProviderRegistry llmProviderRegistry,
+            EmbeddingProviderRegistry embeddingProviderRegistry,
             OpenAiCompatibleGatewayClient gatewayClient,
             KnowledgeBaseVectorService vectorService,
             KnowledgeBaseListService listService,
@@ -77,6 +80,7 @@ public class KnowledgeBaseQueryService {
             ResourceLoader resourceLoader) throws IOException {
         this.providerId = queryProperties.getLlmProvider();
         this.llmProviderRegistry = llmProviderRegistry;
+        this.embeddingProviderRegistry = embeddingProviderRegistry;
         this.gatewayClient = gatewayClient;
         this.vectorService = vectorService;
         this.listService = listService;
@@ -312,6 +316,7 @@ public class KnowledgeBaseQueryService {
 
 //    向量检索
     private List<Document> retrieveRelevantDocs(QueryContext queryContext, List<Long> knowledgeBaseIds) {
+        AiRuntimeConfigSnapshot embeddingSnapshot = resolveEmbeddingSnapshot();
         for (String candidateQuery : queryContext.candidateQueries()) {
             if (candidateQuery.isBlank()) {
                 continue;
@@ -320,7 +325,8 @@ public class KnowledgeBaseQueryService {
                 candidateQuery,
                 knowledgeBaseIds,
                 queryContext.searchParams().topK(),
-                queryContext.searchParams().minScore()
+                queryContext.searchParams().minScore(),
+                embeddingSnapshot
             );
             log.info("检索候选 query='{}'，命中 {} 条", candidateQuery, docs.size());
             if (hasEffectiveHit(docs)) {
@@ -457,6 +463,10 @@ public class KnowledgeBaseQueryService {
             "default",
             false
         );
+    }
+
+    private AiRuntimeConfigSnapshot resolveEmbeddingSnapshot() {
+        return embeddingProviderRegistry.resolveEmbeddingSnapshot(AiRuntimeScene.KNOWLEDGEBASE);
     }
 
     private String buildGatewayInput(String userPrompt, List<Message> effectiveHistory) {
