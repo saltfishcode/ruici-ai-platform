@@ -1,6 +1,7 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.evaluation.EvaluationReport;
 import com.ruici.ai.common.evaluation.QaRecord;
 import com.ruici.ai.common.evaluation.UnifiedEvaluationService;
@@ -66,7 +67,10 @@ public class VoiceInterviewEvaluationService {
             List<QaRecord> qaRecords = buildQaRecords(messages);
 
             String provider = session.getLlmProvider();
-            ChatClient chatClient = llmProviderRegistry.getChatClientOrDefault(provider);
+            AiRuntimeConfigSnapshot snapshot = session.toLlmRuntimeSnapshot();
+            ChatClient chatClient = snapshot != null
+                ? llmProviderRegistry.getChatClient(snapshot)
+                : llmProviderRegistry.getChatClientOrDefault(provider);
 
             String sessionIdStr = String.valueOf(sessionId);
             String referenceContext = skillService.buildEvaluationReferenceSectionSafe(session.getSkillId());
