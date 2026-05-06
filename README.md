@@ -136,7 +136,12 @@ ruici-ai-platform/
 ├── word                       # 测试报告
 ├── api/                       # 接口文档
 ├── .env.example
-└── docker-compose.yml
+├── docker-compose.yml`        # 标准环境一体化部署
+├── docker-compose.ecs.yml`    # ECS 环境兼容部署
+├── docker-compose.dev.yml`    # 本地开发
+├── Dockerfile                 # Docker镜像
+├── deploy-remote.sh           # 服务器环境部署脚本
+└── Prompts and Skills.md      # 提示词与技能的调用情况
 ```
 
 ## 快速开始
