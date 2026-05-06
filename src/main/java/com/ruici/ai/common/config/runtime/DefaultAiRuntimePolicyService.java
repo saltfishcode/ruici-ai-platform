@@ -39,8 +39,8 @@ public class DefaultAiRuntimePolicyService implements AiRuntimePolicyService {
 
     @Override
     public void validateResolvedSnapshot(AiRuntimeConfigSnapshot snapshot, String clientType) {
-        if (snapshot.domain() != AiRuntimeDomain.CHAT) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "当前阶段仅支持 chat 域运行时解析");
+        if (snapshot.domain() != AiRuntimeDomain.CHAT && snapshot.domain() != AiRuntimeDomain.EMBEDDING) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "当前阶段仅支持 chat / embedding 域运行时解析");
         }
         if (!StringUtils.hasText(snapshot.providerId())) {
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR, "AI 运行时快照缺少 providerId");

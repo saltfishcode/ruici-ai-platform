@@ -20,9 +20,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
 
     private static final String DEFAULT_CHAT_CONFIG_KEY = "THIRD_PARTY_MODEL";
+    private static final String DEFAULT_EMBEDDING_CONFIG_KEY = "AI_EMBEDDING_MODEL";
     private static final String DEFAULT_PROVIDER_ID = "third-party";
     private static final String DEFAULT_MODEL_NAME = "gpt-5.2";
     private static final String DEFAULT_FALLBACK_MODEL = "qwen-plus";
+    private static final String DEFAULT_EMBEDDING_PROVIDER_ID = "dashscope";
+    private static final String DEFAULT_EMBEDDING_MODEL_NAME = "text-embedding-v3";
     private static final long STATIC_CONFIG_VERSION = 0L;
 
     private final AiRuntimeConfigRepository configRepository;
@@ -43,21 +46,39 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
 
     @Override
     public AiRuntimeConfigSnapshot resolveChatConfig(AiRuntimeResolveContext context) {
+        return resolveConfig(context);
+    }
+
+    @Override
+    public AiRuntimeConfigSnapshot refreshChatSnapshot(AiRuntimeResolveContext context) {
+        return refreshSnapshot(context);
+    }
+
+    @Override
+    public AiRuntimeConfigSnapshot resolveEmbeddingConfig(AiRuntimeResolveContext context) {
+        return resolveConfig(context);
+    }
+
+    @Override
+    public AiRuntimeConfigSnapshot refreshEmbeddingSnapshot(AiRuntimeResolveContext context) {
+        return refreshSnapshot(context);
+    }
+
+    private AiRuntimeConfigSnapshot resolveConfig(AiRuntimeResolveContext context) {
         if (isRequestOverridePresent(context)) {
             return resolveRequestOverride(context);
         }
         if (!StringUtils.hasText(context.snapshotKey())) {
-            return refreshChatSnapshot(context);
+            return refreshSnapshot(context);
         }
         AiRuntimeConfigSnapshot cachedSnapshot = snapshotCache.get(context.snapshotKey());
         if (cachedSnapshot != null) {
             return cachedSnapshot;
         }
-        return refreshChatSnapshot(context);
+        return refreshSnapshot(context);
     }
 
-    @Override
-    public AiRuntimeConfigSnapshot refreshChatSnapshot(AiRuntimeResolveContext context) {
+    private AiRuntimeConfigSnapshot refreshSnapshot(AiRuntimeResolveContext context) {
         try {
             AiRuntimeConfigSnapshot snapshot = loadSnapshotFromDatabase(context);
             cacheSnapshot(context.snapshotKey(), snapshot);
@@ -89,7 +110,7 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             : providerConfig.getModel();
         String fallbackModelName = StringUtils.hasText(context.requestFallbackModelName())
             ? context.requestFallbackModelName().trim()
-            : providerConfig.getFallbackModel();
+            : resolveStaticFallbackModelName(context, providerConfig);
         AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
             resolveConfigKey(context),
             context.domain(),
@@ -185,8 +206,8 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             context.domain(),
             context.scene(),
             providerId,
-            providerConfig.getModel(),
-            providerConfig.getFallbackModel(),
+            resolveStaticModelName(context, providerConfig),
+            resolveStaticFallbackModelName(context, providerConfig),
             STATIC_CONFIG_VERSION,
             source,
             stale
@@ -197,10 +218,45 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
         if (StringUtils.hasText(context.staticProviderId())) {
             return context.staticProviderId().trim();
         }
+        if (context.domain() == AiRuntimeDomain.EMBEDDING) {
+            if (StringUtils.hasText(llmProviderProperties.getDefaultEmbeddingProvider())) {
+                return llmProviderProperties.getDefaultEmbeddingProvider().trim();
+            }
+            return DEFAULT_EMBEDDING_PROVIDER_ID;
+        }
         if (StringUtils.hasText(llmProviderProperties.getDefaultProvider())) {
             return llmProviderProperties.getDefaultProvider().trim();
         }
         return DEFAULT_PROVIDER_ID;
+    }
+
+    private String resolveStaticModelName(AiRuntimeResolveContext context, ProviderConfig providerConfig) {
+        if (StringUtils.hasText(context.staticModelName())) {
+            return context.staticModelName().trim();
+        }
+        if (context.domain() == AiRuntimeDomain.EMBEDDING) {
+            if (StringUtils.hasText(providerConfig.getEmbeddingModel())) {
+                return providerConfig.getEmbeddingModel().trim();
+            }
+            return DEFAULT_EMBEDDING_MODEL_NAME;
+        }
+        if (StringUtils.hasText(providerConfig.getModel())) {
+            return providerConfig.getModel().trim();
+        }
+        return DEFAULT_MODEL_NAME;
+    }
+
+    private String resolveStaticFallbackModelName(AiRuntimeResolveContext context, ProviderConfig providerConfig) {
+        if (StringUtils.hasText(context.staticFallbackModelName())) {
+            return context.staticFallbackModelName().trim();
+        }
+        if (context.domain() == AiRuntimeDomain.EMBEDDING) {
+            return null;
+        }
+        if (StringUtils.hasText(providerConfig.getFallbackModel())) {
+            return providerConfig.getFallbackModel().trim();
+        }
+        return DEFAULT_FALLBACK_MODEL;
     }
 
     private ProviderConfig resolveProviderConfig(String providerId) {
@@ -214,7 +270,15 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             ProviderConfig defaultConfig = new ProviderConfig();
             defaultConfig.setModel(DEFAULT_MODEL_NAME);
             defaultConfig.setFallbackModel(DEFAULT_FALLBACK_MODEL);
+            defaultConfig.setEmbeddingModel(DEFAULT_EMBEDDING_MODEL_NAME);
             defaultConfig.setBaseUrl("https://api-s.zwenooo.link/v1");
+            defaultConfig.setApiKey("");
+            return defaultConfig;
+        }
+        if (DEFAULT_EMBEDDING_PROVIDER_ID.equals(providerId)) {
+            ProviderConfig defaultConfig = new ProviderConfig();
+            defaultConfig.setEmbeddingModel(DEFAULT_EMBEDDING_MODEL_NAME);
+            defaultConfig.setBaseUrl("https://dashscope.aliyuncs.com/compatible-mode");
             defaultConfig.setApiKey("");
             return defaultConfig;
         }
@@ -224,7 +288,14 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
     private String resolveConfigKey(AiRuntimeResolveContext context) {
         return StringUtils.hasText(context.configKey())
             ? context.configKey().trim()
-            : DEFAULT_CHAT_CONFIG_KEY;
+            : defaultConfigKey(context.domain());
+    }
+
+    private String defaultConfigKey(AiRuntimeDomain domain) {
+        if (domain == AiRuntimeDomain.EMBEDDING) {
+            return DEFAULT_EMBEDDING_CONFIG_KEY;
+        }
+        return DEFAULT_CHAT_CONFIG_KEY;
     }
 
     private boolean isRequestOverridePresent(AiRuntimeResolveContext context) {

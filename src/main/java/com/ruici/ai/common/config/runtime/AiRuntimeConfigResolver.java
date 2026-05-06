@@ -8,4 +8,8 @@ public interface AiRuntimeConfigResolver {
     AiRuntimeConfigSnapshot resolveChatConfig(AiRuntimeResolveContext context);
 
     AiRuntimeConfigSnapshot refreshChatSnapshot(AiRuntimeResolveContext context);
+
+    AiRuntimeConfigSnapshot resolveEmbeddingConfig(AiRuntimeResolveContext context);
+
+    AiRuntimeConfigSnapshot refreshEmbeddingSnapshot(AiRuntimeResolveContext context);
 }

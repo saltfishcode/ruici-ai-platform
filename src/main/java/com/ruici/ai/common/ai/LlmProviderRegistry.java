@@ -126,8 +126,23 @@ public class LlmProviderRegistry {
      * 避免 OpenAI-compatible provider 在流式回复中触发工具调用导致链路中断。</p>
      */
     public ChatClient getVoiceChatClient(String providerId) {
-        String id = resolveProviderId(providerId);
-        return clientCache.computeIfAbsent(id + ":voice", key -> createVoiceChatClient(id));
+        AiRuntimeConfigSnapshot snapshot = resolveChatSnapshot(
+            providerId,
+            null,
+            null,
+            AiRuntimeScene.VOICE,
+            buildSnapshotKey(AiRuntimeScene.VOICE, "voice", CHAT_CONFIG_KEY),
+            "voice",
+            true
+        );
+        return getVoiceChatClient(snapshot);
+    }
+
+    public ChatClient getVoiceChatClient(AiRuntimeConfigSnapshot snapshot) {
+        return clientCache.computeIfAbsent(buildCacheKey(snapshot, "voice"), key -> {
+            log.info("[LlmProviderRegistry] Cache miss. Creating voice chat client for key: {}", key);
+            return createVoiceChatClient(snapshot);
+        });
     }
 
     public ChatClient getChatClient(AiRuntimeConfigSnapshot snapshot) {
@@ -161,6 +176,8 @@ public class LlmProviderRegistry {
             requestModelName,
             requestFallbackModelName,
             properties.getDefaultProvider(),
+            null,
+            null,
             snapshotKey,
             clientType,
             requestOverrideAllowed
@@ -200,24 +217,9 @@ public class LlmProviderRegistry {
         return ChatClient.builder(chatModel).build();
     }
 
-    private ChatClient createVoiceChatClient(String providerId) {
-        ProviderConfig providerConfig = properties.getProviders().get(providerId);
-        if (providerConfig == null) {
-            throw new IllegalArgumentException("Unknown LLM provider: " + providerId);
-        }
-        AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
-            CHAT_CONFIG_KEY,
-            AiRuntimeDomain.CHAT,
-            AiRuntimeScene.VOICE,
-            providerId,
-            providerConfig.getModel(),
-            providerConfig.getFallbackModel(),
-            0L,
-            null,
-            false
-        );
+    private ChatClient createVoiceChatClient(AiRuntimeConfigSnapshot snapshot) {
         OpenAiChatModel chatModel = buildChatModel(snapshot);
-        log.info("[LlmProviderRegistry] Created voice ChatClient (plain/no tools) for {}", providerId);
+        log.info("[LlmProviderRegistry] Created voice ChatClient (plain/no tools) for {}", snapshot.providerId());
         return ChatClient.builder(chatModel).build();
     }
 

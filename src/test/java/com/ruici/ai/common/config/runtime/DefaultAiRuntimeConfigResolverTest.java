@@ -46,6 +46,8 @@ class DefaultAiRuntimeConfigResolverTest {
             null,
             null,
             "third-party",
+            null,
+            null,
             "knowledgebase:default:THIRD_PARTY_MODEL",
             "default",
             false
@@ -203,6 +205,8 @@ class DefaultAiRuntimeConfigResolverTest {
                 "gpt-5.4",
                 "qwen-max",
                 "third-party",
+                null,
+                null,
                 "simulation:default:THIRD_PARTY_MODEL",
                 "default",
                 true
@@ -215,5 +219,56 @@ class DefaultAiRuntimeConfigResolverTest {
             assertThat(snapshot.fallbackModelName()).isEqualTo("qwen-max");
             assertThat(snapshot.source()).isEqualTo(AiRuntimeConfigSource.REQUEST_OVERRIDE);
         }
+    }
+
+    @Test
+    @DisplayName("embedding 域可回退到静态 embedding model")
+    void shouldResolveEmbeddingStaticFallback() {
+        LlmProviderProperties properties = new LlmProviderProperties();
+        properties.setDefaultEmbeddingProvider("dashscope");
+
+        LlmProviderProperties.ProviderConfig providerConfig = new LlmProviderProperties.ProviderConfig();
+        providerConfig.setBaseUrl("https://dashscope.aliyuncs.com/compatible-mode");
+        providerConfig.setEmbeddingModel("text-embedding-v3");
+        properties.setProviders(Map.of("dashscope", providerConfig));
+
+        DefaultAiRuntimePolicyService policyService = new DefaultAiRuntimePolicyService(properties);
+        DefaultAiRuntimeConfigResolver resolver = new DefaultAiRuntimeConfigResolver(configRepository, policyService, properties);
+
+        AiRuntimeResolveContext context = new AiRuntimeResolveContext(
+            AiRuntimeDomain.EMBEDDING,
+            AiRuntimeScene.KNOWLEDGEBASE,
+            "AI_EMBEDDING_MODEL",
+            null,
+            null,
+            null,
+            "dashscope",
+            "text-embedding-v3",
+            null,
+            "knowledgebase:embedding:AI_EMBEDDING_MODEL",
+            "embedding",
+            false
+        );
+
+        given(configRepository.findFirstByConfigKeyAndDomainAndSceneAndEnabledOrderByPriorityAsc(
+            "AI_EMBEDDING_MODEL",
+            "embedding",
+            "knowledgebase",
+            Boolean.TRUE
+        )).willReturn(Optional.empty());
+        given(configRepository.findFirstByConfigKeyAndDomainAndSceneAndEnabledOrderByPriorityAsc(
+            "AI_EMBEDDING_MODEL",
+            "embedding",
+            "global",
+            Boolean.TRUE
+        )).willReturn(Optional.empty());
+
+        AiRuntimeConfigSnapshot snapshot = resolver.resolveEmbeddingConfig(context);
+
+        assertThat(snapshot.domain()).isEqualTo(AiRuntimeDomain.EMBEDDING);
+        assertThat(snapshot.providerId()).isEqualTo("dashscope");
+        assertThat(snapshot.modelName()).isEqualTo("text-embedding-v3");
+        assertThat(snapshot.fallbackModelName()).isNull();
+        assertThat(snapshot.source()).isEqualTo(AiRuntimeConfigSource.ENV_CONFIG);
     }
 }

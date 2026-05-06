@@ -63,4 +63,30 @@ class DefaultAiRuntimePolicyServiceTest {
             .isInstanceOf(BusinessException.class)
             .hasMessageContaining("未知 Provider");
     }
+
+    @Test
+    @DisplayName("合法 embedding 快照通过校验")
+    void shouldAcceptValidEmbeddingSnapshot() {
+        LlmProviderProperties properties = new LlmProviderProperties();
+        LlmProviderProperties.ProviderConfig providerConfig = new LlmProviderProperties.ProviderConfig();
+        providerConfig.setEmbeddingModel("text-embedding-v3");
+        providerConfig.setBaseUrl("https://dashscope.aliyuncs.com/compatible-mode");
+        properties.setProviders(Map.of("dashscope", providerConfig));
+        DefaultAiRuntimePolicyService policyService = new DefaultAiRuntimePolicyService(properties);
+
+        AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
+            "AI_EMBEDDING_MODEL",
+            AiRuntimeDomain.EMBEDDING,
+            AiRuntimeScene.KNOWLEDGEBASE,
+            "dashscope",
+            "text-embedding-v3",
+            null,
+            3L,
+            AiRuntimeConfigSource.DB_RUNTIME_CONFIG,
+            false
+        );
+
+        assertThatCode(() -> policyService.validateResolvedSnapshot(snapshot, "embedding"))
+            .doesNotThrowAnyException();
+    }
 }

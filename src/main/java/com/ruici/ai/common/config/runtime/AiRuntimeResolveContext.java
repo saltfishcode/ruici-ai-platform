@@ -13,6 +13,8 @@ public record AiRuntimeResolveContext(
     String requestModelName,
     String requestFallbackModelName,
     String staticProviderId,
+    String staticModelName,
+    String staticFallbackModelName,
     String snapshotKey,
     String clientType,
     boolean requestOverrideAllowed
