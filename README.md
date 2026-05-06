@@ -43,7 +43,8 @@
 当前阶段的边界非常明确：
 
 - **已接入动态解析**：chat 相关链路（`document` / `simulation` / `knowledgebase`）
-- **暂不做业务切换**：embedding / voice 仍保持原有稳定配置路径
+- **第二阶段已接线**：embedding 已接入任务级 / 查询级快照，用于知识库向量化与检索链路
+- **第三阶段已接线**：voice 已接入会话级 LLM 快照，用于实时对话与异步评估链路
 - **优先级统一**：请求级覆盖（允许时）→ 数据库运行时配置 → 静态环境配置 → code default
 - **缓存按模型区分**：`LlmProviderRegistry` 不再只按 provider 缓存，而是按 provider + clientType
   + model + fallback + baseUrl + configVersion 组合缓存，避免模型切换后复用旧 client
@@ -66,8 +67,9 @@ fallback model，已经不再建议由业务模块自己拼接判断，而应统
 - 第三方 OpenAI-compatible 中转更适合作为统一聊天入口，方便切换模型和成本控制。
 - 向量化与实时语音的兼容性、稳定性和能力覆盖目前仍以 `Qwen / DashScope` 更稳妥。
 - “OpenAI-compatible” 不是“完全等价 OpenAI”，不同中转在 `/chat/completions`、流式事件、工具调用、结构化输出上可能存在差异，因此需要把聊天和语音/向量能力分层配置，而不是强行共用一个 Provider。
-- `v1.3.0` 先只把 **chat** 做成统一运行时控制面，是为了先稳定最常用、最容易频繁切换模型的链路；
-  embedding / voice 后续再按任务级 / 会话级快照接入，避免一次性放大改动面。
+- `v1.3.0` 先把 **chat** 做成统一运行时控制面，是为了先稳定最常用、最容易频繁切换模型的链路；
+  embedding 已进一步按任务级 / 查询级快照接入知识库向量化与检索，避免 chunk 级频繁查库；
+  voice 仍保留到后续按会话级快照接入，避免一次性放大改动面。
 
 ## 技术栈
 
@@ -156,10 +158,10 @@ src/main/java/com/ruici/ai/common/config/runtime/
 - `modules/simulation`：题目生成 / 会话创建 / 评估链路
 - `modules/knowledgebase`：RAG 改写、问答与流式回答链路
 
-暂未做业务动态切换的范围：
+当前尚未完全动态化的范围：
 
-- `embedding`：仍保持原向量化稳定路径
-- `voice`：仍保持语音专用配置路径
+- `embedding`：已接入知识库向量化与检索的任务级 / 查询级快照，但未扩展到更细粒度热切换或重向量化治理
+- `voice`：已接入会话级 LLM 快照锚点，保证单个语音会话内 provider/model/fallback 一致；`ASR/TTS` 仍保持静态稳定配置
 
 ### 对前端 / 接口的影响
 
@@ -407,14 +409,14 @@ knowledgebase` 三个核心模块的共性依赖。先把 chat 统一到 resolve
 不会。当前运行时配置表只存 providerId、modelName、fallbackModelName、scene、domain、priority、
 configVersion 等 **非敏感控制信息**。真实 API Key 仍然只保留在 `.env` 或环境变量中。
 
-### 为什么 voice / embedding 还没跟着动态切换？
+### 为什么 voice / embedding 没有一起做到完全热切换？
 
-这是 `v1.3.0` 的有意边界：
+这是 `v1.3.0` 的分阶段边界：
 
-- `embedding` 后续按任务/批次级快照接入，避免 chunk 级频繁查库
-- `voice` 后续按会话级快照接入，避免通话进行中漂移 provider/model
+- `embedding` 当前已按任务/批次级快照接入知识库向量化与检索，避免 chunk 级频繁查库
+- `voice` 已按会话级快照接入 LLM 链路，避免通话进行中漂移 provider/model；`ASR/TTS` 仍未做完整动态热切换
 
-当前阶段先不改，是为了保证已有稳定链路不被 chat 改造连带放大风险。
+当前仍未推进的是 `ASR/TTS` 级别的更细粒度动态化，以及 embedding 相关的更高阶治理（例如重向量化策略），目的是保证稳定链路不被一次性放大风险。
 
 ### 向量化为什么仍然依赖 Qwen / DashScope？
 
