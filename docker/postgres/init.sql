@@ -27,6 +27,21 @@ CREATE TABLE IF NOT EXISTS ai_runtime_config (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE IF EXISTS voice_interview_sessions
+  ADD COLUMN IF NOT EXISTS llm_model_name VARCHAR(128);
+
+ALTER TABLE IF EXISTS voice_interview_sessions
+  ADD COLUMN IF NOT EXISTS llm_fallback_model_name VARCHAR(128);
+
+ALTER TABLE IF EXISTS voice_interview_sessions
+  ADD COLUMN IF NOT EXISTS llm_config_version BIGINT;
+
+ALTER TABLE IF EXISTS voice_interview_sessions
+  ADD COLUMN IF NOT EXISTS llm_config_source VARCHAR(64);
+
+ALTER TABLE IF EXISTS voice_interview_sessions
+  ADD COLUMN IF NOT EXISTS llm_config_stale BOOLEAN NOT NULL DEFAULT FALSE;
+
 COMMENT ON TABLE ai_runtime_config IS
 'AI 运行时模型配置表。只存储 provider/model/作用域等非敏感控制信息，不存储 API Key。';
 

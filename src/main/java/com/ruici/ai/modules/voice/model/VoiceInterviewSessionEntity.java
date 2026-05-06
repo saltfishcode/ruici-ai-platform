@@ -1,5 +1,9 @@
 package com.ruici.ai.modules.voice.model;
 
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.common.constant.CommonConstants.ScenarioDefaults;
 import jakarta.persistence.*;
@@ -28,6 +32,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VoiceInterviewSessionEntity {
+
+    private static final String CHAT_CONFIG_KEY = "THIRD_PARTY_MODEL";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -72,6 +78,22 @@ public class VoiceInterviewSessionEntity {
     @Column(name = "llm_provider", length = 50)
     @Builder.Default
     private String llmProvider = ScenarioDefaults.LLM_PROVIDER;
+
+    @Column(name = "llm_model_name", length = 128)
+    private String llmModelName;
+
+    @Column(name = "llm_fallback_model_name", length = 128)
+    private String llmFallbackModelName;
+
+    @Column(name = "llm_config_version")
+    private Long llmConfigVersion;
+
+    @Column(name = "llm_config_source", length = 64)
+    private String llmConfigSource;
+
+    @Column(name = "llm_config_stale")
+    @Builder.Default
+    private Boolean llmConfigStale = false;
 
     @Column(name = "current_phase")
     @Enumerated(EnumType.STRING)
@@ -136,5 +158,42 @@ public class VoiceInterviewSessionEntity {
     @Transient
     public Long getDocumentId() {
         return resumeId;
+    }
+
+    public void applyLlmRuntimeSnapshot(AiRuntimeConfigSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        this.llmProvider = snapshot.providerId();
+        this.llmModelName = snapshot.modelName();
+        this.llmFallbackModelName = snapshot.fallbackModelName();
+        this.llmConfigVersion = snapshot.configVersion();
+        this.llmConfigSource = snapshot.source() != null ? snapshot.source().name() : null;
+        this.llmConfigStale = snapshot.stale();
+    }
+
+    public boolean hasLlmRuntimeSnapshot() {
+        return llmProvider != null
+            && !llmProvider.isBlank()
+            && llmModelName != null
+            && !llmModelName.isBlank()
+            && llmConfigVersion != null;
+    }
+
+    public AiRuntimeConfigSnapshot toLlmRuntimeSnapshot() {
+        if (!hasLlmRuntimeSnapshot()) {
+            return null;
+        }
+        return new AiRuntimeConfigSnapshot(
+            CHAT_CONFIG_KEY,
+            AiRuntimeDomain.CHAT,
+            AiRuntimeScene.VOICE,
+            llmProvider,
+            llmModelName,
+            llmFallbackModelName,
+            llmConfigVersion,
+            llmConfigSource != null ? AiRuntimeConfigSource.valueOf(llmConfigSource) : null,
+            Boolean.TRUE.equals(llmConfigStale)
+        );
     }
 }

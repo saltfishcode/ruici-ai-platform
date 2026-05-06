@@ -1,5 +1,8 @@
 package com.ruici.ai.modules.voice.service;
 
+import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.constant.CommonConstants.ScenarioDefaults;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
@@ -52,6 +55,7 @@ public class VoiceInterviewService {
     private final RedissonClient redissonClient;
     private final VoiceInterviewProperties properties;
     private final VoiceEvaluateStreamProducer voiceEvaluateStreamProducer;
+    private final LlmProviderRegistry llmProviderRegistry;
 
     private static final String SESSION_CACHE_KEY_PREFIX = "voice:session:";
     private static final int CACHE_TTL_HOURS = 1;
@@ -79,6 +83,15 @@ public class VoiceInterviewService {
         String effectiveLlmProvider = (request.getLlmProvider() != null && !request.getLlmProvider().isBlank())
             ? request.getLlmProvider()
             : properties.getLlmProvider();
+        AiRuntimeConfigSnapshot llmSnapshot = llmProviderRegistry.resolveChatSnapshot(
+            effectiveLlmProvider,
+            null,
+            null,
+            AiRuntimeScene.VOICE,
+            LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.VOICE, "voice", "THIRD_PARTY_MODEL"),
+            "voice",
+            true
+        );
 
         VoiceInterviewSessionEntity session = VoiceInterviewSessionEntity.builder()
                 .userId(DEFAULT_USER_ID)
@@ -95,6 +108,7 @@ public class VoiceInterviewService {
                 .plannedDuration(request.getPlannedDuration())
                 .currentPhase(determineFirstPhase(request))
                 .build();
+        session.applyLlmRuntimeSnapshot(llmSnapshot);
 
         VoiceInterviewSessionEntity saved = sessionRepository.save(session);
         cacheSession(saved);
