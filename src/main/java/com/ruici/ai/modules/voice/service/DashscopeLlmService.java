@@ -1,6 +1,7 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import com.ruici.ai.modules.document.model.ResumeEntity;
 import com.ruici.ai.modules.document.repository.ResumeRepository;
 import com.ruici.ai.modules.voice.config.VoiceInterviewProperties;
@@ -32,10 +33,13 @@ public class DashscopeLlmService {
         try {
             PromptContext promptContext = buildPromptContext(userInput, session, conversationHistory);
 
+            AiRuntimeConfigSnapshot snapshot = session.toLlmRuntimeSnapshot();
             String provider = session.getLlmProvider();
             log.info("[VoiceInterview] Session {} using LLM provider: {}", session.getId(), provider);
 
-            ChatClient chatClient = llmProviderRegistry.getVoiceChatClient(provider);
+            ChatClient chatClient = snapshot != null
+                ? llmProviderRegistry.getVoiceChatClient(snapshot)
+                : llmProviderRegistry.getVoiceChatClient(provider);
 
             ChatClient.CallResponseSpec response = chatClient.prompt()
                 .system(promptContext.systemPrompt())
@@ -71,10 +75,13 @@ public class DashscopeLlmService {
                                        List<String> conversationHistory) {
         try {
             PromptContext promptContext = buildPromptContext(userInput, session, conversationHistory);
+            AiRuntimeConfigSnapshot snapshot = session.toLlmRuntimeSnapshot();
             String provider = session.getLlmProvider();
             log.info("[VoiceInterview] Session {} using LLM provider (sentence stream): {}", session.getId(), provider);
 
-            ChatClient chatClient = llmProviderRegistry.getVoiceChatClient(provider);
+            ChatClient chatClient = snapshot != null
+                ? llmProviderRegistry.getVoiceChatClient(snapshot)
+                : llmProviderRegistry.getVoiceChatClient(provider);
             StringBuilder raw = new StringBuilder();
             AtomicLong lastEmitNanos = new AtomicLong(System.nanoTime());
             AtomicInteger lastEmitLength = new AtomicInteger(0);
