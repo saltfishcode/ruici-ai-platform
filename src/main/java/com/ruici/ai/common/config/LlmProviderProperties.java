@@ -10,6 +10,7 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "app.ai")
 public class LlmProviderProperties {
     private String defaultProvider = "third-party";
+    private String defaultEmbeddingProvider = "dashscope";
     private Map<String, ProviderConfig> providers;
     private AdvisorConfig advisors = new AdvisorConfig();
 
@@ -19,6 +20,7 @@ public class LlmProviderProperties {
         private String apiKey;
         private String model;
         private String fallbackModel;
+        private String embeddingModel;
     }
 
     @Data
