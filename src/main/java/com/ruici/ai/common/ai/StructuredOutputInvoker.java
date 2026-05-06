@@ -47,12 +47,12 @@ public class StructuredOutputInvoker {
         StructuredOutputProperties properties,
         @Autowired(required = false) MeterRegistry meterRegistry
     ) {
-        this.maxAttempts = Math.max(1, properties.getStructuredMaxAttempts());
-        this.includeLastErrorInRetryPrompt = properties.isStructuredIncludeLastError();
-        this.retryUseRepairPrompt = properties.isStructuredRetryUseRepairPrompt();
-        this.retryAppendStrictJsonInstruction = properties.isStructuredRetryAppendStrictJsonInstruction();
-        this.errorMessageMaxLength = Math.max(20, properties.getStructuredErrorMessageMaxLength());
-        this.metricsEnabled = properties.isStructuredMetricsEnabled();
+        this.maxAttempts = Math.max(1, properties.getMaxAttempts());
+        this.includeLastErrorInRetryPrompt = properties.isIncludeLastError();
+        this.retryUseRepairPrompt = properties.isRetryUseRepairPrompt();
+        this.retryAppendStrictJsonInstruction = properties.isRetryAppendStrictJsonInstruction();
+        this.errorMessageMaxLength = Math.max(20, properties.getErrorMessageMaxLength());
+        this.metricsEnabled = properties.isMetricsEnabled();
         this.meterRegistry = meterRegistry;
     }
 

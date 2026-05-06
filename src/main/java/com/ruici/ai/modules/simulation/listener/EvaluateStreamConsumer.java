@@ -2,6 +2,8 @@ package com.ruici.ai.modules.simulation.listener;
 
 import com.ruici.ai.common.async.AbstractStreamConsumer;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
 import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.infrastructure.redis.RedisService;
@@ -126,7 +128,16 @@ public class EvaluateStreamConsumer extends AbstractStreamConsumer<EvaluateStrea
 
         // 获取 LLM 客户端
         String provider = session.getLlmProvider();
-        ChatClient chatClient = llmProviderRegistry.getChatClientOrDefault(provider);
+        AiRuntimeConfigSnapshot runtimeSnapshot = llmProviderRegistry.resolveChatSnapshot(
+            provider,
+            null,
+            null,
+            AiRuntimeScene.SIMULATION,
+            LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.SIMULATION, "default", "THIRD_PARTY_MODEL"),
+            "default",
+            false
+        );
+        ChatClient chatClient = llmProviderRegistry.getChatClient(runtimeSnapshot);
 
         String resumeText = session.getResume() != null ? session.getResume().getResumeText() : "";
         InterviewReportDTO report = evaluationService.evaluateInterview(chatClient, sessionId, resumeText, questions);

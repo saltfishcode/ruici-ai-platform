@@ -2,6 +2,8 @@ package com.ruici.ai.modules.knowledgebase.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.ai.OpenAiCompatibleGatewayClient;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.modules.knowledgebase.model.QueryRequest;
@@ -48,8 +50,8 @@ public class KnowledgeBaseQueryService {
     private static final int STREAM_PROBE_CHARS = 120;
     private static final int MAX_REWRITE_HISTORY_CHAR = 200;
 
-    private final ChatClient chatClient;
     private final OpenAiCompatibleGatewayClient gatewayClient;
+    private final LlmProviderRegistry llmProviderRegistry;
     private final String providerId;
     private final KnowledgeBaseVectorService vectorService;
     private final KnowledgeBaseListService listService;
@@ -74,7 +76,7 @@ public class KnowledgeBaseQueryService {
             KnowledgeBaseQueryProperties queryProperties,
             ResourceLoader resourceLoader) throws IOException {
         this.providerId = queryProperties.getLlmProvider();
-        this.chatClient = llmProviderRegistry.getChatClientOrDefault(this.providerId);
+        this.llmProviderRegistry = llmProviderRegistry;
         this.gatewayClient = gatewayClient;
         this.vectorService = vectorService;
         this.listService = listService;
@@ -146,11 +148,12 @@ public class KnowledgeBaseQueryService {
 
         String systemPrompt = buildSystemPrompt();
         String userPrompt = buildUserPrompt(context, normalizedQuestion);
+        AiRuntimeConfigSnapshot runtimeSnapshot = resolveChatSnapshot();
 
         try {
-            String answer = useGatewayCompatibility()
-                ? gatewayClient.generateText(providerId, systemPrompt, userPrompt)
-                : chatClient.prompt()
+            String answer = useGatewayCompatibility(runtimeSnapshot)
+                ? gatewayClient.generateText(runtimeSnapshot, systemPrompt, userPrompt)
+                : llmProviderRegistry.getChatClient(runtimeSnapshot).prompt()
                     .system(systemPrompt)
                     .user(userPrompt)
                     .call()
@@ -259,11 +262,12 @@ public class KnowledgeBaseQueryService {
             // 4. 构建提示词
             String systemPrompt = buildSystemPrompt();
             String userPrompt = buildUserPrompt(context, normalizedQuestion);
+            AiRuntimeConfigSnapshot runtimeSnapshot = resolveChatSnapshot();
 
             // 5. 流式调用（带历史上下文）+ 探测窗口归一化
-            Flux<String> responseFlux = useGatewayCompatibility()
-                ? gatewayClient.streamText(providerId, systemPrompt, buildGatewayInput(userPrompt, effectiveHistory))
-                : buildDefaultStreamResponse(systemPrompt, userPrompt, effectiveHistory);
+            Flux<String> responseFlux = useGatewayCompatibility(runtimeSnapshot)
+                ? gatewayClient.streamText(runtimeSnapshot, systemPrompt, buildGatewayInput(userPrompt, effectiveHistory))
+                : buildDefaultStreamResponse(runtimeSnapshot, systemPrompt, userPrompt, effectiveHistory);
 
             log.info("开始流式输出知识库回答(探测窗口): kbIds={}", normalizedKnowledgeBaseIds);
             return normalizeStreamOutput(responseFlux)
@@ -347,9 +351,10 @@ public class KnowledgeBaseQueryService {
             variables.put("question", question);
             variables.put("history", formatHistoryForRewrite(history));
             String rewritePrompt = rewritePromptTemplate.render(variables);
-            String rewritten = useGatewayCompatibility()
-                ? gatewayClient.generateText(providerId, "", rewritePrompt)
-                : chatClient.prompt()
+            AiRuntimeConfigSnapshot runtimeSnapshot = resolveChatSnapshot();
+            String rewritten = useGatewayCompatibility(runtimeSnapshot)
+                ? gatewayClient.generateText(runtimeSnapshot, "", rewritePrompt)
+                : llmProviderRegistry.getChatClient(runtimeSnapshot).prompt()
                     .user(rewritePrompt)
                     .call()
                     .content();
@@ -389,16 +394,17 @@ public class KnowledgeBaseQueryService {
         return sb.toString().trim();
     }
 
-    private boolean useGatewayCompatibility() {
-        return gatewayClient.supports(providerId);
+    private boolean useGatewayCompatibility(AiRuntimeConfigSnapshot runtimeSnapshot) {
+        return gatewayClient.supports(runtimeSnapshot.providerId());
     }
 
     private String answerWithoutKnowledgeBase(String question, String reason) {
         String userPrompt = buildGeneralAnswerPrompt(question, reason);
+        AiRuntimeConfigSnapshot runtimeSnapshot = resolveChatSnapshot();
         try {
-            String answer = useGatewayCompatibility()
-                ? gatewayClient.generateText(providerId, GENERAL_ANSWER_SYSTEM_PROMPT, userPrompt)
-                : chatClient.prompt()
+            String answer = useGatewayCompatibility(runtimeSnapshot)
+                ? gatewayClient.generateText(runtimeSnapshot, GENERAL_ANSWER_SYSTEM_PROMPT, userPrompt)
+                : llmProviderRegistry.getChatClient(runtimeSnapshot).prompt()
                     .system(GENERAL_ANSWER_SYSTEM_PROMPT)
                     .user(userPrompt)
                     .call()
@@ -412,9 +418,10 @@ public class KnowledgeBaseQueryService {
 
     private Flux<String> streamGeneralAnswer(String question, List<Message> history, String reason) {
         String userPrompt = buildGeneralAnswerPrompt(question, reason);
-        Flux<String> responseFlux = useGatewayCompatibility()
-            ? gatewayClient.streamText(providerId, GENERAL_ANSWER_SYSTEM_PROMPT, buildGatewayInput(userPrompt, history))
-            : buildDefaultStreamResponse(GENERAL_ANSWER_SYSTEM_PROMPT, userPrompt, history);
+        AiRuntimeConfigSnapshot runtimeSnapshot = resolveChatSnapshot();
+        Flux<String> responseFlux = useGatewayCompatibility(runtimeSnapshot)
+            ? gatewayClient.streamText(runtimeSnapshot, GENERAL_ANSWER_SYSTEM_PROMPT, buildGatewayInput(userPrompt, history))
+            : buildDefaultStreamResponse(runtimeSnapshot, GENERAL_ANSWER_SYSTEM_PROMPT, userPrompt, history);
 
         return responseFlux.switchIfEmpty(Flux.just(reason + "，暂时无法生成回答，请稍后重试。"));
     }
@@ -428,14 +435,28 @@ public class KnowledgeBaseQueryService {
             """.formatted(reason, question);
     }
 
-    private Flux<String> buildDefaultStreamResponse(String systemPrompt,
+    private Flux<String> buildDefaultStreamResponse(AiRuntimeConfigSnapshot runtimeSnapshot,
+                                                    String systemPrompt,
                                                     String userPrompt,
                                                     List<Message> effectiveHistory) {
-        var promptSpec = chatClient.prompt().system(systemPrompt);
-        if (!effectiveHistory.isEmpty()) {
-            promptSpec = promptSpec.messages(effectiveHistory);
-        }
-        return promptSpec.user(userPrompt).stream().content();
+        ChatClient chatClient = llmProviderRegistry.getChatClient(runtimeSnapshot);
+        return chatClient.prompt()
+            .system(systemPrompt)
+            .user(buildGatewayInput(userPrompt, effectiveHistory))
+            .stream()
+            .content();
+    }
+
+    private AiRuntimeConfigSnapshot resolveChatSnapshot() {
+        return llmProviderRegistry.resolveChatSnapshot(
+            providerId,
+            null,
+            null,
+            AiRuntimeScene.KNOWLEDGEBASE,
+            LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.KNOWLEDGEBASE, "default", "THIRD_PARTY_MODEL"),
+            "default",
+            false
+        );
     }
 
     private String buildGatewayInput(String userPrompt, List<Message> effectiveHistory) {

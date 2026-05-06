@@ -25,9 +25,15 @@ Spring Boot 4.0 + Java 21 + Spring AI 的泛职业文档分析与多场景情景
 平台级特点（以当前代码实现为准）：
 
 - 统一返回体 `Result<T>`，全局异常通过 `GlobalExceptionHandler` 统一转为 HTTP 200 + 业务错误码。
-- 多 LLM Provider：通过 `LlmProviderRegistry` 按 `providerId` 路由并缓存 `ChatClient`。
+- 多 LLM Provider：通过 `LlmProviderRegistry` 按 `providerId` / runtime snapshot 路由并缓存 `ChatClient`。
 - 限流：`@RateLimit` + AOP + Redis Lua，支持 `GLOBAL/IP/USER` 多维度叠加。
 - 异步任务：Redis Stream 模板化生产/消费，失败重试 3 次，覆盖 4 条管道（文档分析/知识库向量化/情景模拟评估/语音评估）。
+
+补充说明（`v1.3.0` 当前阶段）：
+
+- chat 链路已新增运行时配置基础层：数据库动态配置优先、静态配置兜底、统一 resolver、模型感知缓存、last-known-good 兜底。
+- 当前只接入 `chat` 域（`document` / `simulation` / `knowledgebase`），**不提前接入** `embedding` / `voice` 的业务动态切换。
+- 业务模块不允许自行拼接 provider/model 优先级，统一走 resolver + snapshot。
 
 ---
 
@@ -43,9 +49,10 @@ com/ruici/ai/
 │   ├── annotation/                   #   @RateLimit（可重复注解，滑动窗口限流）
 │   ├── aspect/                       #   RateLimitAspect（AOP + Redis Lua 限流）
 │   ├── ai/                           #   StructuredOutputInvoker（结构化输出重试）
-│   │                                 #   LlmProviderRegistry（多 LLM Provider 注册与缓存）
+│   │                                 #   LlmProviderRegistry（多 LLM Provider 注册、运行时快照建 client 与缓存）
 │   ├── async/                        #   AbstractStreamConsumer/Producer（Redis Stream 模板）
 │   ├── config/                       #   配置类（CORS、S3、ObjectMapper、OpenAPI、LlmProvider）
+│   │   └── runtime/                  #   AI 运行时配置：resolver / policy / snapshot / JPA entity
 │   ├── constant/                     #   CommonConstants、AsyncTaskStreamConstants
 │   ├── evaluation/                   #   评估与报告的通用能力（跨模块复用）
 │   ├── exception/                    #   ErrorCode（10 个错误域 1xxx-10xxx）
@@ -108,6 +115,8 @@ Controller → Service → Repository
   - `schedule`：`InterviewParseService`（规则优先 + AI 兜底）、`InterviewScheduleService`（CRUD）
   - `voice`：`VoiceInterviewService`（会话/消息/评估触发）、`DashscopeLlmService`（语音场景 LLM）、`QwenAsrService/QwenTtsService`（实时链路）
 - LLM 调用统一通过 `LlmProviderRegistry` 获取 `ChatClient`（支持 default/plain/voice 三种 client）。
+- chat 相关业务若需要 provider/model 选择，统一先解析 `AiRuntimeConfigSnapshot`，再从 `LlmProviderRegistry`
+  获取 client；禁止业务模块直接复制优先级逻辑。
 - 异步任务通过 Redis Stream（`AbstractStreamProducer/AbstractStreamConsumer` 模板）。
 - 所有业务异常使用 `BusinessException(ErrorCode.XXX, message)`，禁止 `RuntimeException`
 
@@ -248,13 +257,27 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<KnowledgeBas
 ### 8.1 Provider 路由（LlmProviderRegistry）
 
 - Provider 配置来自 `app.ai.default-provider` 与 `app.ai.providers.*`。
+- `v1.3.0` 起，chat 链路新增 runtime resolver：`request override -> DB runtime config -> static env config -> code default`。
+- chat 业务调用应优先产出 `AiRuntimeConfigSnapshot`，再用 snapshot 创建/获取 `ChatClient`。
 - 获取 client：
   - `getChatClientOrDefault(providerId)`：`providerId` 为空/空白时回落到默认 provider。
   - `getChatClient(providerId)`：providerId 不存在会抛 `IllegalArgumentException`。
+  - `getChatClient(snapshot)`：按运行时快照创建并缓存 chat client。
 - client 形态：
   - `default`：默认带 SkillsTool（若存在）+ Advisors（可配置开关）。
   - `plain`：不带工具调用（用于不需要 tool call 的出题/解析等场景）。
   - `voice`：语音专用 client（SkillsTool + 流式 ToolCallAdvisor；不启用 memory advisor）。
+
+### 8.1.1 运行时配置基础层（chat-first）
+
+- 相关包：`common/config/runtime/`
+- 当前核心对象：
+  - `AiRuntimeConfigEntity`：数据库中的非敏感控制面配置
+  - `AiRuntimeConfigSnapshot`：一次 chat 调用最终命中的 provider/model/fallback/version/source
+  - `AiRuntimeConfigResolver`：统一解析优先级并产出快照
+  - `AiRuntimePolicyService`：约束请求级覆盖与快照合法性
+- 当前只支持 `AiRuntimeDomain.CHAT`，`EMBEDDING / ASR / TTS` 先保留枚举与边界，不在本阶段接线。
+- `LlmProviderRegistry` 的 chat 缓存已改为模型感知缓存，避免“provider 未变但 model 已切换”时复用旧 client。
 
 ### 8.2 结构化输出（StructuredOutputInvoker）
 
@@ -265,6 +288,12 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<KnowledgeBas
 
 - `knowledgebase`：`app.ai.rag.llm-provider`（RAG 问答可单独指定 provider）。
 - `voice`：`app.voice-interview.llm-provider`（语音模块默认 provider，历史前缀保留为兼容）。
+
+补充：
+
+- 上述静态配置仍然是 resolver 的重要输入，但 chat 业务不应再把它当成唯一来源。
+- `knowledgebase` / `document` / `simulation` 当前已经逐步切换到“先解析 snapshot，再获取 client”的模式。
+- `voice` 仍保留静态 provider 路径；后续若接入运行时动态配置，只允许按**会话级快照**切换，禁止通话过程中漂移模型。
 
 - 配置：`app.ai.providers.{providerId}.baseUrl/apiKey/model`
 - 默认聊天 Provider：`app.ai.default-provider`，应优先配置为第三方 OpenAI-compatible 中转；Qwen 主要保留给向量化与语音

@@ -1,6 +1,10 @@
 package com.ruici.ai.modules.simulation.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.infrastructure.redis.InterviewSessionCache;
 import com.ruici.ai.modules.document.model.ResumeEntity;
@@ -137,6 +141,17 @@ class InterviewSessionServiceTest {
         @DisplayName("仅提供 documentId 时会回填正文并透传 2.0 字段")
         void shouldResolveResumeTextFromDocumentAndPropagateCompatibilityFields() {
             Long resumeId = 123L;
+            AiRuntimeConfigSnapshot runtimeSnapshot = new AiRuntimeConfigSnapshot(
+                "THIRD_PARTY_MODEL",
+                AiRuntimeDomain.CHAT,
+                AiRuntimeScene.SIMULATION,
+                "third-party",
+                "gpt-5.2",
+                "qwen-plus",
+                0L,
+                AiRuntimeConfigSource.ENV_CONFIG,
+                false
+            );
             String resolvedResumeText = "张三\n五年 Java 后端经验，负责高并发交易系统、缓存治理与链路优化。"
                 + "\n工作经历：主导订单履约链路重构，优化接口响应与稳定性，推动告警与压测体系落地。"
                 + "\n项目经历：负责 Redis + Caffeine 多级缓存、异步编排和慢查询治理，持续优化核心链路 RT 与可维护性。"
@@ -169,7 +184,16 @@ class InterviewSessionServiceTest {
             given(resumePersistenceService.findById(resumeId)).willReturn(Optional.of(resume));
             given(persistenceService.getHistoricalQuestions(anyString(), anyString(), eq(resumeId)))
                 .willReturn(List.<HistoricalQuestion>of());
-            given(llmProviderRegistry.getChatClientOrDefault("third-party")).willReturn(chatClient);
+            given(llmProviderRegistry.resolveChatSnapshot(
+                eq("third-party"),
+                eq(null),
+                eq(null),
+                eq(AiRuntimeScene.SIMULATION),
+                eq(LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.SIMULATION, "default", "THIRD_PARTY_MODEL")),
+                eq("default"),
+                eq(true)
+            )).willReturn(runtimeSnapshot);
+            given(llmProviderRegistry.getChatClient(runtimeSnapshot)).willReturn(chatClient);
             given(questionService.generateQuestionsBySkill(
                 eq(chatClient),
                 any(),

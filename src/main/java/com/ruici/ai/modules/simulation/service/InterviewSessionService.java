@@ -2,6 +2,8 @@ package com.ruici.ai.modules.simulation.service;
 
 import com.ruici.ai.common.constant.CommonConstants.ScenarioDefaults;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.common.model.AsyncTaskStatus;
@@ -112,7 +114,16 @@ public class InterviewSessionService {
             persistenceService.getHistoricalQuestions(scenarioType.id(), skillId, effectiveResumeId);
 
         // 获取 LLM 客户端
-        ChatClient chatClient = llmProviderRegistry.getChatClientOrDefault(request.llmProvider());
+        AiRuntimeConfigSnapshot runtimeSnapshot = llmProviderRegistry.resolveChatSnapshot(
+            request.llmProvider(),
+            null,
+            null,
+            AiRuntimeScene.SIMULATION,
+            LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.SIMULATION, "default", "THIRD_PARTY_MODEL"),
+            "default",
+            request.llmProvider() != null && !request.llmProvider().isBlank()
+        );
+        ChatClient chatClient = llmProviderRegistry.getChatClient(runtimeSnapshot);
 
         // 基于 Skill 生成面试问题
         List<InterviewQuestionDTO> questions = questionService.generateQuestionsBySkill(
@@ -152,7 +163,7 @@ public class InterviewSessionService {
                 effectiveResumeId,
                 totalMainQuestions,
                 questions,
-                request.llmProvider(),
+                runtimeSnapshot.providerId(),
                 skillId,
                 difficulty,
                 simulationDirection.name(),

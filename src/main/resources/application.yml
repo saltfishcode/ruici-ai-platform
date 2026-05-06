@@ -95,7 +95,7 @@ spring:
       api-key: ${AI_EMBEDDING_API_KEY:${AI_BAILIAN_API_KEY}}
       chat:
         options:
-          model: ${AI_CHAT_FALLBACK_MODEL:qwen-plus}
+          model: ${AI_CHAT_FALLBACK_MODEL:qwen-math-turbo}
           temperature: 0.2
       # Embedding 模型配置，默认保留 Qwen 的 text-embedding-v3。
       embedding:
@@ -129,11 +129,11 @@ app:
         base-url: ${THIRD_PARTY_BASE_URL:https://api-s.zwenooo.link/v1}
         api-key: ${THIRD_PARTY_API_KEY:}
         model: ${THIRD_PARTY_MODEL:gpt-5.2}
-        fallback-model: ${THIRD_PARTY_FALLBACK_MODEL:${AI_CHAT_FALLBACK_MODEL:qwen-plus}}
+        fallback-model: ${THIRD_PARTY_FALLBACK_MODEL:${AI_CHAT_FALLBACK_MODEL:qwen-math-turbo}}
       dashscope:
         base-url: https://dashscope.aliyuncs.com/compatible-mode
         api-key: ${AI_BAILIAN_API_KEY}
-        model: ${DASHSCOPE_CHAT_MODEL:qwen-turbo}
+        model: ${DASHSCOPE_CHAT_MODEL:qwen-math-turbo}
       openai:
         base-url: https://api.openai.com/v1
         api-key: ${OPENAI_API_KEY:}
@@ -150,18 +150,19 @@ app:
       message-chat-memory-enabled: ${APP_AI_ADVISORS_MESSAGE_CHAT_MEMORY_ENABLED:false}
       message-chat-memory-max-messages: ${APP_AI_ADVISORS_MESSAGE_CHAT_MEMORY_MAX_MESSAGES:120}
       simple-logger-enabled: ${APP_AI_ADVISORS_SIMPLE_LOGGER_ENABLED:false}
-    # 结构化输出重试次数（用于 BeanOutputConverter 解析失败时的业务层重试）
-    structured-max-attempts: ${APP_AI_STRUCTURED_MAX_ATTEMPTS:2}
-    # 重试时是否将上次错误原因注入提示词，帮助模型定向修复输出
-    structured-include-last-error: ${APP_AI_STRUCTURED_INCLUDE_LAST_ERROR:true}
-    # 是否启用“修复型重试提示词”（关闭后每次重试沿用原始 system prompt）
-    structured-retry-use-repair-prompt: ${APP_AI_STRUCTURED_RETRY_USE_REPAIR_PROMPT:true}
-    # 修复型重试提示词中是否追加严格 JSON 指令
-    structured-retry-append-strict-json-instruction: ${APP_AI_STRUCTURED_RETRY_APPEND_STRICT_JSON_INSTRUCTION:true}
-    # 注入到重试提示词中的错误信息最大长度
-    structured-error-message-max-length: ${APP_AI_STRUCTURED_ERROR_MESSAGE_MAX_LENGTH:200}
-    # 是否开启结构化输出调用指标（invocations/attempts/latency）
-    structured-metrics-enabled: ${APP_AI_STRUCTURED_METRICS_ENABLED:true}
+    structured:
+      # 结构化输出重试次数（用于 BeanOutputConverter 解析失败时的业务层重试）
+      max-attempts: ${APP_AI_STRUCTURED_MAX_ATTEMPTS:2}
+      # 重试时是否将上次错误原因注入提示词，帮助模型定向修复输出
+      include-last-error: ${APP_AI_STRUCTURED_INCLUDE_LAST_ERROR:true}
+      # 是否启用“修复型重试提示词”（关闭后每次重试沿用原始 system prompt）
+      retry-use-repair-prompt: ${APP_AI_STRUCTURED_RETRY_USE_REPAIR_PROMPT:true}
+      # 修复型重试提示词中是否追加严格 JSON 指令
+      retry-append-strict-json-instruction: ${APP_AI_STRUCTURED_RETRY_APPEND_STRICT_JSON_INSTRUCTION:true}
+      # 注入到重试提示词中的错误信息最大长度
+      error-message-max-length: ${APP_AI_STRUCTURED_ERROR_MESSAGE_MAX_LENGTH:200}
+      # 是否开启结构化输出调用指标（invocations/attempts/latency）
+      metrics-enabled: ${APP_AI_STRUCTURED_METRICS_ENABLED:true}
     rag:
       llm-provider: ${APP_AI_RAG_LLM_PROVIDER:third-party}
       rewrite:

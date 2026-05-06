@@ -2,6 +2,8 @@ package com.ruici.ai.modules.document.service;
 
 import com.ruici.ai.common.ai.StructuredOutputInvoker;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.modules.document.model.AnalysisDifficulty;
@@ -31,7 +33,7 @@ public class ResumeGradingService {
     
     private static final Logger log = LoggerFactory.getLogger(ResumeGradingService.class);
     
-    private final ChatClient chatClient;
+    private final LlmProviderRegistry llmProviderRegistry;
     private final PromptTemplate systemPromptTemplate;
     private final PromptTemplate userPromptTemplate;
     private final BeanOutputConverter<ResumeAnalysisResponseDTO> outputConverter;
@@ -66,7 +68,7 @@ public class ResumeGradingService {
             StructuredOutputInvoker structuredOutputInvoker,
             ResumeAnalysisProperties properties,
             ResourceLoader resourceLoader) throws IOException {
-        this.chatClient = llmProviderRegistry.getDefaultChatClient();
+        this.llmProviderRegistry = llmProviderRegistry;
         this.structuredOutputInvoker = structuredOutputInvoker;
         this.systemPromptTemplate = new PromptTemplate(
             resourceLoader.getResource(properties.getSystemPromptPath())
@@ -109,8 +111,17 @@ public class ResumeGradingService {
             // 调用AI
             ResumeAnalysisResponseDTO dto;
             try {
+                AiRuntimeConfigSnapshot runtimeSnapshot = llmProviderRegistry.resolveChatSnapshot(
+                    null,
+                    null,
+                    null,
+                    AiRuntimeScene.DOCUMENT,
+                    LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.DOCUMENT, "default", "THIRD_PARTY_MODEL"),
+                    "default",
+                    false
+                );
                 dto = structuredOutputInvoker.invoke(
-                    chatClient,
+                    llmProviderRegistry.getChatClient(runtimeSnapshot),
                     systemPromptWithFormat,
                     userPrompt,
                     outputConverter,

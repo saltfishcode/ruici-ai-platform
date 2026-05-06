@@ -1,5 +1,10 @@
 package com.ruici.ai.common.ai;
 
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigResolver;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.AiRuntimeResolveContext;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.common.config.LlmProviderProperties;
 import com.ruici.ai.common.config.LlmProviderProperties.AdvisorConfig;
 import com.ruici.ai.common.config.LlmProviderProperties.ProviderConfig;
@@ -21,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
@@ -36,8 +42,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class LlmProviderRegistry {
 
+    private static final String DEFAULT_CLIENT_TYPE = "default";
+    private static final String CHAT_CONFIG_KEY = "THIRD_PARTY_MODEL";
+
     private final LlmProviderProperties properties;
     private final Map<String, ChatClient> clientCache = new ConcurrentHashMap<>();
+    private final AiRuntimeConfigResolver aiRuntimeConfigResolver;
 
     private final ToolCallingManager toolCallingManager;
     private final ObservationRegistry observationRegistry;
@@ -45,10 +55,12 @@ public class LlmProviderRegistry {
 
     public LlmProviderRegistry(
             LlmProviderProperties properties,
+            AiRuntimeConfigResolver aiRuntimeConfigResolver,
             @Autowired(required = false) ToolCallingManager toolCallingManager,
             @Autowired(required = false) ObservationRegistry observationRegistry,
             @Autowired(required = false) @Qualifier("interviewSkillsToolCallback") ToolCallback interviewSkillsToolCallback) {
         this.properties = properties;
+        this.aiRuntimeConfigResolver = aiRuntimeConfigResolver;
         this.toolCallingManager = toolCallingManager;
         this.observationRegistry = observationRegistry;
         this.interviewSkillsToolCallback = interviewSkillsToolCallback;
@@ -64,10 +76,15 @@ public class LlmProviderRegistry {
      */
     public ChatClient getChatClient(String providerId) {
         log.info("[LlmProviderRegistry] Requesting client for provider: {}", providerId);
-        return clientCache.computeIfAbsent(providerId, id -> {
-            log.info("[LlmProviderRegistry] Cache miss. Creating new client for: {}", id);
-            return createChatClient(id);
-        });
+        return getChatClient(resolveChatSnapshot(
+            providerId,
+            null,
+            null,
+            AiRuntimeScene.GLOBAL,
+            buildSnapshotKey(AiRuntimeScene.GLOBAL, DEFAULT_CLIENT_TYPE, CHAT_CONFIG_KEY),
+            DEFAULT_CLIENT_TYPE,
+            false
+        ));
     }
 
     /**
@@ -76,24 +93,30 @@ public class LlmProviderRegistry {
      * @return The default ChatClient instance
      */
     public ChatClient getDefaultChatClient() {
-        return getChatClient(properties.getDefaultProvider());
+        return getChatClient((String) null);
     }
 
     /**
      * Get a ChatClient for the specified provider, falling back to the default if null or blank.
      */
     public ChatClient getChatClientOrDefault(String providerId) {
-        return (providerId != null && !providerId.isBlank())
-            ? getChatClient(providerId)
-            : getDefaultChatClient();
+        return getChatClient(providerId);
     }
 
     /**
      * 获取不带 SkillsTool 的 ChatClient，用于简历题生成等不需要 Agent 工具调用的场景。
      */
     public ChatClient getPlainChatClient(String providerId) {
-        String id = resolveProviderId(providerId);
-        return clientCache.computeIfAbsent(id + ":plain", key -> createPlainChatClient(id));
+        AiRuntimeConfigSnapshot snapshot = resolveChatSnapshot(
+            providerId,
+            null,
+            null,
+            AiRuntimeScene.GLOBAL,
+            buildSnapshotKey(AiRuntimeScene.GLOBAL, "plain", CHAT_CONFIG_KEY),
+            "plain",
+            false
+        );
+        return getPlainChatClientBySnapshot(snapshot);
     }
 
     /**
@@ -107,45 +130,108 @@ public class LlmProviderRegistry {
         return clientCache.computeIfAbsent(id + ":voice", key -> createVoiceChatClient(id));
     }
 
-    private ChatClient createChatClient(String providerId) {
-        OpenAiChatModel chatModel = buildChatModel(providerId);
+    public ChatClient getChatClient(AiRuntimeConfigSnapshot snapshot) {
+        return clientCache.computeIfAbsent(buildCacheKey(snapshot, DEFAULT_CLIENT_TYPE), key -> {
+            log.info("[LlmProviderRegistry] Cache miss. Creating chat client for key: {}", key);
+            return createChatClient(snapshot);
+        });
+    }
+
+    private ChatClient getPlainChatClientBySnapshot(AiRuntimeConfigSnapshot snapshot) {
+        return clientCache.computeIfAbsent(buildCacheKey(snapshot, "plain"), key -> {
+            log.info("[LlmProviderRegistry] Cache miss. Creating plain chat client for key: {}", key);
+            return createPlainChatClient(snapshot);
+        });
+    }
+
+    public AiRuntimeConfigSnapshot resolveChatSnapshot(
+        String requestProviderId,
+        String requestModelName,
+        String requestFallbackModelName,
+        AiRuntimeScene scene,
+        String snapshotKey,
+        String clientType,
+        boolean requestOverrideAllowed
+    ) {
+        return aiRuntimeConfigResolver.resolveChatConfig(new AiRuntimeResolveContext(
+            AiRuntimeDomain.CHAT,
+            scene,
+            CHAT_CONFIG_KEY,
+            requestProviderId,
+            requestModelName,
+            requestFallbackModelName,
+            properties.getDefaultProvider(),
+            snapshotKey,
+            clientType,
+            requestOverrideAllowed
+        ));
+    }
+
+    public void evictChatClient(AiRuntimeConfigSnapshot snapshot, String clientType) {
+        if (snapshot == null) {
+            return;
+        }
+        clientCache.remove(buildCacheKey(snapshot, clientType));
+    }
+
+    public static String buildSnapshotKey(AiRuntimeScene scene, String clientType, String configKey) {
+        return scene.code() + ":" + clientType + ":" + configKey;
+    }
+
+    private ChatClient createChatClient(AiRuntimeConfigSnapshot snapshot) {
+        OpenAiChatModel chatModel = buildChatModel(snapshot);
 
         ChatClient.Builder builder = ChatClient.builder(chatModel);
         if (interviewSkillsToolCallback != null) {
             builder.defaultToolCallbacks(interviewSkillsToolCallback);
         }
-        List<Advisor> advisors = buildDefaultAdvisors(providerId);
+        List<Advisor> advisors = buildDefaultAdvisors(snapshot.providerId());
         if (!advisors.isEmpty()) {
             builder.defaultAdvisors(advisors.toArray(new Advisor[0]));
-            log.info("[LlmProviderRegistry] Applied {} advisors for provider {}", advisors.size(), providerId);
+            log.info("[LlmProviderRegistry] Applied {} advisors for provider {}", advisors.size(), snapshot.providerId());
         }
 
         return builder.build();
     }
 
-    private ChatClient createPlainChatClient(String providerId) {
-        OpenAiChatModel chatModel = buildChatModel(providerId);
-        log.info("[LlmProviderRegistry] Created plain ChatClient (no tools) for {}", providerId);
+    private ChatClient createPlainChatClient(AiRuntimeConfigSnapshot snapshot) {
+        OpenAiChatModel chatModel = buildChatModel(snapshot);
+        log.info("[LlmProviderRegistry] Created plain ChatClient (no tools) for {}", snapshot.providerId());
         return ChatClient.builder(chatModel).build();
     }
 
     private ChatClient createVoiceChatClient(String providerId) {
-        OpenAiChatModel chatModel = buildChatModel(providerId);
+        ProviderConfig providerConfig = properties.getProviders().get(providerId);
+        if (providerConfig == null) {
+            throw new IllegalArgumentException("Unknown LLM provider: " + providerId);
+        }
+        AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
+            CHAT_CONFIG_KEY,
+            AiRuntimeDomain.CHAT,
+            AiRuntimeScene.VOICE,
+            providerId,
+            providerConfig.getModel(),
+            providerConfig.getFallbackModel(),
+            0L,
+            null,
+            false
+        );
+        OpenAiChatModel chatModel = buildChatModel(snapshot);
         log.info("[LlmProviderRegistry] Created voice ChatClient (plain/no tools) for {}", providerId);
         return ChatClient.builder(chatModel).build();
     }
 
-    private OpenAiChatModel buildChatModel(String providerId) {
-        ProviderConfig config = properties.getProviders().get(providerId);
+    private OpenAiChatModel buildChatModel(AiRuntimeConfigSnapshot snapshot) {
+        ProviderConfig config = properties.getProviders().get(snapshot.providerId());
         if (config == null) {
-            log.error("[LlmProviderRegistry] Provider config not found: {}", providerId);
-            throw new IllegalArgumentException("Unknown LLM provider: " + providerId);
+            log.error("[LlmProviderRegistry] Provider config not found: {}", snapshot.providerId());
+            throw new IllegalArgumentException("Unknown LLM provider: " + snapshot.providerId());
         }
 
         String normalizedBaseUrl = normalizeBaseUrlForOpenAiApi(config.getBaseUrl());
 
         log.info("[LlmProviderRegistry] Building ChatModel - Provider: {}, BaseUrl: {}, Model: {}",
-                 providerId, normalizedBaseUrl, config.getModel());
+                 snapshot.providerId(), normalizedBaseUrl, snapshot.modelName());
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(10000);
@@ -161,7 +247,7 @@ public class LlmProviderRegistry {
                 .build();
 
         OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .model(config.getModel())
+                .model(snapshot.modelName())
                 .temperature(0.2)
                 .build();
 
@@ -221,6 +307,17 @@ public class LlmProviderRegistry {
     private String resolveProviderId(String providerId) {
         return (providerId != null && !providerId.isBlank())
             ? providerId : properties.getDefaultProvider();
+    }
+
+    private String buildCacheKey(AiRuntimeConfigSnapshot snapshot, String clientType) {
+        String baseUrl = properties.getProviders().get(snapshot.providerId()).getBaseUrl();
+        String fallback = StringUtils.hasText(snapshot.fallbackModelName()) ? snapshot.fallbackModelName() : "-";
+        return snapshot.providerId()
+            + ":" + clientType
+            + ":" + snapshot.modelName()
+            + ":" + fallback
+            + ":" + normalizeBaseUrlForOpenAiApi(baseUrl)
+            + ":" + snapshot.configVersion();
     }
 
     static String normalizeBaseUrlForOpenAiApi(String baseUrl) {

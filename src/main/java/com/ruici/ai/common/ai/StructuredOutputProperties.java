@@ -6,13 +6,13 @@ import org.springframework.stereotype.Component;
 
 @Data
 @Component
-@ConfigurationProperties(prefix = "app.ai")
+@ConfigurationProperties(prefix = "app.ai.structured")
 public class StructuredOutputProperties {
 
-    private int structuredMaxAttempts = 2;
-    private boolean structuredIncludeLastError = true;
-    private boolean structuredRetryUseRepairPrompt = true;
-    private boolean structuredRetryAppendStrictJsonInstruction = true;
-    private int structuredErrorMessageMaxLength = 200;
-    private boolean structuredMetricsEnabled = true;
+    private int maxAttempts = 2;
+    private boolean includeLastError = true;
+    private boolean retryUseRepairPrompt = true;
+    private boolean retryAppendStrictJsonInstruction = true;
+    private int errorMessageMaxLength = 200;
+    private boolean metricsEnabled = true;
 }

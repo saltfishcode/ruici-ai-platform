@@ -34,6 +34,25 @@
 
 项目采用 **多 Provider 架构**，但默认策略已经切换为“自定义 OpenAI-compatible 中转优先”。
 
+### v1.3.0 当前阶段说明
+
+从 `v1.3.0` 开始，聊天链路已经接入 **chat-first 运行时动态配置基础能力**，目标是把
+`Provider / Model / Fallback Model` 的决策，从“各业务模块自行读取静态配置”收敛为
+“统一 resolver 解析 + Registry 缓存 + 模块按快照消费”。
+
+当前阶段的边界非常明确：
+
+- **已接入动态解析**：chat 相关链路（`document` / `simulation` / `knowledgebase`）
+- **暂不做业务切换**：embedding / voice 仍保持原有稳定配置路径
+- **优先级统一**：请求级覆盖（允许时）→ 数据库运行时配置 → 静态环境配置 → code default
+- **缓存按模型区分**：`LlmProviderRegistry` 不再只按 provider 缓存，而是按 provider + clientType
+  + model + fallback + baseUrl + configVersion 组合缓存，避免模型切换后复用旧 client
+- **last-known-good 兜底**：chat resolver 内部保留最近一次可用快照，用于数据库配置失效或异常场景的
+  稳定回退
+
+这意味着：当前默认聊天 Provider 仍然可以是 `third-party`，但具体聊天链路最终使用哪个 model /
+fallback model，已经不再建议由业务模块自己拼接判断，而应统一走运行时解析。
+
 ### 默认路由
 
 - **主聊天 / 通用推理 / 情景模拟**：默认走第三方 OpenAI-compatible 中转
@@ -47,6 +66,8 @@
 - 第三方 OpenAI-compatible 中转更适合作为统一聊天入口，方便切换模型和成本控制。
 - 向量化与实时语音的兼容性、稳定性和能力覆盖目前仍以 `Qwen / DashScope` 更稳妥。
 - “OpenAI-compatible” 不是“完全等价 OpenAI”，不同中转在 `/chat/completions`、流式事件、工具调用、结构化输出上可能存在差异，因此需要把聊天和语音/向量能力分层配置，而不是强行共用一个 Provider。
+- `v1.3.0` 先只把 **chat** 做成统一运行时控制面，是为了先稳定最常用、最容易频繁切换模型的链路；
+  embedding / voice 后续再按任务级 / 会话级快照接入，避免一次性放大改动面。
 
 ## 技术栈
 
@@ -108,6 +129,43 @@ React 18 + TypeScript + Vite + TailwindCSS 4，位于 `frontend/` 目录。
 部分配置键、数据库字段和兼容命名仍然带有旧项目色彩，这是当前重构过程中的兼容层，不代表最终产品语义。
 
 前后端对接时，建议直接查看 `api/` 目录下的模块接口说明，而不是只根据类名猜测语义。
+
+## 运行时 AI 配置（v1.3.0）
+
+`v1.3.0` 新增的不是“更多 Controller 接口”，而是后端内部的 **AI 运行时控制面基础层**。当前代码里，
+这部分主要位于：
+
+```text
+src/main/java/com/ruici/ai/common/config/runtime/
+```
+
+其中关键职责可以这样理解：
+
+- `AiRuntimeConfigEntity` / `AiRuntimeConfigRepository`：承载数据库中的非敏感运行时控制信息
+  （如 scene / domain / provider / model / fallback model / priority / version）
+- `AiRuntimePolicyService`：约束当前允许的覆盖范围与快照合法性
+- `AiRuntimeConfigResolver`：把请求级覆盖、数据库配置、静态配置、兜底策略收敛为单一快照
+- `AiRuntimeConfigSnapshot`：把一次调用真正使用的 provider/model/fallback/version/source 固化下来
+- `LlmProviderRegistry`：根据快照创建并缓存 `ChatClient`
+
+### 当前接线范围
+
+已经切到 resolver + snapshot 的 chat 链路包括：
+
+- `modules/document`：文档分析评分链路
+- `modules/simulation`：题目生成 / 会话创建 / 评估链路
+- `modules/knowledgebase`：RAG 改写、问答与流式回答链路
+
+暂未做业务动态切换的范围：
+
+- `embedding`：仍保持原向量化稳定路径
+- `voice`：仍保持语音专用配置路径
+
+### 对前端 / 接口的影响
+
+- **当前没有新增必传接口字段**，也没有把现有公开接口改成新的路径。
+- 这次改动主要影响后端内部如何选择聊天模型，而不是前端如何调用接口。
+- 如果后续增加运行时配置管理接口或后台控制面，再在 `api/` 目录单独补接口文档。
 
 ## 项目结构
 
@@ -337,6 +395,26 @@ docker compose up -d --build
 ```
 
 ## 常见问题
+
+### v1.3.0 为什么只先做 chat 运行时动态配置？
+
+因为聊天链路最容易遇到模型切换、fallback 和中转兼容问题，也是当前 `document / simulation /
+knowledgebase` 三个核心模块的共性依赖。先把 chat 统一到 resolver + snapshot + model-aware cache，
+可以先把收益最大的部分稳定下来。
+
+### 数据库动态配置会不会把密钥也放进数据库？
+
+不会。当前运行时配置表只存 providerId、modelName、fallbackModelName、scene、domain、priority、
+configVersion 等 **非敏感控制信息**。真实 API Key 仍然只保留在 `.env` 或环境变量中。
+
+### 为什么 voice / embedding 还没跟着动态切换？
+
+这是 `v1.3.0` 的有意边界：
+
+- `embedding` 后续按任务/批次级快照接入，避免 chunk 级频繁查库
+- `voice` 后续按会话级快照接入，避免通话进行中漂移 provider/model
+
+当前阶段先不改，是为了保证已有稳定链路不被 chat 改造连带放大风险。
 
 ### 向量化为什么仍然依赖 Qwen / DashScope？
 

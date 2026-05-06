@@ -2,6 +2,7 @@ package com.ruici.ai.common.ai;
 
 import com.ruici.ai.common.config.LlmProviderProperties;
 import com.ruici.ai.common.config.LlmProviderProperties.ProviderConfig;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -44,6 +45,20 @@ public class OpenAiCompatibleGatewayClient {
     public String generateText(String providerId, String instructions, String input) {
         ProviderConfig config = getProviderConfig(providerId);
         List<String> modelCandidates = buildModelCandidates(config);
+        return generateText(config, modelCandidates, resolveProviderId(providerId), instructions, input);
+    }
+
+    public String generateText(AiRuntimeConfigSnapshot snapshot, String instructions, String input) {
+        ProviderConfig config = getProviderConfig(snapshot.providerId());
+        List<String> modelCandidates = buildModelCandidates(snapshot, config);
+        return generateText(config, modelCandidates, snapshot.providerId(), instructions, input);
+    }
+
+    private String generateText(ProviderConfig config,
+                                List<String> modelCandidates,
+                                String providerId,
+                                String instructions,
+                                String input) {
 
         Exception responsesFailure = null;
         for (String model : modelCandidates) {
@@ -60,14 +75,14 @@ public class OpenAiCompatibleGatewayClient {
                 catch (Exception e) {
                     responsesFailure = e;
                     log.warn("Responses API 调用失败，准备尝试下一个候选组合: provider={}, model={}, endpoint={}, error={}",
-                        resolveProviderId(providerId), model, endpoint, e.getMessage());
+                        providerId, model, endpoint, e.getMessage());
                 }
             }
         }
 
         if (responsesFailure != null) {
             log.warn("Responses API 全部候选端点失败，回退到 chat/completions: provider={}, error={}",
-                resolveProviderId(providerId), responsesFailure.getMessage());
+                providerId, responsesFailure.getMessage());
         }
 
         return requestChatCompletionWithFallback(config, modelCandidates, instructions, input, false);
@@ -76,13 +91,27 @@ public class OpenAiCompatibleGatewayClient {
     public Flux<String> streamText(String providerId, String instructions, String input) {
         ProviderConfig config = getProviderConfig(providerId);
         List<String> modelCandidates = buildModelCandidates(config);
+        return streamText(config, modelCandidates, resolveProviderId(providerId), instructions, input);
+    }
+
+    public Flux<String> streamText(AiRuntimeConfigSnapshot snapshot, String instructions, String input) {
+        ProviderConfig config = getProviderConfig(snapshot.providerId());
+        List<String> modelCandidates = buildModelCandidates(snapshot, config);
+        return streamText(config, modelCandidates, snapshot.providerId(), instructions, input);
+    }
+
+    private Flux<String> streamText(ProviderConfig config,
+                                    List<String> modelCandidates,
+                                    String providerId,
+                                    String instructions,
+                                    String input) {
 
         return requestResponsesWithFallback(config, modelCandidates, instructions, input)
             .transform(this::decodeResponsesStream)
             .switchIfEmpty(decodeChatCompletionsStreamWithFallback(config, modelCandidates, instructions, input))
             .onErrorResume(error -> {
                 log.warn("Responses SSE 调用失败，回退到 chat/completions 流式: provider={}, error={}",
-                    resolveProviderId(providerId), error.getMessage());
+                    providerId, error.getMessage());
                 return decodeChatCompletionsStreamWithFallback(config, modelCandidates, instructions, input);
             });
     }
@@ -312,6 +341,20 @@ public class OpenAiCompatibleGatewayClient {
         }
         if (StringUtils.hasText(config.getFallbackModel())) {
             addModelCandidateVariants(candidates, config.getFallbackModel());
+        }
+        return new ArrayList<>(candidates);
+    }
+
+    List<String> buildModelCandidates(AiRuntimeConfigSnapshot snapshot, ProviderConfig config) {
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        if (StringUtils.hasText(snapshot.modelName())) {
+            addModelCandidateVariants(candidates, snapshot.modelName());
+        }
+        if (StringUtils.hasText(snapshot.fallbackModelName())) {
+            addModelCandidateVariants(candidates, snapshot.fallbackModelName());
+        }
+        if (candidates.isEmpty()) {
+            return buildModelCandidates(config);
         }
         return new ArrayList<>(candidates);
     }
