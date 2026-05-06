@@ -1,5 +1,7 @@
 package com.ruici.ai.modules.knowledgebase.listener;
 
+import com.ruici.ai.common.ai.EmbeddingProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.async.AbstractStreamProducer;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
 import com.ruici.ai.infrastructure.redis.RedisService;
@@ -19,12 +21,18 @@ import java.util.Map;
 public class VectorizeStreamProducer extends AbstractStreamProducer<VectorizeStreamProducer.VectorizeTaskPayload> {
 
     private final KnowledgeBaseRepository knowledgeBaseRepository;
+    private final EmbeddingProviderRegistry embeddingProviderRegistry;
 
-    record VectorizeTaskPayload(Long kbId, String content) {}
+    record VectorizeTaskPayload(Long kbId, String content, AiRuntimeConfigSnapshot embeddingSnapshot) {}
 
-    public VectorizeStreamProducer(RedisService redisService, KnowledgeBaseRepository knowledgeBaseRepository) {
+    public VectorizeStreamProducer(
+        RedisService redisService,
+        KnowledgeBaseRepository knowledgeBaseRepository,
+        EmbeddingProviderRegistry embeddingProviderRegistry
+    ) {
         super(redisService);
         this.knowledgeBaseRepository = knowledgeBaseRepository;
+        this.embeddingProviderRegistry = embeddingProviderRegistry;
     }
 
     /**
@@ -34,7 +42,10 @@ public class VectorizeStreamProducer extends AbstractStreamProducer<VectorizeStr
      * @param content 文档内容
      */
     public void sendVectorizeTask(Long kbId, String content) {
-        sendTask(new VectorizeTaskPayload(kbId, content));
+        AiRuntimeConfigSnapshot embeddingSnapshot = embeddingProviderRegistry.resolveEmbeddingSnapshot(
+            com.ruici.ai.common.config.runtime.AiRuntimeScene.KNOWLEDGEBASE
+        );
+        sendTask(new VectorizeTaskPayload(kbId, content, embeddingSnapshot));
     }
 
     @Override
@@ -49,10 +60,16 @@ public class VectorizeStreamProducer extends AbstractStreamProducer<VectorizeStr
 
     @Override
     protected Map<String, String> buildMessage(VectorizeTaskPayload payload) {
+        AiRuntimeConfigSnapshot embeddingSnapshot = payload.embeddingSnapshot();
         return Map.of(
             AsyncTaskStreamConstants.FIELD_KB_ID, payload.kbId().toString(),
             AsyncTaskStreamConstants.FIELD_CONTENT, payload.content(),
-            AsyncTaskStreamConstants.FIELD_RETRY_COUNT, "0"
+            AsyncTaskStreamConstants.FIELD_RETRY_COUNT, "0",
+            AsyncTaskStreamConstants.FIELD_EMBEDDING_PROVIDER_ID, embeddingSnapshot.providerId(),
+            AsyncTaskStreamConstants.FIELD_EMBEDDING_MODEL_NAME, embeddingSnapshot.modelName(),
+            AsyncTaskStreamConstants.FIELD_EMBEDDING_CONFIG_VERSION, String.valueOf(embeddingSnapshot.configVersion()),
+            AsyncTaskStreamConstants.FIELD_EMBEDDING_CONFIG_SOURCE, embeddingSnapshot.source().name(),
+            AsyncTaskStreamConstants.FIELD_EMBEDDING_STALE, String.valueOf(embeddingSnapshot.stale())
         );
     }
 

@@ -81,6 +81,31 @@ public final class AsyncTaskStreamConstants {
      */
     public static final String FIELD_KB_ID = "kbId";
 
+    /**
+     * 向量化任务使用的 embedding provider。
+     */
+    public static final String FIELD_EMBEDDING_PROVIDER_ID = "embeddingProviderId";
+
+    /**
+     * 向量化任务使用的 embedding model。
+     */
+    public static final String FIELD_EMBEDDING_MODEL_NAME = "embeddingModelName";
+
+    /**
+     * 向量化任务使用的 embedding config version。
+     */
+    public static final String FIELD_EMBEDDING_CONFIG_VERSION = "embeddingConfigVersion";
+
+    /**
+     * 向量化任务使用的 embedding config source。
+     */
+    public static final String FIELD_EMBEDDING_CONFIG_SOURCE = "embeddingConfigSource";
+
+    /**
+     * 向量化任务使用的 embedding stale 标记。
+     */
+    public static final String FIELD_EMBEDDING_STALE = "embeddingStale";
+
     // ========== 简历分析 Stream 配置 ==========
 
     /**

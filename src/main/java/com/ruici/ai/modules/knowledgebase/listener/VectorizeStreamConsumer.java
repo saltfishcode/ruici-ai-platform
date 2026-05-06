@@ -2,6 +2,10 @@ package com.ruici.ai.modules.knowledgebase.listener;
 
 import com.ruici.ai.common.async.AbstractStreamConsumer;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import com.ruici.ai.infrastructure.redis.RedisService;
 import com.ruici.ai.modules.knowledgebase.model.VectorStatus;
 import com.ruici.ai.modules.knowledgebase.repository.KnowledgeBaseRepository;
@@ -33,7 +37,7 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<VectorizeStr
         this.knowledgeBaseRepository = knowledgeBaseRepository;
     }
 
-    record VectorizePayload(Long kbId, String content) {}
+    record VectorizePayload(Long kbId, String content, AiRuntimeConfigSnapshot embeddingSnapshot) {}
 
     @Override
     protected String taskDisplayName() {
@@ -64,11 +68,28 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<VectorizeStr
     protected VectorizePayload parsePayload(StreamMessageId messageId, Map<String, String> data) {
         String kbIdStr = data.get(AsyncTaskStreamConstants.FIELD_KB_ID);
         String content = data.get(AsyncTaskStreamConstants.FIELD_CONTENT);
-        if (kbIdStr == null || content == null) {
+        String embeddingProviderId = data.get(AsyncTaskStreamConstants.FIELD_EMBEDDING_PROVIDER_ID);
+        String embeddingModelName = data.get(AsyncTaskStreamConstants.FIELD_EMBEDDING_MODEL_NAME);
+        String embeddingConfigVersion = data.get(AsyncTaskStreamConstants.FIELD_EMBEDDING_CONFIG_VERSION);
+        String embeddingConfigSource = data.get(AsyncTaskStreamConstants.FIELD_EMBEDDING_CONFIG_SOURCE);
+        String embeddingStale = data.get(AsyncTaskStreamConstants.FIELD_EMBEDDING_STALE);
+        if (kbIdStr == null || content == null || embeddingProviderId == null || embeddingModelName == null
+            || embeddingConfigVersion == null || embeddingConfigSource == null || embeddingStale == null) {
             log.warn("消息格式错误，跳过: messageId={}", messageId);
             return null;
         }
-        return new VectorizePayload(Long.parseLong(kbIdStr), content);
+        AiRuntimeConfigSnapshot embeddingSnapshot = new AiRuntimeConfigSnapshot(
+            "AI_EMBEDDING_MODEL",
+            AiRuntimeDomain.EMBEDDING,
+            AiRuntimeScene.KNOWLEDGEBASE,
+            embeddingProviderId,
+            embeddingModelName,
+            null,
+            Long.parseLong(embeddingConfigVersion),
+            AiRuntimeConfigSource.valueOf(embeddingConfigSource),
+            Boolean.parseBoolean(embeddingStale)
+        );
+        return new VectorizePayload(Long.parseLong(kbIdStr), content, embeddingSnapshot);
     }
 
     @Override
@@ -83,7 +104,7 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<VectorizeStr
 
     @Override
     protected void processBusiness(VectorizePayload payload) {
-        vectorService.vectorizeAndStore(payload.kbId(), payload.content());
+        vectorService.vectorizeAndStore(payload.kbId(), payload.content(), payload.embeddingSnapshot());
     }
 
     @Override
@@ -104,7 +125,15 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<VectorizeStr
             Map<String, String> message = Map.of(
                 AsyncTaskStreamConstants.FIELD_KB_ID, kbId.toString(),
                 AsyncTaskStreamConstants.FIELD_CONTENT, content,
-                AsyncTaskStreamConstants.FIELD_RETRY_COUNT, String.valueOf(retryCount)
+                AsyncTaskStreamConstants.FIELD_RETRY_COUNT, String.valueOf(retryCount),
+                AsyncTaskStreamConstants.FIELD_EMBEDDING_PROVIDER_ID, payload.embeddingSnapshot().providerId(),
+                AsyncTaskStreamConstants.FIELD_EMBEDDING_MODEL_NAME, payload.embeddingSnapshot().modelName(),
+                AsyncTaskStreamConstants.FIELD_EMBEDDING_CONFIG_VERSION,
+                    String.valueOf(payload.embeddingSnapshot().configVersion()),
+                AsyncTaskStreamConstants.FIELD_EMBEDDING_CONFIG_SOURCE,
+                    payload.embeddingSnapshot().source().name(),
+                AsyncTaskStreamConstants.FIELD_EMBEDDING_STALE,
+                    String.valueOf(payload.embeddingSnapshot().stale())
             );
 
             redisService().streamAdd(
