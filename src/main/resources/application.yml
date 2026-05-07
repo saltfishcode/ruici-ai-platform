@@ -95,11 +95,12 @@ spring:
       api-key: ${AI_EMBEDDING_API_KEY:${AI_BAILIAN_API_KEY}}
       chat:
         options:
-          model: ${AI_CHAT_FALLBACK_MODEL:qwen-math-turbo}
+          model: ${AI_CHAT_FALLBACK_MODEL:qwen3.6-plus}
           temperature: 0.2
       # Embedding 模型配置，默认保留 Qwen 的 text-embedding-v3。
       embedding:
         options:
+          # 不仅是回调还负责部分情景模拟
           model: ${AI_EMBEDDING_MODEL:text-embedding-v3}
     # 禁用自动重试机制，让异常立即返回
     retry:
@@ -129,11 +130,11 @@ app:
         base-url: ${THIRD_PARTY_BASE_URL:https://api-s.zwenooo.link/v1}
         api-key: ${THIRD_PARTY_API_KEY:}
         model: ${THIRD_PARTY_MODEL:gpt-5.2}
-        fallback-model: ${THIRD_PARTY_FALLBACK_MODEL:${AI_CHAT_FALLBACK_MODEL:qwen-math-turbo}}
+        fallback-model: ${THIRD_PARTY_FALLBACK_MODEL:${AI_CHAT_FALLBACK_MODEL:qwen3.6-plus}}
       dashscope:
         base-url: https://dashscope.aliyuncs.com/compatible-mode
         api-key: ${AI_BAILIAN_API_KEY}
-        model: ${DASHSCOPE_CHAT_MODEL:qwen-math-turbo}
+        model: ${DASHSCOPE_CHAT_MODEL:qwen3.6-plus}
       openai:
         base-url: https://api.openai.com/v1
         api-key: ${OPENAI_API_KEY:}

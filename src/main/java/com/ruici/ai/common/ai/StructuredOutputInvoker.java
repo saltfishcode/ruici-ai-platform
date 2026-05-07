@@ -98,7 +98,7 @@ public class StructuredOutputInvoker {
         recordInvocation(contextTag, STATUS_FAILURE, startNanos);
         throw new BusinessException(
             errorCode,
-            errorPrefix + (lastError != null ? lastError.getMessage() : "unknown")
+            errorPrefix + (lastError != null ? sanitizeErrorMessage(lastError.getMessage()) : "unknown")
         );
     }
 
@@ -124,6 +124,18 @@ public class StructuredOutputInvoker {
 
     private String sanitizeErrorMessage(String message) {
         String oneLine = message.replace('\n', ' ').replace('\r', ' ').trim();
+        if (oneLine.contains("Could not parse the given text to the desired target type")) {
+            return "模型返回内容不是合法 JSON，存在解释文字、代码块或字段结构错误。";
+        }
+        if (oneLine.contains("Unrecognized token")
+            || oneLine.contains("Unexpected character")
+            || oneLine.contains("Unexpected end-of-input")
+            || oneLine.contains("was expecting")) {
+            return "模型返回内容不是合法 JSON，请仅返回可直接解析的 JSON 对象。";
+        }
+        if (oneLine.contains("Range of input length should be [1, 3072]")) {
+            return "输入长度超过当前模型限制（3072 tokens），请缩短提示词或切换更大上下文模型。";
+        }
         if (oneLine.length() > errorMessageMaxLength) {
             return oneLine.substring(0, errorMessageMaxLength) + "...";
         }

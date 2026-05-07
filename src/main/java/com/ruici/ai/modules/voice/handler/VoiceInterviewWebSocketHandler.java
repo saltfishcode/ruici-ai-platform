@@ -11,6 +11,7 @@ import com.ruici.ai.modules.voice.config.VoiceInterviewProperties;
 import com.ruici.ai.modules.voice.service.QwenAsrService;
 import com.ruici.ai.modules.voice.service.QwenTtsService;
 import com.ruici.ai.modules.voice.service.DashscopeLlmService;
+import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.modules.voice.service.VoiceInterviewService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -939,24 +940,33 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
                 )));
             }
 
-            // 2. Save session state to database
-            interviewService.pauseSession(sessionId, "timeout");
+            // 2. Save session state to database (ignore if already paused/completed)
+            try {
+                interviewService.pauseSession(sessionId, "timeout");
+            } catch (BusinessException e) {
+                log.warn("Session {} cannot be paused (status may have changed): {}", sessionId, e.getMessage());
+            }
 
             // 3. Close WebSocket connection
             if (session != null && session.isOpen()) {
                 session.close(CloseStatus.GOING_AWAY);
             }
 
-            // 4. Cleanup - Stop ASR session to prevent resource leak
-            sttService.stopTranscription(sessionId);
-            sessions.remove(sessionId);
-            sessionStates.remove(sessionId);
-            lastActivityTime.remove(sessionId);
-
             log.info("Session {} paused due to timeout", sessionId);
 
         } catch (Exception e) {
             log.error("Error handling pause timeout for session {}", sessionId, e);
+        } finally {
+            // 4. Always cleanup resources regardless of pauseSession success/failure
+            //    This prevents stale entries from triggering infinite timeout loops
+            try {
+                sttService.stopTranscription(sessionId);
+            } catch (Exception e) {
+                log.warn("Failed to stop ASR transcription for session {}: {}", sessionId, e.getMessage());
+            }
+            sessions.remove(sessionId);
+            sessionStates.remove(sessionId);
+            lastActivityTime.remove(sessionId);
         }
     }
 

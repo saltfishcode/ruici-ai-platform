@@ -244,6 +244,7 @@ class InterviewSessionServiceTest {
                 eq(SimulationDifficulty.SHARP.name()),
                 eq(true)
             );
+            verify(llmProviderRegistry).getChatClient(runtimeSnapshot);
         }
 
         @Test

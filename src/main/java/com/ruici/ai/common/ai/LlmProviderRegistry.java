@@ -16,6 +16,9 @@ import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.client.advisor.ToolCallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -29,9 +32,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
+import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -201,7 +206,16 @@ public class LlmProviderRegistry {
     }
 
     private ChatClient createChatClient(AiRuntimeConfigSnapshot snapshot) {
-        OpenAiChatModel chatModel = buildChatModel(snapshot);
+        ChatModel chatModel = buildChatModel(snapshot.providerId(), snapshot.modelName());
+
+        // 存在有效的兜底模型且与主模型不同时，包装为 FallbackChatModel
+        if (hasFallbackModel(snapshot)) {
+            ChatModel fallbackChatModel = buildChatModel(snapshot.providerId(), snapshot.fallbackModelName());
+            chatModel = new FallbackChatModel(chatModel, fallbackChatModel,
+                snapshot.modelName(), snapshot.fallbackModelName());
+            log.info("[LlmProviderRegistry] Fallback wrapper enabled: primary={}, fallback={}",
+                snapshot.modelName(), snapshot.fallbackModelName());
+        }
 
         ChatClient.Builder builder = ChatClient.builder(chatModel);
         if (interviewSkillsToolCallback != null) {
@@ -217,28 +231,38 @@ public class LlmProviderRegistry {
     }
 
     private ChatClient createPlainChatClient(AiRuntimeConfigSnapshot snapshot) {
-        OpenAiChatModel chatModel = buildChatModel(snapshot);
+        ChatModel chatModel = buildChatModel(snapshot.providerId(), snapshot.modelName());
+
+        // 存在有效的兜底模型时，包装为 FallbackChatModel
+        if (hasFallbackModel(snapshot)) {
+            ChatModel fallbackChatModel = buildChatModel(snapshot.providerId(), snapshot.fallbackModelName());
+            chatModel = new FallbackChatModel(chatModel, fallbackChatModel,
+                snapshot.modelName(), snapshot.fallbackModelName());
+            log.info("[LlmProviderRegistry] Plain client fallback wrapper enabled: primary={}, fallback={}",
+                snapshot.modelName(), snapshot.fallbackModelName());
+        }
+
         log.info("[LlmProviderRegistry] Created plain ChatClient (no tools) for {}", snapshot.providerId());
         return ChatClient.builder(chatModel).build();
     }
 
     private ChatClient createVoiceChatClient(AiRuntimeConfigSnapshot snapshot) {
-        OpenAiChatModel chatModel = buildChatModel(snapshot);
+        OpenAiChatModel chatModel = buildChatModel(snapshot.providerId(), snapshot.modelName());
         log.info("[LlmProviderRegistry] Created voice ChatClient (plain/no tools) for {}", snapshot.providerId());
         return ChatClient.builder(chatModel).build();
     }
 
-    private OpenAiChatModel buildChatModel(AiRuntimeConfigSnapshot snapshot) {
-        ProviderConfig config = properties.getProviders().get(snapshot.providerId());
+    private OpenAiChatModel buildChatModel(String providerId, String modelName) {
+        ProviderConfig config = properties.getProviders().get(providerId);
         if (config == null) {
-            log.error("[LlmProviderRegistry] Provider config not found: {}", snapshot.providerId());
-            throw new IllegalArgumentException("Unknown LLM provider: " + snapshot.providerId());
+            log.error("[LlmProviderRegistry] Provider config not found: {}", providerId);
+            throw new IllegalArgumentException("Unknown LLM provider: " + providerId);
         }
 
         String normalizedBaseUrl = normalizeBaseUrlForOpenAiApi(config.getBaseUrl());
 
         log.info("[LlmProviderRegistry] Building ChatModel - Provider: {}, BaseUrl: {}, Model: {}",
-                 snapshot.providerId(), normalizedBaseUrl, snapshot.modelName());
+                 providerId, normalizedBaseUrl, modelName);
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(10000);
@@ -254,7 +278,7 @@ public class LlmProviderRegistry {
                 .build();
 
         OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .model(snapshot.modelName())
+                .model(modelName)
                 .temperature(0.2)
                 .build();
 
@@ -265,6 +289,14 @@ public class LlmProviderRegistry {
                 RetryUtils.DEFAULT_RETRY_TEMPLATE,
                 observationRegistry != null ? observationRegistry : ObservationRegistry.NOOP
         );
+    }
+
+    /**
+     * 检查快照中是否配置了有效的兜底模型（非空且与主模型不同）。
+     */
+    private boolean hasFallbackModel(AiRuntimeConfigSnapshot snapshot) {
+        return StringUtils.hasText(snapshot.fallbackModelName())
+            && !snapshot.fallbackModelName().equals(snapshot.modelName());
     }
 
     private List<Advisor> buildDefaultAdvisors(String providerId) {
@@ -325,6 +357,48 @@ public class LlmProviderRegistry {
             + ":" + fallback
             + ":" + normalizeBaseUrlForOpenAiApi(baseUrl)
             + ":" + snapshot.configVersion();
+    }
+
+    /**
+     * 支持主模型失败时自动回退到兜底模型的 ChatModel 包装器。
+     * <p>当 {@link #call(Prompt)} 抛出异常时，自动使用兜底模型重试。
+     * {@link #stream(Prompt)} 在流错误时也会切换到兜底模型。</p>
+     */
+    private static class FallbackChatModel implements ChatModel {
+
+        private final ChatModel primary;
+        private final ChatModel fallback;
+        private final String primaryModelName;
+        private final String fallbackModelName;
+
+        FallbackChatModel(ChatModel primary, ChatModel fallback,
+                          String primaryModelName, String fallbackModelName) {
+            this.primary = Objects.requireNonNull(primary, "primary ChatModel must not be null");
+            this.fallback = Objects.requireNonNull(fallback, "fallback ChatModel must not be null");
+            this.primaryModelName = primaryModelName;
+            this.fallbackModelName = fallbackModelName;
+        }
+
+        @Override
+        public ChatResponse call(Prompt prompt) {
+            try {
+                return primary.call(prompt);
+            } catch (Exception e) {
+                log.warn("[FallbackChatModel] 主模型 {} 调用失败，回退到兜底模型 {}: {}",
+                    primaryModelName, fallbackModelName, e.getMessage());
+                return fallback.call(prompt);
+            }
+        }
+
+        @Override
+        public Flux<ChatResponse> stream(Prompt prompt) {
+            return primary.stream(prompt)
+                .onErrorResume(e -> {
+                    log.warn("[FallbackChatModel] 主模型 {} 流式调用失败，回退到兜底模型 {}: {}",
+                        primaryModelName, fallbackModelName, e.getMessage());
+                    return fallback.stream(prompt);
+                });
+        }
     }
 
     static String normalizeBaseUrlForOpenAiApi(String baseUrl) {

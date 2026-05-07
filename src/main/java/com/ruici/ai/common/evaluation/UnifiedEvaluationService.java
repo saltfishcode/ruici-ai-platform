@@ -45,6 +45,7 @@ public class UnifiedEvaluationService {
     private final ResourceLoader resourceLoader;
 
     // 批次评估结果
+    // 使用 Java record 原生构造器，Jackson 可自动完成反序列化
     private record BatchReportDTO(
         int overallScore,
         String overallFeedback,

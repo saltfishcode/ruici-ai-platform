@@ -242,14 +242,22 @@
 
 - 使用 `interview-question-skill-system.st` 与 `interview-question-skill-user.st`
 - 通过 `structuredOutputInvoker.invoke(...)` 调用模型
-- 引入 `skillService.buildReferenceSection(...)` 注入分类参考内容
+- 引入 `skillService.buildQuestionReferenceSection(...)` 注入分类参考内容
 - 使用由 `InterviewSessionService` 传入的默认 client
+- 当前 prompt 语义中明确包含 `Skill Tool` / skill 使用指令，因此该链路在业务语义上应视为 **tool-capable prompt**，不应随意切换到 `plain client`
 
 这条链路说明：
 
 - prompt 会确定触发。
 - skill 资源也确定被业务代码读取并注入 prompt。
 - 是否发生 Spring AI 的 tool call，不可保证。
+
+补充维护结论（2026-05）：
+
+- 若运行时模型不支持 function / tool calling（例如某些 `qwen-math-*` 模型），会直接报 `Function call not supported.`。
+- 此时正确排障顺序应为：**先检查模型能力与 runtime override，再决定是否调整 client 类型**。
+- 如果 prompt 仍要求 `Skill Tool` / skill 调用，而代码却改成 `plain client`，会造成“提示词语义要求可调用工具，但运行时显式禁用工具”的不一致。
+- 因此，方向题链路默认应保持 `InterviewSessionService -> getChatClient(runtimeSnapshot)`；是否真正发生 tool call 由模型能力、advisor 配置与模型决策共同决定。
 
 判定：
 
@@ -592,6 +600,13 @@ RAG 主要依赖的是：
 3. `skillsRoot` 是否正确，skill 目录是否存在。
 4. 如果是 simulation / voice 评估参考内容问题，检查 `skill.meta.yml` 与 reference 文件映射是否完整。
 5. 如果是 RAG rewrite 问题，检查 `app.ai.rag.rewrite.enabled`。
+
+当出现“prompt 明明要求 tool / skill，为什么运行时报 `Function call not supported.`”时，请额外按下面顺序排查：
+
+1. 当前命中的模型是否支持 function / tool calling。
+2. 当前 runtime snapshot 是否被 `REQUEST_OVERRIDE` / DB runtime config 切到了不支持 tool 的模型。
+3. 该链路是否本应保留 tool 语义；若是，不要用 `plain client` 规避报错。
+4. 只有在业务语义明确不需要 tool 时，才同步删除 prompt 中的 `Skill Tool` 指令并改用 `plain client`。
 
 ---
 

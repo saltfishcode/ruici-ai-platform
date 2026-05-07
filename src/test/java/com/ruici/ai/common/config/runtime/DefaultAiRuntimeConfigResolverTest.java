@@ -204,7 +204,7 @@ class DefaultAiRuntimeConfigResolverTest {
     class RequestOverride {
 
         @Test
-        @DisplayName("允许覆盖时优先使用请求级 provider/model")
+        @DisplayName("允许覆盖时优先使用请求级 provider/model/fallback")
         void shouldPreferRequestOverrideWhenAllowed() {
             DefaultAiRuntimeConfigResolver resolver = createResolver();
             AiRuntimeResolveContext context = new AiRuntimeResolveContext(
@@ -227,6 +227,95 @@ class DefaultAiRuntimeConfigResolverTest {
             assertThat(snapshot.providerId()).isEqualTo("third-party");
             assertThat(snapshot.modelName()).isEqualTo("gpt-5.4");
             assertThat(snapshot.fallbackModelName()).isEqualTo("qwen-max");
+            assertThat(snapshot.source()).isEqualTo(AiRuntimeConfigSource.REQUEST_OVERRIDE);
+        }
+
+        @Test
+        @DisplayName("请求未指定 fallback 时从数据库运行时配置中解析")
+        void shouldResolveFallbackFromDatabaseWhenRequestMissingFallback() {
+            DefaultAiRuntimeConfigResolver resolver = createResolver();
+
+            // DB 中存在一条 runtime 配置，带有兜底模型
+            AiRuntimeConfigEntity entity = AiRuntimeConfigEntity.builder()
+                .id(2L)
+                .configKey("THIRD_PARTY_MODEL")
+                .domain("chat")
+                .scene("simulation")
+                .providerId("third-party")
+                .modelName("gpt-5.2")
+                .fallbackModelName("qwen-max")
+                .enabled(Boolean.TRUE)
+                .priority(1)
+                .configVersion(5L)
+                .build();
+            given(configRepository.findFirstByConfigKeyAndDomainAndSceneAndEnabledOrderByPriorityAsc(
+                "THIRD_PARTY_MODEL",
+                "chat",
+                "simulation",
+                Boolean.TRUE
+            )).willReturn(Optional.of(entity));
+
+            // 请求覆盖了 provider，但未指定 fallbackModelName
+            AiRuntimeResolveContext context = new AiRuntimeResolveContext(
+                AiRuntimeDomain.CHAT,
+                AiRuntimeScene.SIMULATION,
+                "THIRD_PARTY_MODEL",
+                "third-party",
+                "gpt-5.4",          // 请求覆盖了 model
+                null,                // 请求未指定 fallback
+                "third-party",
+                null,
+                null,
+                "simulation:default:THIRD_PARTY_MODEL",
+                "default",
+                true                // 允许覆盖
+            );
+
+            AiRuntimeConfigSnapshot snapshot = resolver.resolveChatConfig(context);
+
+            // 主 provider/model 仍来自请求覆盖
+            assertThat(snapshot.providerId()).isEqualTo("third-party");
+            assertThat(snapshot.modelName()).isEqualTo("gpt-5.4");
+            // fallback model 来自数据库运行时配置
+            assertThat(snapshot.fallbackModelName()).isEqualTo("qwen-max");
+            assertThat(snapshot.source()).isEqualTo(AiRuntimeConfigSource.REQUEST_OVERRIDE);
+        }
+
+        @Test
+        @DisplayName("请求未指定 fallback 且数据库无配置时回退到静态配置")
+        void shouldFallbackToStaticConfigWhenDatabaseMissingForFallback() {
+            DefaultAiRuntimeConfigResolver resolver = createResolver();
+            given(configRepository.findFirstByConfigKeyAndDomainAndSceneAndEnabledOrderByPriorityAsc(
+                "THIRD_PARTY_MODEL",
+                "chat",
+                "simulation",
+                Boolean.TRUE
+            )).willReturn(Optional.empty());
+            given(configRepository.findFirstByConfigKeyAndDomainAndSceneAndEnabledOrderByPriorityAsc(
+                "THIRD_PARTY_MODEL",
+                "chat",
+                "global",
+                Boolean.TRUE
+            )).willReturn(Optional.empty());
+
+            AiRuntimeResolveContext context = new AiRuntimeResolveContext(
+                AiRuntimeDomain.CHAT,
+                AiRuntimeScene.SIMULATION,
+                "THIRD_PARTY_MODEL",
+                "third-party",
+                "gpt-5.4",
+                null,               // 请求未指定 fallback
+                "third-party",
+                null,
+                null,
+                "simulation:default:THIRD_PARTY_MODEL",
+                "default",
+                true
+            );
+
+            AiRuntimeConfigSnapshot snapshot = resolver.resolveChatConfig(context);
+
+            assertThat(snapshot.fallbackModelName()).isEqualTo("qwen-plus");  // 静态默认值
             assertThat(snapshot.source()).isEqualTo(AiRuntimeConfigSource.REQUEST_OVERRIDE);
         }
     }

@@ -110,9 +110,15 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
         String modelName = StringUtils.hasText(context.requestModelName())
             ? context.requestModelName().trim()
             : providerConfig.getModel();
-        String fallbackModelName = StringUtils.hasText(context.requestFallbackModelName())
-            ? context.requestFallbackModelName().trim()
-            : resolveStaticFallbackModelName(context, providerConfig);
+
+        // 兜底模型：请求级覆盖 → 数据库运行时配置 → 静态/环境配置
+        String fallbackModelName;
+        if (StringUtils.hasText(context.requestFallbackModelName())) {
+            fallbackModelName = context.requestFallbackModelName().trim();
+        } else {
+            fallbackModelName = resolveFallbackModelFromDbOrStatic(context, providerConfig);
+        }
+
         AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
             resolveConfigKey(context),
             context.domain(),
@@ -127,6 +133,23 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
         policyService.validateResolvedSnapshot(snapshot, context.clientType());
         logResolvedSnapshot(snapshot);
         return snapshot;
+    }
+
+    /**
+     * 从数据库运行时配置中解析兜底模型名，若 DB 未命中则回退到静态配置。
+     */
+    private String resolveFallbackModelFromDbOrStatic(AiRuntimeResolveContext context, ProviderConfig providerConfig) {
+        try {
+            AiRuntimeConfigEntity entity = findRuntimeConfig(context);
+            if (entity != null && StringUtils.hasText(entity.getFallbackModelName())) {
+                log.debug("从数据库运行时配置获取 fallback model: entityId={}, fallback={}",
+                    entity.getId(), entity.getFallbackModelName());
+                return entity.getFallbackModelName().trim();
+            }
+        } catch (Exception e) {
+            log.warn("查询数据库 fallback model 异常，使用静态配置: {}", e.getMessage());
+        }
+        return resolveStaticFallbackModelName(context, providerConfig);
     }
 
     private AiRuntimeConfigSnapshot loadSnapshotFromDatabase(AiRuntimeResolveContext context) {

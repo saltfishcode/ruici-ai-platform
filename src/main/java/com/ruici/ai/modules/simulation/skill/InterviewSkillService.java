@@ -51,6 +51,7 @@ public class InterviewSkillService {
 
     private static final int MAX_REFERENCE_SECTION_CHARS = 12000;
     private static final int MAX_EVALUATION_REFERENCE_SECTION_CHARS = 6000;
+    private static final int MAX_QUESTION_REFERENCE_SECTION_CHARS = 1200;
     private static final int MAX_SINGLE_REFERENCE_CHARS = 3000;
 
     private final LlmProviderRegistry llmProviderRegistry;
@@ -350,6 +351,18 @@ public class InterviewSkillService {
             skill,
             category -> allocation.getOrDefault(category.key(), 0) > 0,
             MAX_REFERENCE_SECTION_CHARS
+        );
+    }
+
+    /**
+     * 出题阶段参考基线：使用更小的截断阈值，避免 LLM 输入超长（如 3072 token 限制）。
+     * 仅覆盖该 skill 下当前出题分配覆盖的分类。
+     */
+    public String buildQuestionReferenceSection(SkillDTO skill, Map<String, Integer> allocation) {
+        return buildReferenceSectionInternal(
+            skill,
+            category -> allocation.getOrDefault(category.key(), 0) > 0,
+            MAX_QUESTION_REFERENCE_SECTION_CHARS
         );
     }
 

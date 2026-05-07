@@ -354,4 +354,3 @@ mvn "-Dtest=LlmProviderRegistryTest,KnowledgeBaseQueryServiceTest,DashscopeLlmSe
 1. **补全 `AiRuntimeConfigValidationServiceTest`**（计划要求的最低门禁测试，当前缺失）
 2. **ASR/TTS 的会话级 snapshot**（仅当业务需要时）
 3. **多实例缓存失效传播方案**
-4. **API Key 动态化**（当前所有密钥仍通过 `application.yml` / `.env` 静态配置）

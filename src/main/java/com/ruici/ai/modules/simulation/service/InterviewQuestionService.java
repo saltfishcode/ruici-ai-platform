@@ -49,6 +49,10 @@ public class InterviewQuestionService {
     private static final String DEFAULT_QUESTION_TYPE = "GENERAL";
     private static final int MAX_FOLLOW_UP_COUNT = 2;
     private static final double RESUME_QUESTION_RATIO = 0.6;
+    private static final int MAX_HISTORICAL_SECTION_CHARS = 400;
+    private static final int MAX_JD_SECTION_CHARS = 500;
+    /** 总提示词安全上限（字符），qwen-math-turbo 输入限 3072 tokens，中文约 1.5‑2 chars/token */
+    private static final int MAX_TOTAL_PROMPT_CHARS = 4200;
 
     private static final String GENERIC_MODE_SYSTEM_APPEND = """
         \n\n# 通用场景模式
@@ -188,7 +192,7 @@ public class InterviewQuestionService {
             int questionCount,
             SkillDTO skill, String difficultyDesc, String historicalSection) {
         try {
-            ChatClient plainClient = llmProviderRegistry.getPlainChatClient(null);
+            ChatClient plainClient = llmProviderRegistry.getPlainChatClient((String) null);
             Map<String, Object> variables = new HashMap<>();
             variables.put("questionCount", questionCount);
             variables.put("followUpCount", followUpCount);
@@ -200,10 +204,17 @@ public class InterviewQuestionService {
             variables.put("skillDescription", skill.description() != null ? skill.description() : "");
             variables.put("difficultyDescription", difficultyDesc);
             variables.put("resumeText", resumeText);
-            variables.put("historicalSection", historicalSection);
+            variables.put("historicalSection", truncateSection(historicalSection, MAX_HISTORICAL_SECTION_CHARS));
 
             String systemPrompt = resumeSystemPromptTemplate.render() + "\n\n" + outputConverter.getFormat();
             String userPrompt = resumeUserPromptTemplate.render(variables);
+
+            // 安全检测：总提示词长度超过模型上下文窗口可能导致请求失败
+            int totalChars = systemPrompt.length() + userPrompt.length();
+            if (totalChars > MAX_TOTAL_PROMPT_CHARS) {
+                log.warn("简历题提示词超长风险: total={} chars, max={} chars, 请检查模型上下文窗口大小",
+                    totalChars, MAX_TOTAL_PROMPT_CHARS);
+            }
 
             QuestionListDTO dto = structuredOutputInvoker.invoke(
                 plainClient, systemPrompt, userPrompt, outputConverter,
@@ -246,13 +257,20 @@ public class InterviewQuestionService {
             variables.put("scenarioQuestionStyle", scenarioType.questionStyle());
             variables.put("aiRoleLabel", scenarioType.aiRoleLabel());
             variables.put("allocationTable", allocationTable);
-            variables.put("historicalSection", historicalSection);
-            variables.put("referenceSection", skillService.buildReferenceSection(skill, allocation));
-            variables.put("jdSection", buildJdSection(skill.sourceJd()));
+            variables.put("historicalSection", truncateSection(historicalSection, MAX_HISTORICAL_SECTION_CHARS));
+            variables.put("referenceSection", skillService.buildQuestionReferenceSection(skill, allocation));
+            variables.put("jdSection", truncateSection(buildJdSection(skill.sourceJd()), MAX_JD_SECTION_CHARS));
 
             String systemPrompt = skillSystemPromptTemplate.render()
                 + GENERIC_MODE_SYSTEM_APPEND + outputConverter.getFormat();
             String userPrompt = skillUserPromptTemplate.render(variables);
+
+            // 安全检测：总提示词长度超过模型上下文窗口可能导致请求失败
+            int totalChars = systemPrompt.length() + userPrompt.length();
+            if (totalChars > MAX_TOTAL_PROMPT_CHARS) {
+                log.warn("方向题提示词超长风险: total={} chars, max={} chars, 请检查模型上下文窗口大小",
+                    totalChars, MAX_TOTAL_PROMPT_CHARS);
+            }
 
             QuestionListDTO dto = structuredOutputInvoker.invoke(
                 chatClient, systemPrompt, userPrompt, outputConverter,
@@ -559,6 +577,17 @@ public class InterviewQuestionService {
             return "";
         }
         return "## 职位描述（JD）\n根据以下 JD 关键要求出题，确保题目与岗位实际需求相关：\n" + sourceJd;
+    }
+
+    /**
+     * 截断文本段落到指定最大字符数，避免 LLM 输入超长（如 3072 token 限制）。
+     * 若段落已因截断省略会在末尾追加截断说明。
+     */
+    private static String truncateSection(String section, int maxChars) {
+        if (section == null || section.length() <= maxChars) {
+            return section;
+        }
+        return section.substring(0, maxChars) + "\n...(内容过长，已截断)";
     }
 
     private List<String> sanitizeFollowUps(List<String> followUps) {
