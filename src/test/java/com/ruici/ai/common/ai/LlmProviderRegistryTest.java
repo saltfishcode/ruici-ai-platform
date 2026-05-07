@@ -1,5 +1,6 @@
 package com.ruici.ai.common.ai;
 
+import com.ruici.ai.common.config.runtime.AiRuntimeScene;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,37 @@ class LlmProviderRegistryTest {
             assertThatThrownBy(() -> LlmProviderRegistry.normalizeBaseUrlForOpenAiApi(" "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Provider baseUrl must not be blank");
+        }
+    }
+
+    @Nested
+    @DisplayName("运行时快照键")
+    class SnapshotKeys {
+
+        @Test
+        @DisplayName("不同 clientType 使用不同 snapshotKey")
+        void shouldUseDifferentSnapshotKeysForDifferentClientTypes() {
+            String defaultKey = LlmProviderRegistry.buildSnapshotKey(
+                AiRuntimeScene.KNOWLEDGEBASE,
+                "default",
+                "THIRD_PARTY_MODEL"
+            );
+            String plainKey = LlmProviderRegistry.buildSnapshotKey(
+                AiRuntimeScene.KNOWLEDGEBASE,
+                "plain",
+                "THIRD_PARTY_MODEL"
+            );
+            String voiceKey = LlmProviderRegistry.buildSnapshotKey(
+                AiRuntimeScene.VOICE,
+                "voice",
+                "THIRD_PARTY_MODEL"
+            );
+
+            assertThat(defaultKey).isEqualTo("knowledgebase:default:THIRD_PARTY_MODEL");
+            assertThat(plainKey).isEqualTo("knowledgebase:plain:THIRD_PARTY_MODEL");
+            assertThat(voiceKey).isEqualTo("voice:voice:THIRD_PARTY_MODEL");
+            assertThat(defaultKey).isNotEqualTo(plainKey);
+            assertThat(defaultKey).isNotEqualTo(voiceKey);
         }
     }
 }

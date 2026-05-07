@@ -69,7 +69,14 @@ fallback model，已经不再建议由业务模块自己拼接判断，而应统
 - “OpenAI-compatible” 不是“完全等价 OpenAI”，不同中转在 `/chat/completions`、流式事件、工具调用、结构化输出上可能存在差异，因此需要把聊天和语音/向量能力分层配置，而不是强行共用一个 Provider。
 - `v1.3.0` 先把 **chat** 做成统一运行时控制面，是为了先稳定最常用、最容易频繁切换模型的链路；
   embedding 已进一步按任务级 / 查询级快照接入知识库向量化与检索，避免 chunk 级频繁查库；
-  voice 仍保留到后续按会话级快照接入，避免一次性放大改动面。
+  voice 已按会话级快照接入实时对话与异步评估，`ASR/TTS` 仍保持静态稳定配置，避免一次性放大改动面。
+
+### ChatClient 语义边界
+
+- `default client`：带 SkillsTool 与 advisors（受配置开关影响），用于需要保留增强能力的常规聊天链路。
+- `plain client`：不带 tools / advisors，用于简历题生成、解析等不希望发生工具调用的链路。
+- `voice client`：当前实现同样是 plain/no-tools，目的是避免实时语音链路因 tool calling 增加首包时延或流式不稳定。
+- `knowledgebase` 的 OpenAI-compatible gateway 分支会直接调用 gateway client，不经过 `ChatClient` 挂载的 tools / advisors；因此“默认 client 具备增强能力”并不等于所有 RAG 请求都一定经过增强链。
 
 ## 技术栈
 

@@ -3,6 +3,7 @@ package com.ruici.ai.modules.document.service;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.ai.StructuredOutputInvoker;
 import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
 import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
 import com.ruici.ai.common.config.runtime.AiRuntimeScene;
@@ -18,8 +19,10 @@ import org.springframework.core.io.DefaultResourceLoader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -97,5 +100,7 @@ class ResumeGradingServiceTest {
             false
         );
         verify(llmProviderRegistry).getChatClient(runtimeSnapshot);
+        verify(llmProviderRegistry, never()).getPlainChatClient(anyString());
+        verify(llmProviderRegistry, never()).getVoiceChatClient(any(AiRuntimeConfigSnapshot.class));
     }
 }

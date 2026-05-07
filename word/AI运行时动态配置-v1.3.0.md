@@ -1,5 +1,11 @@
 # AI 运行时动态配置落地说明 v1.3.0
 
+> **本文档更新说明**：
+> 本文最初撰写于 v1.3.0 启动阶段，反映设计意图与初始范围。
+> 实际实施过程中，范围逐步扩大——embedding 和 voice 的 snapshot 接入比计划更早完成。
+> 本文标记 ⚠️ 表示"初始设计如此，实际已超前"，标记 ✅ 表示"已实现"。
+> 执行顺序与最终交付的完整对照见 `private/重构v3/AI模型动态配置执行计划.md` 第 5.3 节。
+
 ## 1. 背景
 
 在 `v1.2.x` 之前，项目虽然已经具备多 Provider 架构，但 chat 链路里的 Provider / Model 选择仍然主要依赖：
@@ -29,17 +35,25 @@
 
 这些链路的共同点都是：本质依赖 chat model，且更容易遇到“需要临时切换模型 / fallback”的需求。
 
-### 2.2 暂不纳入范围
+### 2.2 暂不纳入范围 ⚠️
 
-- `embedding`
-- `voice`（ASR / TTS / Realtime）
+> ⚠️ **初始设计**：以下能力在 v1.3.0 初始启动阶段暂不纳入。
+> **实际情况**：在后续迭代中以下能力已部分完成，详见下文。
 
-原因不是它们不重要，而是它们对“何时允许切换模型”的约束更严格：
+- `embedding` ✅
 
-- `embedding` 更适合按任务/批次级快照切换，不能在 chunk 级频繁查库
-- `voice` 更适合按会话级快照切换，不能在通话进行中漂移 provider/model
+  初始设计理由：embedding 更适合按任务/批次级快照切换，不能在 chunk 级频繁查库。
+  
+  实际情况：**已按任务级 / 查询级快照落地**至知识库向量化与检索链路（`EmbeddingProviderRegistry`、`VectorizeStreamConsumer`），
+  满足"批次级解析、不 chunk 级查库"的约束。
 
-所以 `v1.3.0` 先只做 chat，是为了先稳定收益最大、变更风险最可控的部分。
+- `voice` ✅
+
+  初始设计理由：voice 更适合按会话级快照切换，不能在通话进行中漂移 provider/model。
+  
+  实际情况：**已按会话级 LLM 快照落地**至实时对话与异步评估链路。
+  实时对话使用 `voice client`（plain/no-tools），会后评估使用 `default client`，但两者共用同一份会话固化快照。
+  `ASR/TTS` 仍保持静态稳定配置，不在当前范围接入动态热切换。
 
 ## 3. 设计原则
 
@@ -138,7 +152,8 @@ request override -> DB runtime config -> static env config -> code default
 
 - `InterviewSessionService` 会在创建会话时解析 snapshot
 - 评估链路也改为按 snapshot 获取 client
-- 当前阶段只把 chat 链路收敛，不扩展到 voice 实时会话切换
+- ⚠️ 初始设计只把 chat 链路收敛，不扩展到 voice 实时会话切换。
+  **实际情况：voice 会话级 LLM 快照已在 `v1.3.x` 后续迭代中完成。**
 
 ## 8. 对外接口是否变化
 
@@ -150,13 +165,23 @@ request override -> DB runtime config -> static env config -> code default
 
 ## 9. 测试与验证
 
-本次配套新增 / 更新的聚焦测试包括：
+### 初始设计阶段新增的测试
 
 ```text
 src/test/java/com/ruici/ai/common/config/runtime/DefaultAiRuntimeConfigResolverTest.java
 src/test/java/com/ruici/ai/common/config/runtime/DefaultAiRuntimePolicyServiceTest.java
 src/test/java/com/ruici/ai/common/ai/OpenAiCompatibleGatewayClientTest.java
 src/test/java/com/ruici/ai/modules/simulation/service/InterviewSessionServiceTest.java
+```
+
+### ✅ 后续迭代中补充的测试（覆盖 runtime + voice + kb）
+
+```text
+src/test/java/com/ruici/ai/modules/voice/service/VoiceInterviewServiceTest.java
+src/test/java/com/ruici/ai/modules/voice/service/DashscopeLlmServiceTest.java
+src/test/java/com/ruici/ai/modules/voice/service/VoiceInterviewEvaluationServiceTest.java
+src/test/java/com/ruici/ai/modules/document/service/ResumeGradingServiceTest.java
+src/test/java/com/ruici/ai/modules/knowledgebase/service/KnowledgeBaseQueryServiceTest.java
 ```
 
 同时，为了在 Windows + JDK 21 环境下稳定执行 Mockito 测试，补充了：
@@ -178,19 +203,25 @@ mvn -q "-Dtest=LlmProviderRegistryTest,OpenAiCompatibleGatewayClientTest,Default
 
 ## 10. 后续演进建议
 
-`v1.3.0` 的交付重点是把运行时动态配置的 **chat foundation** 落下来，而不是一次性把所有 AI 能力都改完。
+`v1.3.0` 的初始交付重点是把运行时动态配置的 **chat foundation** 落下来。
 
-后续演进建议按下面顺序推进：
+在实际迭代过程中，embedding 与 voice 的 snapshot 已提前完成接入。
+当前已交付状态，与计划 `private/重构v3/AI模型动态配置执行计划.md` 的对照：
 
-1. 补运行时配置管理接口 / 后台控制面
-2. 为 embedding 增加任务/批次级 snapshot
-3. 为 voice 增加会话级 snapshot
-4. 扩展审计与回滚能力
+| 阶段 | 计划内容 | 当前状态 |
+|---|---|---|
+| Phase 0-4: Chat | simulation/document/knowledgebase 接入 resolver | ✅ 已完成 |
+| Phase 5: Embedding | 任务/批次级快照 | ✅ 已完成 |
+| Phase 6: Voice | 会话级 LLM 快照 | ✅ 已完成 |
+| Phase 7: 管理能力 | 管理接口、启停、刷新、审计 | ⏳ 未开始 |
+| ASR/TTS 动态切换 | 按会话级快照 | ⏳ 未开始 |
 
-简单说：
+### 剩余待推进
 
-```text
-先把 chat 管稳 -> 再把 embedding 管细 -> 最后把 voice 管安全
-```
-
-这也是当前版本为何坚持 `chat-first` 的根本原因。
+1. **补运行时配置管理接口 / 后台控制面**（对应 Phase 7）
+   - `AiRuntimeConfigCommandService`、`QueryService`、`ValidationService` 尚未实现
+   - 没有 admin 模块和对应 Controller
+2. **扩展审计与回滚能力**
+   - 审计 Entity/Repository 已就绪，但写入审计的回调链路未接线
+3. **ASR/TTS 的会话级 snapshot**（仅当业务需要时）
+4. **多实例缓存失效传播方案**

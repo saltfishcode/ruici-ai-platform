@@ -115,9 +115,15 @@
 #### voice client
 
 - 方法：`getVoiceChatClient(...)`
-- 行为：同样显式构造 plain/no tools 的 `ChatClient`，目的是避免实时语音链路因为 tool calling 导致不稳定。
+- 行为：显式构造 plain/no tools 的 `ChatClient`，目的是避免实时语音链路因为 tool calling 导致首包时延增加或流式链路不稳定。
 
 判定：**不会触发 SkillsTool**。
+
+补充说明：
+
+- `voice` 模块当前已经接入**会话级 LLM 快照**。
+- 实时对话使用 `voice client`，因此不会触发 SkillsTool。
+- 会后评估复用同一份会话快照，但调用的是 `default client`，因此**具备** SkillsTool / advisors 能力。
 
 ### 3.3 关键配置开关
 
@@ -176,12 +182,13 @@
 
 ### 4.4 Skill 使用情况
 
-`ResumeGradingService` 使用的是 `llmProviderRegistry.getDefaultChatClient()`。
+`ResumeGradingService` 当前会先解析 `DOCUMENT` 场景的 `AiRuntimeConfigSnapshot`，再调用
+`llmProviderRegistry.getChatClient(snapshot)`。
 
 这意味着：
 
 - **Prompt 调用**：确定发生。
-- **SkillsTool 能力**：已挂载到默认 client。
+- **SkillsTool 能力**：已挂载到 `default` client。
 - **实际 tool call**：不能仅凭接线断言一定发生，取决于模型是否发起工具调用。
 
 ### 4.5 判定
@@ -548,6 +555,7 @@ RAG 主要依赖的是：
 - **不能**把 `simulation` 里的“skill”简单理解成“全靠 Spring AI 工具调用”；当前更真实的实现是“后端主动加载 skill 资源并把内容注入 prompt”。
 - **不能**把 `voice` 实时链路当成 skill-enabled agent 流程；它明确绕开了 tools。
 - **不能**把 `knowledgebase` 的 gateway 分支误判为也会经过 `ChatClient` 上的 tool callbacks。
+- **不能**把“默认 client 具备增强能力”外推成“所有 RAG 请求都会实际经过增强 client”；gateway 分支是明确例外。
 
 ### 10.3 当前尚未完全落地的方向
 

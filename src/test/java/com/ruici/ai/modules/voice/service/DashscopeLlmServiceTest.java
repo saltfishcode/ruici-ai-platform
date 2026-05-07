@@ -16,8 +16,10 @@ import org.springframework.ai.chat.client.ChatClient;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,5 +71,6 @@ class DashscopeLlmServiceTest {
 
         assertThat(result).isEqualTo("这是实时回答。");
         verify(llmProviderRegistry).getVoiceChatClient(session.toLlmRuntimeSnapshot());
+        verify(llmProviderRegistry, never()).getChatClient(any(com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot.class));
     }
 }

@@ -3,6 +3,7 @@ package com.ruici.ai.modules.knowledgebase.service;
 import com.ruici.ai.common.ai.EmbeddingProviderRegistry;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.ai.OpenAiCompatibleGatewayClient;
+import org.springframework.ai.chat.client.ChatClient;
 import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
 import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,6 +34,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -56,6 +60,9 @@ class KnowledgeBaseQueryServiceTest {
 
     @Mock
     private KnowledgeBaseCountService countService;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private ChatClient chatClient;
 
     private KnowledgeBaseQueryService createService() throws Exception {
         KnowledgeBaseQueryProperties properties = new KnowledgeBaseQueryProperties();
@@ -142,6 +149,27 @@ class KnowledgeBaseQueryServiceTest {
             false
         );
         verify(gatewayClient).generateText(eq(runtimeSnapshot), anyString(), anyString());
+        verify(llmProviderRegistry, never()).getChatClient(any(AiRuntimeConfigSnapshot.class));
+        verifyNoInteractions(vectorService, countService, listService);
+    }
+
+    @Test
+    @DisplayName("未命中 gateway 时通用问答走 default ChatClient")
+    void shouldUseDefaultChatClientWhenGatewayCompatibilityDisabled() throws Exception {
+        KnowledgeBaseQueryService service = createService();
+        AiRuntimeConfigSnapshot runtimeSnapshot = runtimeSnapshot();
+
+        stubRuntimeSnapshot(runtimeSnapshot);
+        given(gatewayClient.supports("third-party")).willReturn(false);
+        given(llmProviderRegistry.getChatClient(runtimeSnapshot)).willReturn(chatClient);
+        given(chatClient.prompt().system(anyString()).user(anyString()).call().content())
+            .willReturn("这是 default client 的回答");
+
+        QueryResponse response = service.queryKnowledgeBase(new QueryRequest(List.of(), "请帮我总结这份材料"));
+
+        assertThat(response.answer()).isEqualTo("这是 default client 的回答");
+        verify(llmProviderRegistry).getChatClient(runtimeSnapshot);
+        verify(gatewayClient, never()).generateText(any(AiRuntimeConfigSnapshot.class), anyString(), anyString());
         verifyNoInteractions(vectorService, countService, listService);
     }
 
@@ -177,6 +205,54 @@ class KnowledgeBaseQueryServiceTest {
                 .contains("当前请求:")
                 .contains("请继续总结");
             verifyNoInteractions(vectorService, countService, listService);
+        }
+
+        @Test
+        @DisplayName("未命中 gateway 时流式问答走 default ChatClient")
+        void shouldUseDefaultChatClientForStreamingWhenGatewayCompatibilityDisabled() throws Exception {
+            KnowledgeBaseQueryService service = createService();
+            AiRuntimeConfigSnapshot runtimeSnapshot = runtimeSnapshot();
+
+            stubRuntimeSnapshot(runtimeSnapshot);
+            given(gatewayClient.supports("third-party")).willReturn(false);
+            given(llmProviderRegistry.getChatClient(runtimeSnapshot)).willReturn(chatClient);
+            given(chatClient.prompt().system(anyString()).user(anyString()).stream().content())
+                .willReturn(Flux.just("第一段", "第二段"));
+
+            List<String> chunks = service.answerQuestionStream(List.of(), "请继续总结", List.of())
+                .collectList()
+                .block();
+
+            assertThat(chunks).containsExactly("第一段", "第二段");
+            verify(llmProviderRegistry).getChatClient(runtimeSnapshot);
+            verify(gatewayClient, never()).streamText(any(AiRuntimeConfigSnapshot.class), anyString(), anyString());
+            verifyNoInteractions(vectorService, countService, listService);
+        }
+
+        @Test
+        @DisplayName("知识库检索命中且 gateway 关闭时流式走 default ChatClient")
+        void shouldUseDefaultChatClientForStreamingWhenKnowledgeBaseHitAndGatewayDisabled() throws Exception {
+            KnowledgeBaseQueryService service = createService();
+            AiRuntimeConfigSnapshot runtimeSnapshot = runtimeSnapshot();
+            AiRuntimeConfigSnapshot embeddingSnapshot = embeddingSnapshot();
+
+            stubRuntimeSnapshot(runtimeSnapshot);
+            stubEmbeddingSnapshot(embeddingSnapshot);
+            given(gatewayClient.supports("third-party")).willReturn(false);
+            given(vectorService.similaritySearch(anyString(), eq(List.of(10L)), anyInt(), anyDouble(), any()))
+                .willReturn(List.of(new Document("命中的知识片段")));
+            given(llmProviderRegistry.getChatClient(runtimeSnapshot)).willReturn(chatClient);
+            given(chatClient.prompt().system(anyString()).user(anyString()).stream().content())
+                .willReturn(Flux.just("命中片段相关回答第一段", "命中片段相关回答第二段"));
+
+            List<String> chunks = service.answerQuestionStream(List.of(10L), "岗位要求是什么？")
+                .collectList()
+                .block();
+
+            assertThat(chunks).containsExactly("命中片段相关回答第一段命中片段相关回答第二段");
+            verify(llmProviderRegistry, times(2)).getChatClient(runtimeSnapshot);
+            verify(gatewayClient, never()).streamText(any(AiRuntimeConfigSnapshot.class), anyString(), anyString());
+            verify(vectorService).similaritySearch("岗位要求是什么？", List.of(10L), 12, 0.28, embeddingSnapshot);
         }
 
         @Test

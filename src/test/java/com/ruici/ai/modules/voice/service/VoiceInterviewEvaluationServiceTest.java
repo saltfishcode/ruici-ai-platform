@@ -1,6 +1,7 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
 import com.ruici.ai.common.evaluation.EvaluationReport;
 import com.ruici.ai.common.evaluation.UnifiedEvaluationService;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -107,5 +109,6 @@ class VoiceInterviewEvaluationServiceTest {
         service.generateEvaluation(10L);
 
         verify(llmProviderRegistry).getChatClient(session.toLlmRuntimeSnapshot());
+        verify(llmProviderRegistry, never()).getVoiceChatClient(any(AiRuntimeConfigSnapshot.class));
     }
 }

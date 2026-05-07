@@ -266,7 +266,7 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<KnowledgeBas
 - client 形态：
   - `default`：默认带 SkillsTool（若存在）+ Advisors（可配置开关）。
   - `plain`：不带工具调用（用于不需要 tool call 的出题/解析等场景）。
-  - `voice`：语音专用 client（SkillsTool + 流式 ToolCallAdvisor；不启用 memory advisor）。
+  - `voice`：语音专用 plain client（当前实现不挂 SkillsTool / ToolCallAdvisor / memory advisor），用于实时语音链路稳定性优先的场景。
 
 ### 8.1.1 运行时配置基础层（chat-first）
 
@@ -293,7 +293,8 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<KnowledgeBas
 
 - 上述静态配置仍然是 resolver 的重要输入，但 chat 业务不应再把它当成唯一来源。
 - `knowledgebase` / `document` / `simulation` 当前已经逐步切换到“先解析 snapshot，再获取 client”的模式。
-- `voice` 仍保留静态 provider 路径；后续若接入运行时动态配置，只允许按**会话级快照**切换，禁止通话过程中漂移模型。
+- `voice` 当前已接入会话级 LLM 快照：实时对话走 `voice` client，会后评估走 `default` client，但两者共用同一份会话快照；`ASR/TTS` 仍保持静态稳定配置。
+- `knowledgebase` 存在 OpenAI-compatible gateway 分支；命中该分支时不会经过 `ChatClient` 上挂载的 tool callbacks / advisors，需要与默认 client 语义区分理解。
 
 - 配置：`app.ai.providers.{providerId}.baseUrl/apiKey/model`
 - 默认聊天 Provider：`app.ai.default-provider`，应优先配置为第三方 OpenAI-compatible 中转；Qwen 主要保留给向量化与语音
