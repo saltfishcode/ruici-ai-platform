@@ -1,17 +1,17 @@
-package com.ruici.ai.common.config.runtime;
+package com.ruici.ai.common.config.runtime.policy;
 
 import com.ruici.ai.common.config.LlmProviderProperties;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeResolveContext;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-/**
- * chat-first 阶段的最小策略服务。
- *
- * <p>当前先保证 provider 存在、domain 合法、请求级覆盖只在显式允许时生效，后续再扩展更细粒度白名单。</p>
- */
 @Service
+@Slf4j
 public class DefaultAiRuntimePolicyService implements AiRuntimePolicyService {
 
     private final LlmProviderProperties llmProviderProperties;
@@ -39,8 +39,11 @@ public class DefaultAiRuntimePolicyService implements AiRuntimePolicyService {
 
     @Override
     public void validateResolvedSnapshot(AiRuntimeConfigSnapshot snapshot, String clientType) {
-        if (snapshot.domain() != AiRuntimeDomain.CHAT && snapshot.domain() != AiRuntimeDomain.EMBEDDING) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "当前阶段仅支持 chat / embedding 域运行时解析");
+        if (snapshot.domain() != AiRuntimeDomain.CHAT
+            && snapshot.domain() != AiRuntimeDomain.EMBEDDING
+            && snapshot.domain() != AiRuntimeDomain.ASR
+            && snapshot.domain() != AiRuntimeDomain.TTS) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "不支持的 AI 能力域: " + snapshot.domain());
         }
         if (!StringUtils.hasText(snapshot.providerId())) {
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR, "AI 运行时快照缺少 providerId");

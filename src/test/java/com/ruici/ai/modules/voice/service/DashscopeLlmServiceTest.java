@@ -1,7 +1,8 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.modules.document.repository.ResumeRepository;
 import com.ruici.ai.modules.voice.config.VoiceInterviewProperties;
 import com.ruici.ai.modules.voice.model.VoiceInterviewSessionEntity;
@@ -71,6 +72,6 @@ class DashscopeLlmServiceTest {
 
         assertThat(result).isEqualTo("这是实时回答。");
         verify(llmProviderRegistry).getVoiceChatClient(session.toLlmRuntimeSnapshot());
-        verify(llmProviderRegistry, never()).getChatClient(any(com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot.class));
+        verify(llmProviderRegistry, never()).getChatClient(any(com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot.class));
     }
 }

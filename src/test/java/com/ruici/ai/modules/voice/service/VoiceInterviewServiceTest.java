@@ -1,10 +1,10 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
-import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.modules.voice.config.VoiceInterviewProperties;
 import com.ruici.ai.modules.voice.dto.CreateSessionRequest;
 import com.ruici.ai.modules.voice.listener.VoiceEvaluateStreamProducer;

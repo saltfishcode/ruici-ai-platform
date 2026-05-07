@@ -2,8 +2,8 @@ package com.ruici.ai.modules.document.service;
 
 import com.ruici.ai.common.ai.StructuredOutputInvoker;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.modules.document.model.AnalysisDifficulty;

@@ -1,8 +1,8 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.common.constant.CommonConstants.ScenarioDefaults;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;

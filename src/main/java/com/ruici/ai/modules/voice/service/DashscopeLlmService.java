@@ -1,7 +1,7 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.modules.document.model.ResumeEntity;
 import com.ruici.ai.modules.document.repository.ResumeRepository;
 import com.ruici.ai.modules.voice.config.VoiceInterviewProperties;

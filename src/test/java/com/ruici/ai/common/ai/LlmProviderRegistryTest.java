@@ -1,6 +1,6 @@
 package com.ruici.ai.common.ai;
 
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

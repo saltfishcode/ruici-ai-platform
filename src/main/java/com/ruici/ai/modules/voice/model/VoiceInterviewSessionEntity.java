@@ -1,9 +1,9 @@
 package com.ruici.ai.modules.voice.model;
 
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
-import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.common.constant.CommonConstants.ScenarioDefaults;
 import jakarta.persistence.*;

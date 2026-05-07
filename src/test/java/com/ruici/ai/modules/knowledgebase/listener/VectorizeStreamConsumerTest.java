@@ -1,9 +1,9 @@
 package com.ruici.ai.modules.knowledgebase.listener;
 
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSource;
-import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
 import com.ruici.ai.infrastructure.redis.RedisService;
 import com.ruici.ai.modules.knowledgebase.repository.KnowledgeBaseRepository;

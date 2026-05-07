@@ -2,7 +2,7 @@ package com.ruici.ai.common.ai;
 
 import com.ruici.ai.common.config.LlmProviderProperties;
 import com.ruici.ai.common.config.LlmProviderProperties.ProviderConfig;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

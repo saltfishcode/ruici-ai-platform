@@ -14,6 +14,7 @@ import {
   Info,
   Sun,
   Zap,
+  Brain,
 } from 'lucide-react';
 import {useTheme} from '../hooks/useTheme';
 import {useState} from 'react';
@@ -124,6 +125,7 @@ export default function Layout() {
         { id: 'simulation-history', path: '/simulation/history', label: '练习历史', icon: History, description: '查看往期练习记录' },
         { id: 'schedule', path: '/schedule', label: '日程管理', icon: CalendarDays, description: '管理日程安排' },
         { id: 'voice-simulation', path: '/voice', label: '语音面试', icon: AudioWaveform, description: '实时语音对话模拟' },
+        { id: 'ai-config', path: '/ai-config', label: '模型配置', icon: Brain, description: '管理 AI 模型选择' },
         { id: 'about', path: '/about', label: '关于', icon: Info, description: '了解项目初心与定位' },
       ],
     },
@@ -148,6 +150,9 @@ export default function Layout() {
     }
     if (path === '/voice') {
       return currentPath.startsWith('/voice');
+    }
+    if (path === '/ai-config') {
+      return currentPath === '/ai-config';
     }
     if (path === '/knowledgebase') {
       return (currentPath === '/knowledgebase' || currentPath === '/knowledgebase/upload') && !currentPath.includes('/chat');

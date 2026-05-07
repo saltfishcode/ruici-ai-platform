@@ -1,7 +1,7 @@
 package com.ruici.ai.modules.knowledgebase.service;
 
 import com.ruici.ai.common.ai.EmbeddingProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.modules.knowledgebase.repository.VectorRepository;

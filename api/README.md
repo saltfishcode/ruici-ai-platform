@@ -11,6 +11,7 @@
 - `schedule.md`：场景日程接口
 - `knowledgebase.md`：知识库管理与检索接口
 - `rag-chat.md`：RAG 聊天会话接口
+- `ai-runtime-config.md`：AI 运行时配置管理接口（模型选择）
 
 ## 当前兼容约定
 
@@ -22,7 +23,7 @@
 - `documents` 模块对外已经统一走 `/api/documents`，但内部类名仍保留 `Resume*` 历史命名。
 - `documents` 模块当前前端已显式使用 `profession` 与 `analysisDifficulty` 两个 2.0 字段做上传与重分析。
 - `v1.3.0` 新增的是后端内部 **chat-first AI 运行时动态配置基础层**，当前未引入新的公开 Controller 路径，也未新增前端必传字段。
-- 如果后续补充“运行时配置管理接口 / 后台控制面”，会在 `api/` 目录新增独立文档，而不是隐式散落在现有模块文档里。
+- `ai-runtime-config.md` 记录后续新增的运行时配置管理接口，用于前端直接对接模型选择。
 
 ## 返回约定
 

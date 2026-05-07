@@ -1,22 +1,23 @@
-package com.ruici.ai.common.config.runtime;
+package com.ruici.ai.common.config.runtime.entity;
+
+/**
+ * AI 运行时配置审计 JPA 实体。
+ * <p>对应数据库表 {@code ai_runtime_config_audit}，记录每次配置变更的操作者、变更类型和前后值摘要。
+ * 由 {@link com.ruici.ai.common.config.runtime.service.AiRuntimeConfigCommandService} 在保存/启停/刷新时同步写入。</p>
+ */
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
-/**
- * AI 运行时配置审计实体。
- */
 @Entity
 @Table(name = "ai_runtime_config_audit")
 @Data
@@ -24,7 +25,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AiRuntimeConfigAuditEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,35 +32,18 @@ public class AiRuntimeConfigAuditEntity {
     @Column(name = "config_id")
     private Long configId;
 
-    @Column(name = "action_type", nullable = false, length = 32)
+    @Column(name = "action_type", length = 32)
     private String actionType;
 
-    @Column(name = "config_key", length = 64)
-    private String configKey;
-
-    @Column(name = "domain", length = 32)
-    private String domain;
-
-    @Column(name = "scene", length = 32)
-    private String scene;
-
-    @Column(name = "before_summary", columnDefinition = "TEXT")
+    @Column(name = "before_summary", length = 1024)
     private String beforeSummary;
 
-    @Column(name = "after_summary", columnDefinition = "TEXT")
+    @Column(name = "after_summary", length = 1024)
     private String afterSummary;
 
     @Column(name = "operator", length = 64)
     private String operator;
 
-    @Column(name = "operated_at", nullable = false)
-    private LocalDateTime operatedAt;
-
-    @Column(name = "remark", length = 500)
-    private String remark;
-
-    @PrePersist
-    protected void onCreate() {
-        this.operatedAt = LocalDateTime.now();
-    }
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 }

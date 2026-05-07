@@ -52,7 +52,16 @@ com/ruici/ai/
 │   │                                 #   LlmProviderRegistry（多 LLM Provider 注册、运行时快照建 client 与缓存）
 │   ├── async/                        #   AbstractStreamConsumer/Producer（Redis Stream 模板）
 │   ├── config/                       #   配置类（CORS、S3、ObjectMapper、OpenAPI、LlmProvider）
-│   │   └── runtime/                  #   AI 运行时配置：resolver / policy / snapshot / JPA entity
+│   │   └── runtime/                  #   AI 运行时配置：按职责分包
+│   │       ├── model/                #     枚举：AiRuntimeDomain / AiRuntimeScene / AiRuntimeConfigSource
+│   │       ├── snapshot/             #     快照与上下文：AiRuntimeConfigSnapshot / AiRuntimeResolveContext
+│   │       ├── entity/               #     JPA 实体：AiRuntimeConfigEntity / AiRuntimeConfigAuditEntity
+│   │       ├── repository/           #     JPA 仓库：AiRuntimeConfigRepository / AuditRepository
+│   │       ├── resolver/             #     解析器：AiRuntimeConfigResolver / DefaultAiRuntimeConfigResolver
+│   │       ├── policy/               #     策略：AiRuntimePolicyService / DefaultAiRuntimePolicyService / ValidationService
+│   │       ├── service/              #     管理服务：CommandService / QueryService
+│   │       ├── controller/           #     REST 端点：AiRuntimeConfigController
+│   │       └── dto/                  #     数据传输：SaveRequest / ListDTO / DetailDTO / RefreshResponse
 │   ├── constant/                     #   CommonConstants、AsyncTaskStreamConstants
 │   ├── evaluation/                   #   评估与报告的通用能力（跨模块复用）
 │   ├── exception/                    #   ErrorCode（10 个错误域 1xxx-10xxx）

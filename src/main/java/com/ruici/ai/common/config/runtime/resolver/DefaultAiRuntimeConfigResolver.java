@@ -1,7 +1,15 @@
-package com.ruici.ai.common.config.runtime;
+package com.ruici.ai.common.config.runtime.resolver;
 
 import com.ruici.ai.common.config.LlmProviderProperties;
 import com.ruici.ai.common.config.LlmProviderProperties.ProviderConfig;
+import com.ruici.ai.common.config.runtime.entity.AiRuntimeConfigEntity;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeConfigSource;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.policy.AiRuntimePolicyService;
+import com.ruici.ai.common.config.runtime.repository.AiRuntimeConfigRepository;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeResolveContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -9,12 +17,6 @@ import org.springframework.util.StringUtils;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * chat-first 阶段的运行时解析器。
- *
- * <p>实现顺序固定为：请求覆盖 -> 本地快照 -> DB -> 静态配置 -> 代码默认，并在 DB 失败时回退到
- * last-known-good，避免高热聊天链路在控制面短时故障时直接失败。</p>
- */
 @Service
 @Slf4j
 public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
@@ -123,6 +125,7 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             false
         );
         policyService.validateResolvedSnapshot(snapshot, context.clientType());
+        logResolvedSnapshot(snapshot);
         return snapshot;
     }
 
@@ -131,6 +134,7 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
         if (entity == null) {
             AiRuntimeConfigSnapshot staticSnapshot = buildStaticSnapshot(context, AiRuntimeConfigSource.ENV_CONFIG, false);
             policyService.validateResolvedSnapshot(staticSnapshot, context.clientType());
+            logResolvedSnapshot(staticSnapshot);
             return staticSnapshot;
         }
         AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
@@ -145,6 +149,7 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             false
         );
         policyService.validateResolvedSnapshot(snapshot, context.clientType());
+        logResolvedSnapshot(snapshot);
         return snapshot;
     }
 
@@ -173,6 +178,18 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
         lastKnownGoodCache.put(snapshotKey, toLastKnownGoodSnapshot(snapshot));
     }
 
+    public void evictSnapshot(String snapshotKey) {
+        if (!StringUtils.hasText(snapshotKey)) {
+            return;
+        }
+        snapshotCache.remove(snapshotKey);
+    }
+
+    public void evictAllSnapshots() {
+        snapshotCache.clear();
+        log.info("[DefaultAiRuntimeConfigResolver] Snapshot cache cleared");
+    }
+
     private AiRuntimeConfigSnapshot getLastKnownGood(String snapshotKey) {
         if (!StringUtils.hasText(snapshotKey)) {
             return null;
@@ -192,6 +209,15 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             AiRuntimeConfigSource.LAST_KNOWN_GOOD,
             true
         );
+    }
+
+    private void logResolvedSnapshot(AiRuntimeConfigSnapshot snapshot) {
+        log.info("AI 运行时配置已解析: domain={}, scene={}, provider={}, model={}, fallback={}, source={}, v={}{}",
+            snapshot.domain(), snapshot.scene(),
+            snapshot.providerId(), snapshot.modelName(),
+            snapshot.fallbackModelName(),
+            snapshot.source(), snapshot.configVersion(),
+            snapshot.stale() ? " (stale)" : "");
     }
 
     private AiRuntimeConfigSnapshot buildStaticSnapshot(

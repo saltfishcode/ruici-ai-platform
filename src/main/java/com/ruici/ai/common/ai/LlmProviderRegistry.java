@@ -1,10 +1,10 @@
 package com.ruici.ai.common.ai;
 
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigResolver;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.AiRuntimeDomain;
-import com.ruici.ai.common.config.runtime.AiRuntimeResolveContext;
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.resolver.AiRuntimeConfigResolver;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeResolveContext;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.common.config.LlmProviderProperties;
 import com.ruici.ai.common.config.LlmProviderProperties.AdvisorConfig;
 import com.ruici.ai.common.config.LlmProviderProperties.ProviderConfig;
@@ -189,6 +189,11 @@ public class LlmProviderRegistry {
             return;
         }
         clientCache.remove(buildCacheKey(snapshot, clientType));
+    }
+
+    public void evictAllChatClients() {
+        clientCache.clear();
+        log.info("[LlmProviderRegistry] All ChatClient caches have been evicted");
     }
 
     public static String buildSnapshotKey(AiRuntimeScene scene, String clientType, String configKey) {

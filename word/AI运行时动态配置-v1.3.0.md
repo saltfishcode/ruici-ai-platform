@@ -2,9 +2,11 @@
 
 > **本文档更新说明**：
 > 本文最初撰写于 v1.3.0 启动阶段，反映设计意图与初始范围。
-> 实际实施过程中，范围逐步扩大——embedding 和 voice 的 snapshot 接入比计划更早完成。
+> 实际实施过程中，范围逐步扩大——embedding 和 voice 的 snapshot 接入比计划更早完成，
+> Phase 7 管理接口与前端页面也已实现。
 > 本文标记 ⚠️ 表示"初始设计如此，实际已超前"，标记 ✅ 表示"已实现"。
 > 执行顺序与最终交付的完整对照见 `private/重构v3/AI模型动态配置执行计划.md` 第 5.3 节。
+> 最终状态截止于 2026-05-07。
 
 ## 1. 背景
 
@@ -73,21 +75,29 @@
 src/main/java/com/ruici/ai/common/config/runtime/
 ```
 
-关键对象包括：
+按职责分为以下子包：
 
-- `AiRuntimeDomain`
-- `AiRuntimeScene`
-- `AiRuntimeConfigSource`
-- `AiRuntimeConfigSnapshot`
-- `AiRuntimeResolveContext`
-- `AiRuntimeConfigEntity`
-- `AiRuntimeConfigAuditEntity`
-- `AiRuntimeConfigRepository`
-- `AiRuntimeConfigAuditRepository`
-- `AiRuntimePolicyService`
-- `AiRuntimeConfigResolver`
-- `DefaultAiRuntimePolicyService`
-- `DefaultAiRuntimeConfigResolver`
+| 子包 | 职责 | 包含文件 |
+|---|---|---|
+| `model/` | 核心枚举 | `AiRuntimeDomain`、`AiRuntimeScene`、`AiRuntimeConfigSource` |
+| `snapshot/` | 快照与解析上下文 | `AiRuntimeConfigSnapshot`、`AiRuntimeResolveContext` |
+| `entity/` | JPA 持久化实体 | `AiRuntimeConfigEntity`、`AiRuntimeConfigAuditEntity` |
+| `repository/` | 数据访问仓库 | `AiRuntimeConfigRepository`、`AiRuntimeConfigAuditRepository` |
+| `resolver/` | 解析器接口与实现 | `AiRuntimeConfigResolver`、`DefaultAiRuntimeConfigResolver` |
+| `policy/` | 策略校验 | `AiRuntimePolicyService`、`DefaultAiRuntimePolicyService`、`AiRuntimeConfigValidationService` |
+| `service/` | 管理业务服务 | `AiRuntimeConfigCommandService`、`AiRuntimeConfigQueryService` |
+| `controller/` | REST 端点 | `AiRuntimeConfigController` |
+| `dto/` | 数据传输对象 | 4 个 request/response record |
+
+### 前端（Phase 7）
+
+```text
+frontend/src/pages/AiRuntimeConfigPage.tsx
+frontend/src/api/aiRuntimeConfig.ts
+```
+
+- 侧边栏「模型配置」页面，支持列表查看、按 domain/scene 过滤、编辑弹窗、启用/禁用开关、刷新缓存按钮
+- 编辑时弹窗按 domain 给出约束提示（chat 可任意 provider，embedding/asr/tts 仅限 dashscope）
 
 其中可以这样理解：
 
@@ -96,6 +106,97 @@ src/main/java/com/ruici/ai/common/config/runtime/
 - `Snapshot`：一次解析结果的不可变快照
 - `PolicyService`：做约束与合法性校验
 - `Resolver`：做真正的优先级解析与兜底策略
+
+## 4a. AI 运行时配置解析流程
+
+下面这个图表展示了一次 AI 模型调用从业务模块发出到拿到 ChatClient 的完整路径：
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  业务 Service 调用                                                │
+│  (simulation/document/knowledgebase/voice)                       │
+│  例: InterviewQuestionService.generateDirectionOnly(...)          │
+│      ResumeGradingService.analyzeResume(...)                      │
+│      KnowledgeBaseQueryService.answerQuestion(...)                │
+│      VoiceInterviewEvaluationService.generateEvaluation(...)       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         │  resolveChatConfig(context)
+                         │  resolveEmbeddingConfig(context)
+                         ▼
+┌────────────────────────────────────────────────────────────────┐
+│          DefaultAiRuntimeConfigResolver                         │
+│                                                                │
+│  入口 resolveConfig(context)                                     │
+│     │                                                            │
+│     ├── 有请求覆盖(isRequestOverridePresent)                       │
+│     │   └──→ resolveRequestOverride() ──→ Snapshot(REQUEST_OVERRIDE)
+│     │        跳过缓存，直接返回                                      │
+│     │                                                            │
+│     ├── snapshotCache 命中                                       │
+│     │   └──→ 直接返回缓存 Snapshot (Hot Path, 最快)                 │
+│     │                                                            │
+│     └── 缓存未命中 → refreshSnapshot()                             │
+│           │                                                      │
+│           ├── loadSnapshotFromDatabase()                          │
+│           │   ├── DB 找到启用配置 → Snapshot(DB_RUNTIME_CONFIG)     │
+│           │   │    缓存该快照并返回                                 │
+│           │   └── DB 未命中 → buildStaticSnapshot()               │
+│           │        └──→ Snapshot(ENV_CONFIG)                      │
+│           │             来自 app.ai.default-provider 等静态配置      │
+│           │                                                      │
+│           └── DB 异常 → 两级兜底                                    │
+│                ├── lastKnownGood 存在 → Snapshot(LAST_KNOWN_GOOD) │
+│                │    上次成功解析的缓存，已标记 stale=true            │
+│                └── lastKnownGood 不存在 → buildStaticSnapshot()    │
+│                      → Snapshot(ENV_CONFIG, stale=false)         │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ 返回 AiRuntimeConfigSnapshot
+                         ▼
+┌────────────────────────────────────────────────────────────────┐
+│          LlmProviderRegistry                                     │
+│                                                                │
+│  getChatClient(snapshot)                                         │
+│     │                                                            │
+│     ├── clientCache 命中                                          │
+│     │   └──→ 返回缓存中 ChatClient (Hot Path, 不用重建 HTTP 连接)   │
+│     │                                                            │
+│     └── 缓存未命中 → 创建新 ChatClient                             │
+│          缓存 key = providerId:clientType:modelName:             │
+│                     fallback:normalizedBaseUrl:configVersion     │
+│           │                                                      │
+│           ├── clientType=default → 带 SkillsTool + Advisors      │
+│           ├── clientType=plain   → 不带 tools / advisors         │
+│           └── clientType=voice   → plain, 不带 tools / advisors  │
+│                                                                │
+│  创建的 ChatClient 用于:                                         │
+│   · .call()          → 同步结构化输出                                 │
+│   · .stream()        → 流式响应                                      │
+│   · prompt().call()  → 带 system/user prompt 调用                   │
+└────────────────────────────────────────────────────────────────┘
+
+解析优先级（数字越小优先级越高）：
+ ① REQUEST_OVERRIDE   (最优先，仅被允许的链路)
+ ② DB_RUNTIME_CONFIG  (数据库动态配置，前端页面管理)
+ ③ ENV_CONFIG         (application.yml 静态配置)
+ ④ LAST_KNOWN_GOOD    (上次成功值，DB 不可用时兜底)
+ ⑤ CODE_DEFAULT       (硬编码默认值，极端保护)
+
+缓存体系（全部在 JVM 内存中）：
+ ┌───────────────┬──────────────────┬──────────────────────────┐
+ │ 缓存名称        │ 存储内容          │ 释放方式                   │
+ ├───────────────┼──────────────────┼──────────────────────────┤
+ │ snapshotCache  │ 配置快照           │ evictSnapshot / evictAll │
+ │               │ (provider/model)  │ configVersion 变化后自动miss│
+ ├───────────────┼──────────────────┼──────────────────────────┤
+ │ lastKnownGood  │ 上次成功快照(只读)  │ 永不主动清除               │
+ │               │ (DB 不可用时兜底)   │ 仅在重启后丢失              │
+ ├───────────────┼──────────────────┼──────────────────────────┤
+ │ clientCache    │ ChatClient 实例    │ evictChatClient / evictAll│
+ │ (LlmProvider   │ (含 HTTP 连接池)   │ configVersion 变化后自动miss│
+ │  Registry)     │                  │                          │
+ └───────────────┴──────────────────┴──────────────────────────┘
+```
 
 ## 5. 当前解析顺序
 
@@ -157,11 +258,24 @@ request override -> DB runtime config -> static env config -> code default
 
 ## 8. 对外接口是否变化
 
-当前阶段：**没有新增必传接口字段，也没有新增公开 Controller 路径。**
+### 初始阶段：没有新增必传接口字段
 
-这次改动的重点是后端内部的运行时控制面，而不是前端接口契约。
+本次改动的重点是后端内部的运行时控制面，而不是前端接口契约。
 
 对前端而言，现有 `document / simulation / knowledgebase` 调用方式保持不变；变化主要体现在后端内部如何决定实际使用的 chat model。
+
+### ✅ Phase 7：新增公开 Controller 路径
+
+```text
+GET    /api/ai-runtime-config              # 列表（domain/scene/providerId 过滤）
+GET    /api/ai-runtime-config/{id}         # 详情
+GET    /api/ai-runtime-config/version      # 最新版本号
+POST   /api/ai-runtime-config              # 增/改配置
+PATCH  /api/ai-runtime-config/{id}/enabled # 启停
+POST   /api/ai-runtime-config/refresh      # 刷新缓存
+```
+
+这些接口不要求认证，前端可直接对接，详细请求/响应格式见 `api/ai-runtime-config.md`。
 
 ## 9. 测试与验证
 
@@ -174,7 +288,7 @@ src/test/java/com/ruici/ai/common/ai/OpenAiCompatibleGatewayClientTest.java
 src/test/java/com/ruici/ai/modules/simulation/service/InterviewSessionServiceTest.java
 ```
 
-### ✅ 后续迭代中补充的测试（覆盖 runtime + voice + kb）
+### ✅ 后续迭代中补充的测试（覆盖 runtime + voice + kb + management）
 
 ```text
 src/test/java/com/ruici/ai/modules/voice/service/VoiceInterviewServiceTest.java
@@ -182,7 +296,18 @@ src/test/java/com/ruici/ai/modules/voice/service/DashscopeLlmServiceTest.java
 src/test/java/com/ruici/ai/modules/voice/service/VoiceInterviewEvaluationServiceTest.java
 src/test/java/com/ruici/ai/modules/document/service/ResumeGradingServiceTest.java
 src/test/java/com/ruici/ai/modules/knowledgebase/service/KnowledgeBaseQueryServiceTest.java
+src/test/java/com/ruici/ai/common/config/runtime/AiRuntimeConfigCommandServiceTest.java
+src/test/java/com/ruici/ai/common/config/runtime/AiRuntimeConfigControllerTest.java
 ```
+
+### ⏳ 计划内尚未发布的测试
+
+```text
+src/test/java/com/ruici/ai/common/config/runtime/AiRuntimeConfigValidationServiceTest.java
+```
+
+该测试用例在 `private/重构v3/AI模型动态配置执行计划.md` 第 15.1 节中被列为最小门禁之一，
+但在当前交付阶段尚未实现，建议后续迭代中补全。
 
 同时，为了在 Windows + JDK 21 环境下稳定执行 Mockito 测试，补充了：
 
@@ -201,6 +326,13 @@ mvn -q "-Dtest=LlmProviderRegistryTest,OpenAiCompatibleGatewayClientTest,Default
 
 结果：当前聚焦编译与测试通过。
 
+最新全量验证结果：
+
+```bash
+mvn "-Dtest=LlmProviderRegistryTest,KnowledgeBaseQueryServiceTest,DashscopeLlmServiceTest,VoiceInterviewServiceTest,VoiceInterviewEvaluationServiceTest,ResumeGradingServiceTest,DefaultAiRuntimeConfigResolverTest,DefaultAiRuntimePolicyServiceTest,AiRuntimeConfigCommandServiceTest,AiRuntimeConfigControllerTest" test
+# Tests run: 34, Failures: 0, Errors: 0, Skipped: 0
+```
+
 ## 10. 后续演进建议
 
 `v1.3.0` 的初始交付重点是把运行时动态配置的 **chat foundation** 落下来。
@@ -213,15 +345,13 @@ mvn -q "-Dtest=LlmProviderRegistryTest,OpenAiCompatibleGatewayClientTest,Default
 | Phase 0-4: Chat | simulation/document/knowledgebase 接入 resolver | ✅ 已完成 |
 | Phase 5: Embedding | 任务/批次级快照 | ✅ 已完成 |
 | Phase 6: Voice | 会话级 LLM 快照 | ✅ 已完成 |
-| Phase 7: 管理能力 | 管理接口、启停、刷新、审计 | ⏳ 未开始 |
+| Phase 7: 管理能力 | 管理接口、启停、刷新、审计 | ✅ 已完成 |
+| Phase 7.5: 前端模型选择 | 前端页面/API 层/路由/导航 | ✅ 已完成 |
 | ASR/TTS 动态切换 | 按会话级快照 | ⏳ 未开始 |
 
 ### 剩余待推进
 
-1. **补运行时配置管理接口 / 后台控制面**（对应 Phase 7）
-   - `AiRuntimeConfigCommandService`、`QueryService`、`ValidationService` 尚未实现
-   - 没有 admin 模块和对应 Controller
-2. **扩展审计与回滚能力**
-   - 审计 Entity/Repository 已就绪，但写入审计的回调链路未接线
-3. **ASR/TTS 的会话级 snapshot**（仅当业务需要时）
-4. **多实例缓存失效传播方案**
+1. **补全 `AiRuntimeConfigValidationServiceTest`**（计划要求的最低门禁测试，当前缺失）
+2. **ASR/TTS 的会话级 snapshot**（仅当业务需要时）
+3. **多实例缓存失效传播方案**
+4. **API Key 动态化**（当前所有密钥仍通过 `application.yml` / `.env` 静态配置）

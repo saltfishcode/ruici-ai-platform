@@ -2,8 +2,8 @@ package com.ruici.ai.modules.simulation.listener;
 
 import com.ruici.ai.common.async.AbstractStreamConsumer;
 import com.ruici.ai.common.ai.LlmProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
 import com.ruici.ai.common.model.AsyncTaskStatus;
 import com.ruici.ai.infrastructure.redis.RedisService;

@@ -26,6 +26,7 @@ const SchedulePage = lazy(() => import('./pages/InterviewSchedulePage'));
 const SimulationHubPage = lazy(() => import('./pages/InterviewHubPage'));
 const SimulationDetailPanel = lazy(() => import('./components/InterviewDetailPanel'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
+const AiRuntimeConfigPage = lazy(() => import('./pages/AiRuntimeConfigPage'));
 
 // Loading component
 const Loading = () => (
@@ -222,6 +223,9 @@ function App() {
 
             {/* 关于项目 */}
             <Route path="about" element={<AboutPage />} />
+
+            {/* AI 模型配置 */}
+            <Route path="ai-config" element={<AiRuntimeConfigPage />} />
 
             {/* 问答助手（知识库聊天） */}
             <Route path="knowledgebase/chat" element={<KnowledgeBaseQueryPageWrapper />} />

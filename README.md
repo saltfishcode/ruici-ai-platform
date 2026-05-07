@@ -146,6 +146,15 @@ React 18 + TypeScript + Vite + TailwindCSS 4，位于 `frontend/` 目录。
 
 ```text
 src/main/java/com/ruici/ai/common/config/runtime/
+   model/         枚举（Domain / Scene / Source）
+   snapshot/      快照与解析上下文（Snapshot / ResolveContext）
+   entity/        JPA 实体（Config / Audit）
+   repository/    JPA 仓库
+   resolver/      解析器接口与实现（Resolver + DefaultResolver）
+   policy/        策略校验（PolicyService + ValidationService）
+   service/       管理服务（CommandService / QueryService）
+   controller/    REST 端点（/api/ai-runtime-config）
+   dto/           数据传输对象
 ```
 
 其中关键职责可以这样理解：
@@ -165,7 +174,7 @@ src/main/java/com/ruici/ai/common/config/runtime/
 - `modules/simulation`：题目生成 / 会话创建 / 评估链路
 - `modules/knowledgebase`：RAG 改写、问答与流式回答链路
 
-当前尚未完全动态化的范围：
+当前已接入动态配置但仍有治理空间的链路：
 
 - `embedding`：已接入知识库向量化与检索的任务级 / 查询级快照，但未扩展到更细粒度热切换或重向量化治理
 - `voice`：已接入会话级 LLM 快照锚点，保证单个语音会话内 provider/model/fallback 一致；`ASR/TTS` 仍保持静态稳定配置
@@ -173,8 +182,7 @@ src/main/java/com/ruici/ai/common/config/runtime/
 ### 对前端 / 接口的影响
 
 - **当前没有新增必传接口字段**，也没有把现有公开接口改成新的路径。
-- 这次改动主要影响后端内部如何选择聊天模型，而不是前端如何调用接口。
-- 如果后续增加运行时配置管理接口或后台控制面，再在 `api/` 目录单独补接口文档。
+- 运行时配置管理接口已在 `api/ai-runtime-config.md` 中单独沉淀，前端可通过 `/api/ai-runtime-config/*` 端点管理模型选择。
 
 ## 项目结构
 

@@ -1,7 +1,8 @@
 package com.ruici.ai.modules.knowledgebase.listener;
 
 import com.ruici.ai.common.ai.EmbeddingProviderRegistry;
-import com.ruici.ai.common.config.runtime.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.async.AbstractStreamProducer;
 import com.ruici.ai.common.constant.AsyncTaskStreamConstants;
 import com.ruici.ai.infrastructure.redis.RedisService;
@@ -43,7 +44,7 @@ public class VectorizeStreamProducer extends AbstractStreamProducer<VectorizeStr
      */
     public void sendVectorizeTask(Long kbId, String content) {
         AiRuntimeConfigSnapshot embeddingSnapshot = embeddingProviderRegistry.resolveEmbeddingSnapshot(
-            com.ruici.ai.common.config.runtime.AiRuntimeScene.KNOWLEDGEBASE
+            AiRuntimeScene.KNOWLEDGEBASE
         );
         sendTask(new VectorizeTaskPayload(kbId, content, embeddingSnapshot));
     }
