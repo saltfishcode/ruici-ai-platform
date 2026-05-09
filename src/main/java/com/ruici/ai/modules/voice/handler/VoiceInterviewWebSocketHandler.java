@@ -131,7 +131,7 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
         if (text == null || text.isBlank()) {
             return;
         }
-        byte[] wavAudio = synthesizeToWav(text);
+        byte[] wavAudio = synthesizeToWav(text, null);
         if (wavAudio.length > 0) {
             openingAudioCache.put(text, wavAudio);
         }
@@ -239,7 +239,7 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
                 saveMessage(sessionId, null, aiReply);
 
                 // 语音随后下发
-                byte[] wavAudio = getOpeningWavAudio(aiReply);
+                byte[] wavAudio = getOpeningWavAudio(aiReply, sessionEntity);
                 if (wavAudio.length > 0 && session.isOpen()) {
                     sendAudio(session, wavAudio, aiReply);
                 }
@@ -251,20 +251,23 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
         });
     }
 
-    private byte[] getOpeningWavAudio(String text) {
+    private byte[] getOpeningWavAudio(String text, VoiceInterviewSessionEntity sessionEntity) {
         byte[] cached = openingAudioCache.get(text);
         if (cached != null && cached.length > 0) {
             return cached;
         }
-        byte[] wav = synthesizeToWav(text);
+        byte[] wav = synthesizeToWav(text, sessionEntity);
         if (wav.length > 0) {
             openingAudioCache.put(text, wav);
         }
         return wav;
     }
 
-    private byte[] synthesizeToWav(String text) {
-        byte[] pcm = ttsService.synthesize(text);
+    private byte[] synthesizeToWav(String text, VoiceInterviewSessionEntity sessionEntity) {
+        byte[] pcm = ttsService.synthesize(
+            text,
+            sessionEntity != null ? sessionEntity.toTtsRuntimeSnapshot() : null
+        );
         if (pcm == null || pcm.length == 0) {
             return new byte[0];
         }
@@ -402,8 +405,10 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
     }
 
     private void startDashScopeStt(String sessionId, WebSocketSession session) {
+        VoiceInterviewSessionEntity sessionEntity = getSessionEntity(sessionId);
         sttService.startTranscription(
                 sessionId,
+                sessionEntity != null ? sessionEntity.toAsrRuntimeSnapshot() : null,
                 text -> handleSttResult(sessionId, text, true),
                 text -> handleSttResult(sessionId, text, false),
                 error -> {
@@ -421,8 +426,10 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
         if (session == null || !session.isOpen()) {
             return;
         }
+        VoiceInterviewSessionEntity sessionEntity = getSessionEntity(sessionId);
         sttService.restartTranscription(
                 sessionId,
+                sessionEntity != null ? sessionEntity.toAsrRuntimeSnapshot() : null,
                 text -> handleSttResult(sessionId, text, true),
                 text -> handleSttResult(sessionId, text, false),
                 error -> {
@@ -620,7 +627,7 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
                         ttsSemaphore.acquireUninterruptibly();
                         CompletableFuture<byte[]> future = CompletableFuture.supplyAsync(() -> {
                             try {
-                                return ttsService.synthesize(sentence);
+                                return ttsService.synthesize(sentence, sessionEntity.toTtsRuntimeSnapshot());
                             } finally {
                                 ttsSemaphore.release();
                             }
@@ -720,7 +727,7 @@ public class VoiceInterviewWebSocketHandler extends TextWebSocketHandler impleme
                 long ttsStartNanos = System.nanoTime();
                 log.info("[Session: {}] Starting TTS synthesis for text (length: {})",
                     sessionId, aiReply.length());
-                byte[] aiAudio = ttsService.synthesize(aiReply);
+                byte[] aiAudio = ttsService.synthesize(aiReply, sessionEntity.toTtsRuntimeSnapshot());
                 recordTimerSinceNanos("app.voice.interview.tts.duration", ttsStartNanos, "status", "success");
 
                 if (!session.isOpen()) {

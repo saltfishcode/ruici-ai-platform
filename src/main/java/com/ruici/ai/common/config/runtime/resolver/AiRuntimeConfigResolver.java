@@ -18,4 +18,8 @@ public interface AiRuntimeConfigResolver {
     AiRuntimeConfigSnapshot refreshChatSnapshot(AiRuntimeResolveContext context);
     AiRuntimeConfigSnapshot resolveEmbeddingConfig(AiRuntimeResolveContext context);
     AiRuntimeConfigSnapshot refreshEmbeddingSnapshot(AiRuntimeResolveContext context);
+    AiRuntimeConfigSnapshot resolveAsrConfig(AiRuntimeResolveContext context);
+    AiRuntimeConfigSnapshot refreshAsrSnapshot(AiRuntimeResolveContext context);
+    AiRuntimeConfigSnapshot resolveTtsConfig(AiRuntimeResolveContext context);
+    AiRuntimeConfigSnapshot refreshTtsSnapshot(AiRuntimeResolveContext context);
 }

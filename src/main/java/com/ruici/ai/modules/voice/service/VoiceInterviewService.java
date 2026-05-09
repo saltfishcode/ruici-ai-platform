@@ -1,7 +1,10 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
+import com.ruici.ai.common.config.runtime.resolver.AiRuntimeConfigResolver;
 import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeResolveContext;
 import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
 import com.ruici.ai.common.constant.CommonConstants.ScenarioDefaults;
 import com.ruici.ai.common.exception.BusinessException;
@@ -56,9 +59,15 @@ public class VoiceInterviewService {
     private final VoiceInterviewProperties properties;
     private final VoiceEvaluateStreamProducer voiceEvaluateStreamProducer;
     private final LlmProviderRegistry llmProviderRegistry;
+    private final AiRuntimeConfigResolver aiRuntimeConfigResolver;
 
     private static final String SESSION_CACHE_KEY_PREFIX = "voice:session:";
     private static final int CACHE_TTL_HOURS = 1;
+    private static final String ASR_CLIENT_TYPE = "voice-asr";
+    private static final String TTS_CLIENT_TYPE = "voice-tts";
+    private static final String ASR_CONFIG_KEY = "AI_ASR_MODEL";
+    private static final String TTS_CONFIG_KEY = "AI_TTS_MODEL";
+    private static final String VOICE_PROVIDER_ID = "dashscope";
 
     /**
      * 当前项目还没有接入真正的登录态，因此语音模块先继续使用固定用户 ID 做兼容。
@@ -92,6 +101,34 @@ public class VoiceInterviewService {
             "voice",
             true
         );
+        AiRuntimeConfigSnapshot asrSnapshot = aiRuntimeConfigResolver.resolveAsrConfig(new AiRuntimeResolveContext(
+            AiRuntimeDomain.ASR,
+            AiRuntimeScene.VOICE,
+            ASR_CONFIG_KEY,
+            null,
+            null,
+            null,
+            VOICE_PROVIDER_ID,
+            properties.getQwen().getAsr().getModel(),
+            null,
+            LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.VOICE, ASR_CLIENT_TYPE, ASR_CONFIG_KEY),
+            ASR_CLIENT_TYPE,
+            false
+        ));
+        AiRuntimeConfigSnapshot ttsSnapshot = aiRuntimeConfigResolver.resolveTtsConfig(new AiRuntimeResolveContext(
+            AiRuntimeDomain.TTS,
+            AiRuntimeScene.VOICE,
+            TTS_CONFIG_KEY,
+            null,
+            null,
+            null,
+            VOICE_PROVIDER_ID,
+            properties.getQwen().getTts().getModel(),
+            null,
+            LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.VOICE, TTS_CLIENT_TYPE, TTS_CONFIG_KEY),
+            TTS_CLIENT_TYPE,
+            false
+        ));
 
         VoiceInterviewSessionEntity session = VoiceInterviewSessionEntity.builder()
                 .userId(DEFAULT_USER_ID)
@@ -109,6 +146,8 @@ public class VoiceInterviewService {
                 .currentPhase(determineFirstPhase(request))
                 .build();
         session.applyLlmRuntimeSnapshot(llmSnapshot);
+        session.applyAsrRuntimeSnapshot(asrSnapshot);
+        session.applyTtsRuntimeSnapshot(ttsSnapshot);
 
         VoiceInterviewSessionEntity saved = sessionRepository.save(session);
         cacheSession(saved);

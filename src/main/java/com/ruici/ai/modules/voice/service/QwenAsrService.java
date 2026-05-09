@@ -9,6 +9,7 @@ import com.alibaba.dashscope.audio.omni.OmniRealtimeTranscriptionParam;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.modules.voice.config.VoiceInterviewProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -131,6 +132,17 @@ public class QwenAsrService {
         startTranscription(sessionId, onFinal, null, onError);
     }
 
+    public void startTranscription(
+            String sessionId,
+            AiRuntimeConfigSnapshot snapshot,
+            Consumer<String> onFinal,
+            Consumer<String> onPartial,
+            Consumer<Throwable> onError) {
+        synchronized (lockForSession(sessionId)) {
+            startTranscriptionLocked(sessionId, snapshot, onFinal, onPartial, onError);
+        }
+    }
+
     /**
      * Same as {@link #startTranscription(String, Consumer, Consumer)} but forwards partial transcripts
      * ({@code conversation.item.input_audio_transcription.text}) for live subtitles.
@@ -143,7 +155,7 @@ public class QwenAsrService {
             Consumer<String> onPartial,
             Consumer<Throwable> onError) {
         synchronized (lockForSession(sessionId)) {
-            startTranscriptionLocked(sessionId, onFinal, onPartial, onError);
+            startTranscriptionLocked(sessionId, null, onFinal, onPartial, onError);
         }
     }
 
@@ -152,6 +164,7 @@ public class QwenAsrService {
      */
     public void restartTranscription(
             String sessionId,
+            AiRuntimeConfigSnapshot snapshot,
             Consumer<String> onFinal,
             Consumer<String> onPartial,
             Consumer<Throwable> onError) {
@@ -163,7 +176,7 @@ public class QwenAsrService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            startTranscriptionLocked(sessionId, onFinal, onPartial, onError);
+            startTranscriptionLocked(sessionId, snapshot, onFinal, onPartial, onError);
 
             // Verify reconnection succeeded
             for (int attempt = 0; attempt < 10; attempt++) {
@@ -187,6 +200,7 @@ public class QwenAsrService {
 
     private void startTranscriptionLocked(
             String sessionId,
+            AiRuntimeConfigSnapshot snapshot,
             Consumer<String> onFinal,
             Consumer<String> onPartial,
             Consumer<Throwable> onError) {
@@ -197,7 +211,7 @@ public class QwenAsrService {
         try {
             // Build OmniRealtimeParam with connection settings
             OmniRealtimeParam param = OmniRealtimeParam.builder()
-                    .model(model)
+                    .model(resolveModel(snapshot))
                     .url(url)
                     .apikey(apiKey)
                     .build();
@@ -284,6 +298,13 @@ public class QwenAsrService {
             onError.accept(new IllegalStateException(errorMsg, e));
             throw new IllegalStateException(errorMsg, e);
         }
+    }
+
+    private String resolveModel(AiRuntimeConfigSnapshot snapshot) {
+        if (snapshot != null && snapshot.modelName() != null && !snapshot.modelName().isBlank()) {
+            return snapshot.modelName().trim();
+        }
+        return model;
     }
 
     /**

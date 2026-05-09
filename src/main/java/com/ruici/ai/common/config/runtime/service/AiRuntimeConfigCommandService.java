@@ -13,7 +13,6 @@ import com.ruici.ai.common.config.runtime.entity.AiRuntimeConfigEntity;
 import com.ruici.ai.common.config.runtime.repository.AiRuntimeConfigRepository;
 import com.ruici.ai.common.config.runtime.resolver.AiRuntimeConfigResolver;
 import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
-import com.ruici.ai.common.config.runtime.model.AiRuntimeConfigSource;
 import com.ruici.ai.common.config.runtime.policy.AiRuntimeConfigValidationService;
 import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
 import com.ruici.ai.common.config.runtime.model.AiRuntimeScene;
@@ -28,8 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-
 @Service
 public class AiRuntimeConfigCommandService {
 
@@ -41,6 +38,7 @@ public class AiRuntimeConfigCommandService {
     private final AiRuntimeConfigResolver configResolver;
     private final LlmProviderRegistry llmProviderRegistry;
     private final DefaultAiRuntimeConfigResolver defaultResolver;
+    private final AiRuntimeCacheInvalidationNotifier cacheInvalidationNotifier;
 
     public AiRuntimeConfigCommandService(
         AiRuntimeConfigRepository configRepository,
@@ -48,7 +46,8 @@ public class AiRuntimeConfigCommandService {
         AiRuntimeConfigValidationService validationService,
         AiRuntimeConfigResolver configResolver,
         LlmProviderRegistry llmProviderRegistry,
-        DefaultAiRuntimeConfigResolver defaultResolver
+        DefaultAiRuntimeConfigResolver defaultResolver,
+        AiRuntimeCacheInvalidationNotifier cacheInvalidationNotifier
     ) {
         this.configRepository = configRepository;
         this.auditRepository = auditRepository;
@@ -56,6 +55,7 @@ public class AiRuntimeConfigCommandService {
         this.configResolver = configResolver;
         this.llmProviderRegistry = llmProviderRegistry;
         this.defaultResolver = defaultResolver;
+        this.cacheInvalidationNotifier = cacheInvalidationNotifier;
     }
 
     @Transactional
@@ -130,8 +130,7 @@ public class AiRuntimeConfigCommandService {
 
     @Transactional
     public RefreshAiRuntimeConfigResponse refreshCache(String operator) {
-        defaultResolver.evictAllSnapshots();
-        llmProviderRegistry.evictAllChatClients();
+        cacheInvalidationNotifier.refreshAllAndBroadcast();
         long latestVersion = configRepository.findAll().stream()
             .mapToLong(e -> e.getConfigVersion() != null ? e.getConfigVersion() : 0L)
             .max()
@@ -155,21 +154,9 @@ public class AiRuntimeConfigCommandService {
             scene = AiRuntimeScene.GLOBAL;
         }
 
-        String snapshotKey = LlmProviderRegistry.buildSnapshotKey(
-            scene, "default", entity.getConfigKey());
-        defaultResolver.evictSnapshot(snapshotKey);
+        cacheInvalidationNotifier.evictAndBroadcast(entity);
 
-        AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
-            entity.getConfigKey(),
-            domain,
-            scene,
-            entity.getProviderId(),
-            entity.getModelName(),
-            entity.getFallbackModelName(),
-            entity.getConfigVersion(),
-            AiRuntimeConfigSource.DB_RUNTIME_CONFIG,
-            false
-        );
+        AiRuntimeConfigSnapshot snapshot = AiRuntimeCacheInvalidationNotifier.toSnapshot(entity);
 
         if (domain == AiRuntimeDomain.CHAT || domain == AiRuntimeDomain.EMBEDDING) {
             llmProviderRegistry.evictChatClient(snapshot, "default");

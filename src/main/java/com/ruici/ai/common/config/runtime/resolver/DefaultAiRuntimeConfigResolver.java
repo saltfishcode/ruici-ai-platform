@@ -23,11 +23,16 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
 
     private static final String DEFAULT_CHAT_CONFIG_KEY = "THIRD_PARTY_MODEL";
     private static final String DEFAULT_EMBEDDING_CONFIG_KEY = "AI_EMBEDDING_MODEL";
+    private static final String DEFAULT_ASR_CONFIG_KEY = "AI_ASR_MODEL";
+    private static final String DEFAULT_TTS_CONFIG_KEY = "AI_TTS_MODEL";
     private static final String DEFAULT_PROVIDER_ID = "third-party";
     private static final String DEFAULT_MODEL_NAME = "gpt-5.2";
     private static final String DEFAULT_FALLBACK_MODEL = "qwen-plus";
     private static final String DEFAULT_EMBEDDING_PROVIDER_ID = "dashscope";
     private static final String DEFAULT_EMBEDDING_MODEL_NAME = "text-embedding-v3";
+    private static final String DEFAULT_VOICE_PROVIDER_ID = "dashscope";
+    private static final String DEFAULT_ASR_MODEL_NAME = "qwen3-asr-flash-realtime";
+    private static final String DEFAULT_TTS_MODEL_NAME = "qwen3-tts-flash-realtime";
     private static final long STATIC_CONFIG_VERSION = 0L;
 
     private final AiRuntimeConfigRepository configRepository;
@@ -63,6 +68,26 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
 
     @Override
     public AiRuntimeConfigSnapshot refreshEmbeddingSnapshot(AiRuntimeResolveContext context) {
+        return refreshSnapshot(context);
+    }
+
+    @Override
+    public AiRuntimeConfigSnapshot resolveAsrConfig(AiRuntimeResolveContext context) {
+        return resolveConfig(context);
+    }
+
+    @Override
+    public AiRuntimeConfigSnapshot refreshAsrSnapshot(AiRuntimeResolveContext context) {
+        return refreshSnapshot(context);
+    }
+
+    @Override
+    public AiRuntimeConfigSnapshot resolveTtsConfig(AiRuntimeResolveContext context) {
+        return resolveConfig(context);
+    }
+
+    @Override
+    public AiRuntimeConfigSnapshot refreshTtsSnapshot(AiRuntimeResolveContext context) {
         return refreshSnapshot(context);
     }
 
@@ -273,6 +298,9 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             }
             return DEFAULT_EMBEDDING_PROVIDER_ID;
         }
+        if (context.domain() == AiRuntimeDomain.ASR || context.domain() == AiRuntimeDomain.TTS) {
+            return DEFAULT_VOICE_PROVIDER_ID;
+        }
         if (StringUtils.hasText(llmProviderProperties.getDefaultProvider())) {
             return llmProviderProperties.getDefaultProvider().trim();
         }
@@ -289,6 +317,18 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
             }
             return DEFAULT_EMBEDDING_MODEL_NAME;
         }
+        if (context.domain() == AiRuntimeDomain.ASR) {
+            if (StringUtils.hasText(providerConfig.getModel())) {
+                return providerConfig.getModel().trim();
+            }
+            return DEFAULT_ASR_MODEL_NAME;
+        }
+        if (context.domain() == AiRuntimeDomain.TTS) {
+            if (StringUtils.hasText(providerConfig.getModel())) {
+                return providerConfig.getModel().trim();
+            }
+            return DEFAULT_TTS_MODEL_NAME;
+        }
         if (StringUtils.hasText(providerConfig.getModel())) {
             return providerConfig.getModel().trim();
         }
@@ -299,7 +339,9 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
         if (StringUtils.hasText(context.staticFallbackModelName())) {
             return context.staticFallbackModelName().trim();
         }
-        if (context.domain() == AiRuntimeDomain.EMBEDDING) {
+        if (context.domain() == AiRuntimeDomain.EMBEDDING
+            || context.domain() == AiRuntimeDomain.ASR
+            || context.domain() == AiRuntimeDomain.TTS) {
             return null;
         }
         if (StringUtils.hasText(providerConfig.getFallbackModel())) {
@@ -326,6 +368,7 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
         }
         if (DEFAULT_EMBEDDING_PROVIDER_ID.equals(providerId)) {
             ProviderConfig defaultConfig = new ProviderConfig();
+            defaultConfig.setModel(DEFAULT_ASR_MODEL_NAME);
             defaultConfig.setEmbeddingModel(DEFAULT_EMBEDDING_MODEL_NAME);
             defaultConfig.setBaseUrl("https://dashscope.aliyuncs.com/compatible-mode");
             defaultConfig.setApiKey("");
@@ -343,6 +386,12 @@ public class DefaultAiRuntimeConfigResolver implements AiRuntimeConfigResolver {
     private String defaultConfigKey(AiRuntimeDomain domain) {
         if (domain == AiRuntimeDomain.EMBEDDING) {
             return DEFAULT_EMBEDDING_CONFIG_KEY;
+        }
+        if (domain == AiRuntimeDomain.ASR) {
+            return DEFAULT_ASR_CONFIG_KEY;
+        }
+        if (domain == AiRuntimeDomain.TTS) {
+            return DEFAULT_TTS_CONFIG_KEY;
         }
         return DEFAULT_CHAT_CONFIG_KEY;
     }

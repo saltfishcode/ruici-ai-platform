@@ -2,12 +2,13 @@ import {useCallback, useEffect, useState} from 'react';
 import {useLocation} from 'react-router-dom';
 import {AnimatePresence, motion} from 'framer-motion';
 import {documentApi} from '../api/document';
+import {buildApiUrl} from '../api/request';
 import {simulationApi} from '../api/simulation';
 import AnalysisPanel from '../components/AnalysisPanel';
 import InterviewPanel from '../components/InterviewPanel';
 import InterviewDetailPanel from '../components/InterviewDetailPanel';
 import {formatDateOnly} from '../utils/date';
-import {CheckSquare, ChevronLeft, Clock, Download, MessageSquare, Mic} from 'lucide-react';
+import {CheckSquare, ChevronLeft, Clock, Download, Eye, MessageSquare, Mic} from 'lucide-react';
 import type {InterviewDetail} from '../types/simulation';
 import type {ResumeDetail} from '../types/document';
 
@@ -38,6 +39,23 @@ function getAnalysisDifficultyLabel(analysisDifficulty?: string | null): string 
     default:
       return null;
   }
+}
+
+function isWordDocument(filename?: string | null, contentType?: string | null): boolean {
+  const normalizedFilename = filename?.toLowerCase() ?? '';
+  const normalizedContentType = contentType?.toLowerCase() ?? '';
+
+  return normalizedFilename.endsWith('.doc')
+    || normalizedFilename.endsWith('.docx')
+    || normalizedFilename.endsWith('.docm')
+    || normalizedFilename.endsWith('.dot')
+    || normalizedFilename.endsWith('.dotx')
+    || normalizedFilename.endsWith('.dotm')
+    || normalizedContentType.includes('application/msword')
+    || normalizedContentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    || normalizedContentType.includes('application/vnd.ms-word.document.macroenabled.12')
+    || normalizedContentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.template')
+    || normalizedContentType.includes('application/vnd.ms-word.template.macroenabled.12');
 }
 
 export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }: ResumeDetailPageProps) {
@@ -162,6 +180,47 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
       alert('导出失败，请重试');
     } finally {
       setExporting(null);
+    }
+  };
+
+  const handlePreviewOriginalFile = async () => {
+    try {
+      const previewUrl = resume?.originalFilePreviewUrl;
+      if (!previewUrl) {
+        throw new Error('预览地址不存在');
+      }
+
+      const resolvedPreviewUrl = buildApiUrl(previewUrl);
+
+      if (isWordDocument(resume?.filename, resume?.contentType)) {
+        // 对 Word 文档优先走 Windows Office 协议，让系统尝试直接交给本机 Word 打开，
+        // 而不是交给浏览器按 inline/attachment 规则处理。
+        window.location.href = `ms-word:ofe|u|${encodeURI(resolvedPreviewUrl)}`;
+        return;
+      }
+
+      // 预览直接打开后端 inline 地址，让浏览器按响应头决定内联展示，
+      // 避免先转 blob 后丢失服务端的 Content-Disposition 语义。
+      window.open(resolvedPreviewUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      alert('原文件预览失败，请重试');
+    }
+  };
+
+  const handleDownloadOriginalFile = async () => {
+    try {
+      // 下载与预览共用同一接口，通过 disposition 区分浏览器处理方式。
+      const blob = await documentApi.getOriginalFile(resumeId, 'attachment');
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = resume?.filename || `document-${resumeId}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('原文件下载失败，请重试');
     }
   };
 
@@ -326,6 +385,27 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
             </motion.button>
           )}
           {detailView !== 'interviewDetail' && (
+            <>
+              <motion.button
+                type="button"
+                onClick={handlePreviewOriginalFile}
+                className="px-5 py-2.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 transition-all flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Eye className="w-4 h-4" />
+                预览原文件
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={handleDownloadOriginalFile}
+                className="px-5 py-2.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 transition-all flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Download className="w-4 h-4" />
+                下载原文件
+              </motion.button>
             <motion.button
               type="button"
               onClick={() => onStartInterview(resumeId)}
@@ -336,6 +416,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
               <Mic className="w-4 h-4" />
               开始情景模拟
             </motion.button>
+            </>
           )}
         </div>
       </div>

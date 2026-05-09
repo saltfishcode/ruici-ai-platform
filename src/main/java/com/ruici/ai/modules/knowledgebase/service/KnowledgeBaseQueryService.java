@@ -61,6 +61,9 @@ public class KnowledgeBaseQueryService {
     private final PromptTemplate systemPromptTemplate;
     private final PromptTemplate userPromptTemplate;
     private final PromptTemplate rewritePromptTemplate;
+    private final String systemPromptPath;
+    private final String userPromptPath;
+    private final String rewritePromptPath;
     private final boolean rewriteEnabled;
     private final int shortQueryLength;
     private final int topkShort;
@@ -97,6 +100,9 @@ public class KnowledgeBaseQueryService {
             resourceLoader.getResource(queryProperties.getRewritePromptPath())
                 .getContentAsString(StandardCharsets.UTF_8)
         );
+        this.systemPromptPath = queryProperties.getSystemPromptPath();
+        this.userPromptPath = queryProperties.getUserPromptPath();
+        this.rewritePromptPath = queryProperties.getRewritePromptPath();
         this.rewriteEnabled = queryProperties.getRewrite().isEnabled();
         this.shortQueryLength = queryProperties.getSearch().getShortQueryLength();
         this.topkShort = queryProperties.getSearch().getTopkShort();
@@ -153,9 +159,20 @@ public class KnowledgeBaseQueryService {
         String systemPrompt = buildSystemPrompt();
         String userPrompt = buildUserPrompt(context, normalizedQuestion);
         AiRuntimeConfigSnapshot runtimeSnapshot = resolveChatSnapshot();
+        boolean gatewayCompatibility = useGatewayCompatibility(runtimeSnapshot);
+        // 这里额外标注是否走 gateway 兼容分支，便于区分 ChatClient 与直连网关两类运行语义。
+        log.info(
+            "知识库问答 AI 调用: scene={}, provider={}, model={}, systemPrompt={}, userPrompt={}, gatewayCompatible={}",
+            AiRuntimeScene.KNOWLEDGEBASE,
+            runtimeSnapshot.providerId(),
+            runtimeSnapshot.modelName(),
+            systemPromptPath,
+            userPromptPath,
+            gatewayCompatibility
+        );
 
         try {
-            String answer = useGatewayCompatibility(runtimeSnapshot)
+            String answer = gatewayCompatibility
                 ? gatewayClient.generateText(runtimeSnapshot, systemPrompt, userPrompt)
                 : llmProviderRegistry.getChatClient(runtimeSnapshot).prompt()
                     .system(systemPrompt)
@@ -267,9 +284,20 @@ public class KnowledgeBaseQueryService {
             String systemPrompt = buildSystemPrompt();
             String userPrompt = buildUserPrompt(context, normalizedQuestion);
             AiRuntimeConfigSnapshot runtimeSnapshot = resolveChatSnapshot();
+            boolean gatewayCompatibility = useGatewayCompatibility(runtimeSnapshot);
+            // 流式链路与同步链路共用同一组 prompt 标识，但可能走不同的输出路径。
+            log.info(
+                "知识库流式问答 AI 调用: scene={}, provider={}, model={}, systemPrompt={}, userPrompt={}, gatewayCompatible={}",
+                AiRuntimeScene.KNOWLEDGEBASE,
+                runtimeSnapshot.providerId(),
+                runtimeSnapshot.modelName(),
+                systemPromptPath,
+                userPromptPath,
+                gatewayCompatibility
+            );
 
             // 5. 流式调用（带历史上下文）+ 探测窗口归一化
-            Flux<String> responseFlux = useGatewayCompatibility(runtimeSnapshot)
+            Flux<String> responseFlux = gatewayCompatibility
                 ? gatewayClient.streamText(runtimeSnapshot, systemPrompt, buildGatewayInput(userPrompt, effectiveHistory))
                 : buildDefaultStreamResponse(runtimeSnapshot, systemPrompt, userPrompt, effectiveHistory);
 

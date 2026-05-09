@@ -66,7 +66,7 @@ public class ResumePersistenceService {
      * 保存新简历
      */
     @Transactional(rollbackFor = Exception.class)
-    public ResumeEntity saveResume(MultipartFile file, String resumeText,
+    public ResumeEntity saveResume(MultipartFile file, String detectedContentType, String resumeText,
                                    String storageKey, String storageUrl,
                                    String profession) {
         try {
@@ -76,7 +76,8 @@ public class ResumePersistenceService {
             resume.setFileHash(fileHash);
             resume.setOriginalFilename(file.getOriginalFilename());
             resume.setFileSize(file.getSize());
-            resume.setContentType(file.getContentType());
+            // 优先持久化 Tika 检测到的真实 MIME，避免后续预览/下载仅依赖浏览器上传头。
+            resume.setContentType(detectedContentType != null ? detectedContentType : file.getContentType());
             resume.setStorageKey(storageKey);
             resume.setStorageUrl(storageUrl);
             resume.setResumeText(resumeText);

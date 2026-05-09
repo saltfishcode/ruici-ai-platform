@@ -140,6 +140,8 @@ export interface ResumeDetail {
   fileSize: number;
   contentType: string;
   storageUrl: string;
+   originalFilePreviewUrl: string;
+   originalFileDownloadUrl: string;
   uploadedAt: string;
   accessCount: number;
   resumeText: string;

@@ -3,6 +3,7 @@ package com.ruici.ai.modules.document.service;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.common.model.AsyncTaskStatus;
+import com.ruici.ai.infrastructure.file.FileStorageService;
 import com.ruici.ai.infrastructure.export.PdfExportService;
 import com.ruici.ai.infrastructure.mapper.InterviewMapper;
 import com.ruici.ai.infrastructure.mapper.ResumeMapper;
@@ -39,6 +40,7 @@ public class ResumeHistoryService {
     private final ResumePersistenceService resumePersistenceService;
     private final InterviewPersistenceService interviewPersistenceService;
     private final PdfExportService pdfExportService;
+    private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
     private final ResumeMapper resumeMapper;
     private final InterviewMapper interviewMapper;
@@ -144,6 +146,8 @@ public class ResumeHistoryService {
             resume.getFileSize(),
             resume.getContentType(),
             resume.getStorageUrl(),
+            "/api/documents/" + resume.getId() + "/original-file?disposition=inline",
+            "/api/documents/" + resume.getId() + "/original-file?disposition=attachment",
             resume.getUploadedAt(),
             resume.getAccessCount(),
             resume.getResumeText(),
@@ -151,6 +155,21 @@ public class ResumeHistoryService {
             resume.getAnalyzeError(),
             analysisHistory,
             interviewHistory
+        );
+    }
+
+    public OriginalFileResult getOriginalFile(Long resumeId) {
+        ResumeEntity resume = resumePersistenceService.findById(resumeId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.RESUME_NOT_FOUND));
+        if (resume.getStorageKey() == null || resume.getStorageKey().isBlank()) {
+            throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "原文件不存在");
+        }
+        // 原文件始终以对象存储为准，不从 DTO 或解析文本反推，避免语义漂移。
+        byte[] fileBytes = fileStorageService.downloadFile(resume.getStorageKey());
+        return new OriginalFileResult(
+            fileBytes,
+            resume.getOriginalFilename(),
+            resume.getContentType() != null ? resume.getContentType() : "application/octet-stream"
         );
     }
 
@@ -220,5 +239,7 @@ public class ResumeHistoryService {
      * PDF导出结果
      */
     public record ExportResult(byte[] pdfBytes, String filename) {}
+
+    public record OriginalFileResult(byte[] fileBytes, String filename, String contentType) {}
 }
 

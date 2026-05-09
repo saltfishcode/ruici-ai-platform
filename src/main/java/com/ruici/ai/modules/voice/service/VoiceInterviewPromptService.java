@@ -17,17 +17,20 @@ public class VoiceInterviewPromptService {
             6. 语气简洁直接，适配口语对话。
             """;
 
-    private static final String SKILL_TOOL_INSTRUCTION = """
+    /**
+     * 实时语音链路走 no-tools client，因此这里直接约束角色设定，避免提示词继续暗示工具调用。
+     */
+    private static final String SKILL_PERSONA_INSTRUCTION = """
             你是一位 %s 方向的面试官。
-            如果尚未加载完整的角色设定，请调用 Skill 工具（command: %s）加载该技能的 SKILL.md。
-            工具输出包含完整的面试官角色和出题规则，后续对话应基于该角色进行。
+            请直接以内置的该方向角色设定开展对话，并持续保持该方向的面试风格、问题范围与追问力度。
+            不要提及工具调用、技能加载或系统内部实现。
             """;
 
     public String generateSystemPromptWithContext(String skillId, String resumeText) {
         StringBuilder prompt = new StringBuilder();
 
         if (skillId != null && !skillId.isBlank()) {
-            prompt.append(String.format(SKILL_TOOL_INSTRUCTION, skillId, skillId));
+            prompt.append(String.format(SKILL_PERSONA_INSTRUCTION, skillId));
         }
 
         prompt.append("\n\n").append(VOICE_RESPONSE_CONSTRAINTS);
