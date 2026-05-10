@@ -29,10 +29,14 @@ Spring Boot 4.0 + Java 21 + Spring AI 的泛职业文档分析与多场景情景
 - 限流：`@RateLimit` + AOP + Redis Lua，支持 `GLOBAL/IP/USER` 多维度叠加。
 - 异步任务：Redis Stream 模板化生产/消费，失败重试 3 次，覆盖 4 条管道（文档分析/知识库向量化/情景模拟评估/语音评估）。
 
-补充说明（`v1.3.0` 当前阶段）：
+补充说明（`v1.3.1` 当前阶段）：
 
 - chat 链路已新增运行时配置基础层：数据库动态配置优先、静态配置兜底、统一 resolver、模型感知缓存、last-known-good 兜底。
-- 当前只接入 `chat` 域（`document` / `simulation` / `knowledgebase`），**不提前接入** `embedding` / `voice` 的业务动态切换。
+- `chat` 域（`document` / `simulation` / `knowledgebase`）已全面接入 resolver + snapshot。
+- `embedding` 已按任务级 / 查询级快照接入知识库向量化与检索链路。
+- `voice` 已按会话级快照接入 LLM / ASR / TTS 三类配置，WebSocket 实时链路真正消费快照。
+- 多实例缓存失效通过 Redis Topic 广播（`AiRuntimeCacheInvalidationNotifier`），支持单 key 和全量刷新。
+- 三条 chat 链路（document / simulation / knowledgebase）已补齐 `provider/model/clientType` 低噪声可观测性日志。
 - 业务模块不允许自行拼接 provider/model 优先级，统一走 resolver + snapshot。
 
 ---
@@ -59,7 +63,7 @@ com/ruici/ai/
 │   │       ├── repository/           #     JPA 仓库：AiRuntimeConfigRepository / AuditRepository
 │   │       ├── resolver/             #     解析器：AiRuntimeConfigResolver / DefaultAiRuntimeConfigResolver
 │   │       ├── policy/               #     策略：AiRuntimePolicyService / DefaultAiRuntimePolicyService / ValidationService
-│   │       ├── service/              #     管理服务：CommandService / QueryService
+│   │       ├── service/              #     管理服务：CommandService / QueryService / CacheInvalidationNotifier
 │   │       ├── controller/           #     REST 端点：AiRuntimeConfigController
 │   │       └── dto/                  #     数据传输：SaveRequest / ListDTO / DetailDTO / RefreshResponse
 │   ├── constant/                     #   CommonConstants、AsyncTaskStreamConstants
@@ -277,7 +281,7 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<KnowledgeBas
   - `plain`：不带工具调用（用于不需要 tool call 的出题/解析等场景）。
   - `voice`：语音专用 plain client（当前实现不挂 SkillsTool / ToolCallAdvisor / memory advisor），用于实时语音链路稳定性优先的场景。
 
-### 8.1.1 运行时配置基础层（chat-first）
+### 8.1.1 运行时配置基础层
 
 - 相关包：`common/config/runtime/`
 - 当前核心对象：
@@ -285,8 +289,9 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<KnowledgeBas
   - `AiRuntimeConfigSnapshot`：一次 chat 调用最终命中的 provider/model/fallback/version/source
   - `AiRuntimeConfigResolver`：统一解析优先级并产出快照
   - `AiRuntimePolicyService`：约束请求级覆盖与快照合法性
-- 当前只支持 `AiRuntimeDomain.CHAT`，`EMBEDDING / ASR / TTS` 先保留枚举与边界，不在本阶段接线。
-- `LlmProviderRegistry` 的 chat 缓存已改为模型感知缓存，避免“provider 未变但 model 已切换”时复用旧 client。
+- 已支持 `AiRuntimeDomain.CHAT / EMBEDDING / ASR / TTS` 四个域，均已接入 resolver + snapshot。
+- `LlmProviderRegistry` 的 chat 缓存已改为模型感知缓存，避免"provider 未变但 model 已切换"时复用旧 client。
+- 多实例缓存失效通过 Redis Topic 广播（`AiRuntimeCacheInvalidationNotifier`），支持单 key 和全量刷新。
 
 ### 8.2 结构化输出（StructuredOutputInvoker）
 
@@ -301,8 +306,9 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<KnowledgeBas
 补充：
 
 - 上述静态配置仍然是 resolver 的重要输入，但 chat 业务不应再把它当成唯一来源。
-- `knowledgebase` / `document` / `simulation` 当前已经逐步切换到“先解析 snapshot，再获取 client”的模式。
-- `voice` 当前已接入会话级 LLM 快照：实时对话走 `voice` client，会后评估走 `default` client，但两者共用同一份会话快照；`ASR/TTS` 仍保持静态稳定配置。
+- `knowledgebase` / `document` / `simulation` 当前已经逐步切换到"先解析 snapshot，再获取 client"的模式。
+- `embedding` 已按任务级 / 查询级快照接入知识库向量化与检索链路。
+- `voice` 当前已按会话级快照接入 LLM / ASR / TTS 三类配置：实时对话走 `voice` client，会后评估走 `default` client，两者共用同一份会话快照；WebSocket 实时链路真正消费快照。
 - `knowledgebase` 存在 OpenAI-compatible gateway 分支；命中该分支时不会经过 `ChatClient` 上挂载的 tool callbacks / advisors，需要与默认 client 语义区分理解。
 
 - 配置：`app.ai.providers.{providerId}.baseUrl/apiKey/model`

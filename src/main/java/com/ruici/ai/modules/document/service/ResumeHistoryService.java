@@ -158,18 +158,20 @@ public class ResumeHistoryService {
         );
     }
 
-    public OriginalFileResult getOriginalFile(Long resumeId) {
+    public OriginalFileStreamResult getOriginalFileAsStream(Long resumeId) {
         ResumeEntity resume = resumePersistenceService.findById(resumeId)
             .orElseThrow(() -> new BusinessException(ErrorCode.RESUME_NOT_FOUND));
         if (resume.getStorageKey() == null || resume.getStorageKey().isBlank()) {
             throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "原文件不存在");
         }
-        // 原文件始终以对象存储为准，不从 DTO 或解析文本反推，避免语义漂移。
-        byte[] fileBytes = fileStorageService.downloadFile(resume.getStorageKey());
-        return new OriginalFileResult(
-            fileBytes,
+        var responseStream = fileStorageService.downloadFileAsStream(resume.getStorageKey());
+        long contentLength = responseStream.response().contentLength();
+        String contentType = resume.getContentType() != null ? resume.getContentType() : "application/octet-stream";
+        return new OriginalFileStreamResult(
+            responseStream,
+            contentLength,
             resume.getOriginalFilename(),
-            resume.getContentType() != null ? resume.getContentType() : "application/octet-stream"
+            contentType
         );
     }
 
@@ -240,6 +242,11 @@ public class ResumeHistoryService {
      */
     public record ExportResult(byte[] pdfBytes, String filename) {}
 
-    public record OriginalFileResult(byte[] fileBytes, String filename, String contentType) {}
+    public record OriginalFileStreamResult(
+        java.io.InputStream inputStream,
+        long contentLength,
+        String filename,
+        String contentType
+    ) {}
 }
 

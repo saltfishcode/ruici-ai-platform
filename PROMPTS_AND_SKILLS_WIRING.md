@@ -114,14 +114,15 @@
 
 #### voice client
 
-- 方法：`getVoiceChatClient(...)`
+- 方法：`getChatClient(session.toLlmRuntimeSnapshot())` — 通过会话级快照获取 voice client
 - 行为：显式构造 plain/no tools 的 `ChatClient`，目的是避免实时语音链路因为 tool calling 导致首包时延增加或流式链路不稳定。
 
 判定：**不会触发 SkillsTool**。
 
 补充说明：
 
-- `voice` 模块当前已经接入**会话级 LLM 快照**。
+- `voice` 模块当前已经接入**会话级 LLM / ASR / TTS 快照**。
+- 会话创建时通过 `VoiceInterviewSessionEntity` 同时固化三类快照（`applyLlmRuntimeSnapshot` / `applyAsrRuntimeSnapshot` / `applyTtsRuntimeSnapshot`），WebSocket 实时链路通过 `toLlmRuntimeSnapshot()` 消费。
 - 实时对话使用 `voice client`，因此不会触发 SkillsTool。
 - 会后评估复用同一份会话快照，但调用的是 `default client`，因此**具备** SkillsTool / advisors 能力。
 
@@ -144,6 +145,9 @@
 - `src/main/java/com/ruici/ai/common/config/LlmProviderProperties.java`
 - `src/main/java/com/ruici/ai/common/ai/StructuredOutputProperties.java`
 - `src/main/java/com/ruici/ai/common/ai/AgentUtilsProperties.java`
+- `src/main/java/com/ruici/ai/common/config/runtime/resolver/DefaultAiRuntimeConfigResolver.java`
+- `src/main/java/com/ruici/ai/common/config/runtime/snapshot/AiRuntimeConfigSnapshot.java`
+- `src/main/java/com/ruici/ai/common/config/runtime/service/AiRuntimeCacheInvalidationNotifier.java`
 
 ---
 
@@ -434,13 +438,14 @@ RAG 主要依赖的是：
 
 1. `VoiceInterviewWebSocketHandler`
 2. `DashscopeLlmService.chat(...)` / `chatStreamSentences(...)`
-3. `llmProviderRegistry.getVoiceChatClient(provider)`
+3. `llmProviderRegistry.getChatClient(session.toLlmRuntimeSnapshot())` → voice client
 
 这里的关键点是：
 
-- `getVoiceChatClient(...)` 是 plain/no tools client。
-- `VoiceInterviewPromptService.generateSystemPromptWithContext(...)` 会在系统提示中描述 role / skill 语境。
-- 系统 prompt 文本里即便提到“可调用 skill tool”，运行时 client 也没有挂接 tools。
+- 实时对话已接入**会话级 LLM 快照**：会话创建时固化 `LLM / ASR / TTS` 三类快照到 `VoiceInterviewSessionEntity`，WebSocket 链路通过 `session.toLlmRuntimeSnapshot()` 获取 client。
+- `DashscopeLlmService` 优先使用会话快照创建 client，provider 配置作为兜底。
+- `VoiceInterviewPromptService.generateSystemPromptWithContext(...)` 使用 `SKILL_PERSONA_INSTRUCTION` 模板按 skillId 注入方向角色设定，并追加 `VOICE_RESPONSE_CONSTRAINTS`（6 条语音输出约束）。
+- 提示词**显式禁止**提及工具调用、技能加载或系统内部实现，与 `no-tools client` 设计对齐。
 
 另外，开场白不是 prompt 模板生成，而是来自：
 
@@ -449,12 +454,12 @@ RAG 主要依赖的是：
 因此实时语音主链路的结论是：
 
 - 使用了系统 prompt 组装逻辑，但**当前实时对话主链路不使用 `resources/prompts/*.st`**。
-- Skill 语义可能通过业务服务注入到上下文，但**不会通过 SkillsTool tool call 执行**。
+- Skill 语义通过 `SKILL_PERSONA_INSTRUCTION` 注入角色方向，但**显式禁止**模型提及工具/技能加载。
 
 判定：
 
 - `prompts/*.st`：**未接入**
-- SkillsTool：**不会触发**
+- SkillsTool：**不会触发**（client 无 tools + prompt 显式禁止）
 - `voice-interview-opening.yml`：**确定使用**
 
 ### 7.2 会后评估
@@ -469,7 +474,7 @@ RAG 主要依赖的是：
 
 这一分支会：
 
-- 使用默认 `ChatClient`（`getChatClientOrDefault(provider)`）
+- 使用会话级快照获取 `default` client（`getChatClient(session.toLlmRuntimeSnapshot())`），与实时对话共用同一份会话快照但 clientType 不同
 - 注入 `skillService.buildEvaluationReferenceSectionSafe(session.getSkillId())`
 - 复用 shared 的 `interview-evaluation-*` 与 `interview-evaluation-summary-*` prompt
 
@@ -620,6 +625,9 @@ RAG 主要依赖的是：
 - `src/main/java/com/ruici/ai/common/ai/StructuredOutputInvoker.java`
 - `src/main/java/com/ruici/ai/common/ai/StructuredOutputProperties.java`
 - `src/main/java/com/ruici/ai/common/config/LlmProviderProperties.java`
+- `src/main/java/com/ruici/ai/common/config/runtime/resolver/DefaultAiRuntimeConfigResolver.java`
+- `src/main/java/com/ruici/ai/common/config/runtime/snapshot/AiRuntimeConfigSnapshot.java`
+- `src/main/java/com/ruici/ai/common/config/runtime/service/AiRuntimeCacheInvalidationNotifier.java`
 - `src/main/resources/application.yml`
 
 ### Document
@@ -649,6 +657,8 @@ RAG 主要依赖的是：
 - `src/main/java/com/ruici/ai/modules/voice/service/DashscopeLlmService.java`
 - `src/main/java/com/ruici/ai/modules/voice/service/VoiceInterviewPromptService.java`
 - `src/main/java/com/ruici/ai/modules/voice/service/VoiceInterviewEvaluationService.java`
+- `src/main/java/com/ruici/ai/modules/voice/service/VoiceInterviewService.java`
+- `src/main/java/com/ruici/ai/modules/voice/model/VoiceInterviewSessionEntity.java`
 - `src/main/java/com/ruici/ai/modules/voice/listener/VoiceEvaluateStreamConsumer.java`
 - `src/main/resources/voice-interview-opening.yml`
 

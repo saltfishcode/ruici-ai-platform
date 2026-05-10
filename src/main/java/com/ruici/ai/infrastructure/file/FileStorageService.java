@@ -12,6 +12,7 @@ import net.sourceforge.pinyin4j.format.HanyuPinyinToneType;
 import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -79,6 +80,29 @@ public class FileStorageService {
             return s3Client.getObjectAsBytes(getRequest).asByteArray();
         } catch (S3Exception e) {
             log.error("下载文件失败: {} - {}", fileKey, e.getMessage(), e);
+            throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "文件下载失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 流式下载文件，避免大文件全量加载到内存。
+     *
+     * @param fileKey 文件存储键
+     * @return S3 响应流（调用方负责关闭），携带 contentLength 等元数据
+     */
+    public ResponseInputStream<GetObjectResponse> downloadFileAsStream(String fileKey) {
+        if (!fileExists(fileKey)) {
+            throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "文件不存在: " + fileKey);
+        }
+
+        try {
+            GetObjectRequest getRequest = GetObjectRequest.builder()
+                    .bucket(storageConfig.getBucket())
+                    .key(fileKey)
+                    .build();
+            return s3Client.getObject(getRequest);
+        } catch (S3Exception e) {
+            log.error("流式下载文件失败: {} - {}", fileKey, e.getMessage(), e);
             throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "文件下载失败: " + e.getMessage());
         }
     }

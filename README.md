@@ -34,22 +34,23 @@
 
 项目采用 **多 Provider 架构**，但默认策略已经切换为“自定义 OpenAI-compatible 中转优先”。
 
-### v1.3.0 当前阶段说明
+### v1.3.x 当前阶段说明
 
-从 `v1.3.0` 开始，聊天链路已经接入 **chat-first 运行时动态配置基础能力**，目标是把
-`Provider / Model / Fallback Model` 的决策，从“各业务模块自行读取静态配置”收敛为
-“统一 resolver 解析 + Registry 缓存 + 模块按快照消费”。
+从 `v1.3.0` 开始，聊天链路已经接入 **运行时动态配置基础能力**，目标是把
+`Provider / Model / Fallback Model` 的决策，从"各业务模块自行读取静态配置"收敛为
+"统一 resolver 解析 + Registry 缓存 + 模块按快照消费"。
 
 当前阶段的边界非常明确：
 
 - **已接入动态解析**：chat 相关链路（`document` / `simulation` / `knowledgebase`）
-- **第二阶段已接线**：embedding 已接入任务级 / 查询级快照，用于知识库向量化与检索链路
-- **第三阶段已接线**：voice 已接入会话级 LLM 快照，用于实时对话与异步评估链路
+- **embedding 已接入**：任务级 / 查询级快照，用于知识库向量化与检索链路
+- **voice 已接入**：会话级 LLM / ASR / TTS 快照，用于实时对话与异步评估链路
 - **优先级统一**：请求级覆盖（允许时）→ 数据库运行时配置 → 静态环境配置 → code default
 - **缓存按模型区分**：`LlmProviderRegistry` 不再只按 provider 缓存，而是按 provider + clientType
   + model + fallback + baseUrl + configVersion 组合缓存，避免模型切换后复用旧 client
 - **last-known-good 兜底**：chat resolver 内部保留最近一次可用快照，用于数据库配置失效或异常场景的
   稳定回退
+- **多实例缓存失效**：通过 Redis Topic 广播，支持单 key 和全量刷新
 
 这意味着：当前默认聊天 Provider 仍然可以是 `third-party`，但具体聊天链路最终使用哪个 model /
 fallback model，已经不再建议由业务模块自己拼接判断，而应统一走运行时解析。
@@ -67,9 +68,9 @@ fallback model，已经不再建议由业务模块自己拼接判断，而应统
 - 第三方 OpenAI-compatible 中转更适合作为统一聊天入口，方便切换模型和成本控制。
 - 向量化与实时语音的兼容性、稳定性和能力覆盖目前仍以 `Qwen / DashScope` 更稳妥。
 - “OpenAI-compatible” 不是“完全等价 OpenAI”，不同中转在 `/chat/completions`、流式事件、工具调用、结构化输出上可能存在差异，因此需要把聊天和语音/向量能力分层配置，而不是强行共用一个 Provider。
-- `v1.3.0` 先把 **chat** 做成统一运行时控制面，是为了先稳定最常用、最容易频繁切换模型的链路；
+- `v1.3.x` 先把 **chat** 做成统一运行时控制面，是为了先稳定最常用、最容易频繁切换模型的链路；
   embedding 已进一步按任务级 / 查询级快照接入知识库向量化与检索，避免 chunk 级频繁查库；
-  voice 已按会话级快照接入实时对话与异步评估，`ASR/TTS` 仍保持静态稳定配置，避免一次性放大改动面。
+  voice 已按会话级快照接入 LLM / ASR / TTS 三类配置，WebSocket 实时链路真正消费快照。
 
 ### ChatClient 语义边界
 
@@ -103,9 +104,10 @@ React 18 + TypeScript + Vite + TailwindCSS 4，位于 `frontend/` 目录。
 
 ### 1. 文档分析
 
-- 支持 PDF、DOCX、DOC、TXT、Markdown 等多格式输入。
+- 支持 PDF、DOCX、DOC、TXT、Markdown、HTML 等多格式输入。
 - 支持内容清洗、结构抽取、评估建议、异步处理和 PDF 报告导出。
-- 当前代码中仍有部分 `resume` 命名残留，但业务语义已经按“通用职业文档”理解。
+- 支持前端直连对象存储的原文件预览（PDF/图片/DOCX/Markdown/HTML）。
+- 当前代码中仍有部分 `resume` 命名残留，但业务语义已经按"通用职业文档"理解。
 
 ### 2. 情景模拟
 
@@ -139,7 +141,7 @@ React 18 + TypeScript + Vite + TailwindCSS 4，位于 `frontend/` 目录。
 
 前后端对接时，建议直接查看 `api/` 目录下的模块接口说明，而不是只根据类名猜测语义。
 
-## 运行时 AI 配置（v1.3.0）
+## 运行时 AI 配置（v1.3.x）
 
 `v1.3.0` 新增的不是“更多 Controller 接口”，而是后端内部的 **AI 运行时控制面基础层**。当前代码里，
 这部分主要位于：
@@ -177,7 +179,7 @@ src/main/java/com/ruici/ai/common/config/runtime/
 当前已接入动态配置但仍有治理空间的链路：
 
 - `embedding`：已接入知识库向量化与检索的任务级 / 查询级快照，但未扩展到更细粒度热切换或重向量化治理
-- `voice`：已接入会话级 LLM 快照锚点，保证单个语音会话内 provider/model/fallback 一致；`ASR/TTS` 仍保持静态稳定配置
+- `voice`：已接入会话级 LLM / ASR / TTS 快照，保证单个语音会话内配置一致；WebSocket 实时链路真正消费快照
 
 ### 对前端 / 接口的影响
 
@@ -189,34 +191,39 @@ src/main/java/com/ruici/ai/common/config/runtime/
 ```text
 ruici-ai-platform/
 ├── src/main/java/com/ruici/ai/
-│   ├── common/                # 通用能力：异常、限流、Provider 路由、Redis Stream
+│   ├── common/                # 通用能力：异常、限流、Provider 路由、Redis Stream、AI 运行时配置
 │   ├── infrastructure/        # 文件、导出、Redis、映射等基础设施
 │   └── modules/
 │       ├── document/          # 文档上传、解析、分析、导出
 │       ├── simulation/        # 情景模拟、题目生成、回答评估
 │       ├── knowledgebase/     # 知识库上传、向量化、RAG 问答
 │       ├── schedule/          # 场景化日程解析与管理
-│       └── voice/             # 语音面试 / 语音交互 / ASR / TTS
+│       └── voice/             # 语音交互：WebSocket 实时通话、ASR/TTS、多轮评估
 ├── src/main/resources/
 │   ├── application.yml
 │   ├── application-dev.yml
 │   ├── logback-spring.xml
 │   ├── voice-interview-opening.yml
 │   ├── fonts/
-│   ├── prompts/
-│   ├── scripts/
-│   └── skills/
-├── frontend/                  # 前端
-├── docker/                    # 脚本
-├── word                       # 测试报告
-├── api/                       # 接口文档
-├── .env.example
-├── docker-compose.yml`        # 标准环境一体化部署
-├── docker-compose.ecs.yml`    # ECS 环境兼容部署
-├── docker-compose.dev.yml`    # 本地开发
-├── Dockerfile                 # Docker镜像
+│   ├── prompts/               # StringTemplate 提示词模板（.st）
+│   ├── scripts/               # Redis Lua 脚本
+│   └── skills/                # Skill 资源包（方向题/评估参考）
+├── frontend/                  # React 18 + TypeScript + Vite + TailwindCSS 4
+├── api/                       # 后端接口文档（按模块）
+├── docker/                    # Docker 初始化脚本（postgres init.sql 等）
+├── word/                      # 版本改动记录与已知问题
+├── .env.example               # 环境变量模板
+├── pom.xml                    # Maven 构建配置
+├── Dockerfile                 # Docker 镜像构建
+├── docker-compose.yml         # 标准环境一体化部署
+├── docker-compose.ecs.yml     # ECS 环境兼容部署
+├── docker-compose.dev.yml     # 本地开发（只起依赖）
 ├── deploy-remote.sh           # 服务器环境部署脚本
-└── Prompts and Skills.md      # 提示词与技能的调用情况
+├── CLAUDE.md                  # AI 开发指南（业务导向）
+├── PROMPTS_AND_SKILLS_WIRING.md  # 提示词与技能调用链路文档
+├── CODEX_CLAUDE_RULES.md      # 编码规范速查
+├── SETUP_API_KEYS.md          # API Key 配置说明
+└── README.md                  # 本文件
 ```
 
 ## 快速开始
@@ -424,14 +431,14 @@ knowledgebase` 三个核心模块的共性依赖。先把 chat 统一到 resolve
 不会。当前运行时配置表只存 providerId、modelName、fallbackModelName、scene、domain、priority、
 configVersion 等 **非敏感控制信息**。真实 API Key 仍然只保留在 `.env` 或环境变量中。
 
-### 为什么 voice / embedding 没有一起做到完全热切换？
+### voice / embedding 的动态配置做到了什么程度？
 
-这是 `v1.3.0` 的分阶段边界：
+截至 `v1.3.1`：
 
-- `embedding` 当前已按任务/批次级快照接入知识库向量化与检索，避免 chunk 级频繁查库
-- `voice` 已按会话级快照接入 LLM 链路，避免通话进行中漂移 provider/model；`ASR/TTS` 仍未做完整动态热切换
+- `embedding` 已按任务/批次级快照接入知识库向量化与检索，避免 chunk 级频繁查库
+- `voice` 已按会话级快照接入 LLM / ASR / TTS 三类配置，WebSocket 实时链路真正消费快照
 
-当前仍未推进的是 `ASR/TTS` 级别的更细粒度动态化，以及 embedding 相关的更高阶治理（例如重向量化策略），目的是保证稳定链路不被一次性放大风险。
+当前仍未推进的是 embedding 相关的更高阶治理（例如重向量化策略），目的是保证稳定链路不被一次性放大风险。
 
 ### 向量化为什么仍然依赖 Qwen / DashScope？
 

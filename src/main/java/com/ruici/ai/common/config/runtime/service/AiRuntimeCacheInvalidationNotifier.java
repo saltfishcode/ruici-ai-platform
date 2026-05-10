@@ -71,7 +71,11 @@ public class AiRuntimeCacheInvalidationNotifier {
             return;
         }
         defaultResolver.evictSnapshot(snapshotKey);
-        log.info("AI 运行时快照缓存已失效: snapshotKey={}", snapshotKey);
+        // 远程节点收到单 key 失效时，无法从 snapshotKey 反推完整的 ChatClient 缓存 key
+        // （需要 providerId + model + fallback + baseUrl + configVersion），
+        // 因此采用全量清理策略。ChatClient 创建成本低（仅包装 ChatModel），over-evict 可接受。
+        llmProviderRegistry.evictAllChatClients();
+        log.info("AI 运行时缓存已失效: snapshotKey={}, ChatClient 缓存已全量清理", snapshotKey);
     }
 
     static String buildSnapshotKey(AiRuntimeConfigEntity entity) {

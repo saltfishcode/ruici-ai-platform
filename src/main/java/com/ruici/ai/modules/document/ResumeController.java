@@ -13,6 +13,7 @@ import com.ruici.ai.modules.document.service.ResumeUploadService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -92,17 +93,16 @@ public class ResumeController {
     @GetMapping("/api/documents/{id}/original-file")
     @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 10)
     @RateLimit(dimension = RateLimit.Dimension.IP, count = 5)
-    public ResponseEntity<byte[]> getOriginalFile(
+    public ResponseEntity<InputStreamResource> getOriginalFile(
         @PathVariable Long id,
         @RequestParam(value = "disposition", defaultValue = "inline") String disposition
     ) {
         try {
-            var result = historyService.getOriginalFile(id);
+            var result = historyService.getOriginalFileAsStream(id);
             String encodedFilename = URLEncoder.encode(result.filename(), StandardCharsets.UTF_8);
             String requestedDisposition = "attachment".equalsIgnoreCase(disposition) ? "attachment" : "inline";
             boolean shouldForceAttachment = shouldForceDownload(result.contentType(), requestedDisposition);
             String effectiveDisposition = shouldForceAttachment ? "attachment" : requestedDisposition;
-            // 可执行文本类型不做浏览器内联预览，统一降级为下载流，避免直接执行页面内容。
             String safeContentType = shouldForceAttachment
                 ? MediaType.APPLICATION_OCTET_STREAM_VALUE
                 : result.contentType();
@@ -113,8 +113,8 @@ public class ResumeController {
                     effectiveDisposition + "; filename*=UTF-8''" + encodedFilename)
                 .header("X-Content-Type-Options", "nosniff")
                 .contentType(mediaType)
-                .contentLength(result.fileBytes().length)
-                .body(result.fileBytes());
+                .contentLength(result.contentLength())
+                .body(new InputStreamResource(result.inputStream()));
         } catch (BusinessException e) {
             log.warn("获取原始文档业务异常: documentId={}, code={}, message={}",
                 id, e.getCode(), e.getMessage());
