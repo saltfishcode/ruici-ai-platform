@@ -99,15 +99,15 @@ function StatCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl p-6 shadow-sm border border-slate-100"
+      className="bg-white rounded-xl p-6 shadow-sm border border-stone-100"
     >
       <div className="flex items-center gap-4">
         <div className={`p-3 rounded-lg ${color}`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
         <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="text-2xl font-bold text-slate-800">{value.toLocaleString()}</p>
+          <p className="text-sm text-primary-400">{label}</p>
+          <p className="text-2xl font-bold text-primary-700">{value.toLocaleString()}</p>
         </div>
       </div>
     </motion.div>
@@ -237,7 +237,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
       <div className="flex justify-between items-start mb-8 flex-wrap gap-6">
         <div>
           <motion.h1
-            className="text-2xl font-bold text-slate-800 flex items-center gap-3"
+            className="text-2xl font-bold text-primary-700 flex items-center gap-3"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
@@ -245,7 +245,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
             简历库
           </motion.h1>
           <motion.p
-            className="text-slate-500 mt-1"
+            className="text-primary-400 mt-1"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
@@ -255,17 +255,17 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
         </div>
 
         <motion.div
-          className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-2.5 min-w-[280px] focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100 transition-all"
+          className="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-4 py-2.5 min-w-[280px] focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-100 transition-all"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <Search className="w-5 h-5 text-slate-400" />
+          <Search className="w-5 h-5 text-primary-300" />
           <input
             type="text"
             placeholder="搜索简历..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 outline-none text-slate-700 placeholder:text-slate-400"
+            className="flex-1 outline-none text-primary-600 placeholder:text-primary-300"
           />
         </motion.div>
       </div>
@@ -304,34 +304,34 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
       {/* 空状态 */}
       {!loading && filteredResumes.length === 0 && (
         <motion.div
-          className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100"
+          className="text-center py-20 bg-white rounded-2xl shadow-sm border border-stone-100"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
         >
-          <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-700 mb-2">暂无简历记录</h3>
-          <p className="text-slate-500">上传简历开始您的第一次 AI 面试分析</p>
+          <FileText className="w-16 h-16 text-primary-200 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-primary-600 mb-2">暂无简历记录</h3>
+          <p className="text-primary-400">上传简历开始您的第一次 AI 面试分析</p>
         </motion.div>
       )}
 
       {/* 表格 */}
       {!loading && filteredResumes.length > 0 && (
         <motion.div
-          className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden"
+          className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-stone-50 border-b border-stone-100">
               <tr>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">名称</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">大小</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">分析状态</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">AI 评分</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">面试</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-600">上传时间</th>
-                <th className="text-right px-6 py-4 text-sm font-medium text-slate-600">操作</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-primary-500">名称</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-primary-500">大小</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-primary-500">分析状态</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-primary-500">AI 评分</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-primary-500">面试</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-primary-500">上传时间</th>
+                <th className="text-right px-6 py-4 text-sm font-medium text-primary-500">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -343,23 +343,23 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => onSelectResume(resume.id)}
-                    className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors group"
+                    className="border-b border-stone-100 hover:bg-stone-50 cursor-pointer transition-colors group"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-slate-400" />
+                        <FileText className="w-5 h-5 text-primary-300" />
                         <div>
-                          <p className="font-medium text-slate-800">{resume.filename}</p>
+                          <p className="font-medium text-primary-700">{resume.filename}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td className="px-6 py-4 text-sm text-primary-500">
                       {formatFileSize(resume.fileSize)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <StatusIcon status={resume.analyzeStatus} hasScore={resume.latestScore !== undefined} />
-                        <span className="text-sm text-slate-600">
+                        <span className="text-sm text-primary-500">
                           {getStatusText(resume.analyzeStatus, resume.latestScore !== undefined)}
                         </span>
                       </div>
@@ -367,7 +367,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                     <td className="px-6 py-4">
                       {resume.latestScore !== undefined ? (
                         <div className="flex items-center gap-3">
-                          <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="w-16 h-2 bg-stone-100 rounded-full overflow-hidden">
                             <motion.div
                               className={`h-full ${getScoreColor(resume.latestScore).split(' ')[0]} rounded-full`}
                               initial={{ width: 0 }}
@@ -375,10 +375,10 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                               transition={{ duration: 0.8, delay: index * 0.05 }}
                             />
                           </div>
-                          <span className="font-bold text-slate-800">{resume.latestScore}</span>
+                          <span className="font-bold text-primary-700">{resume.latestScore}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-400">-</span>
+                        <span className="text-primary-300">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -389,10 +389,10 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                         </span>
                       ) : (
                           <span
-                              className="inline-flex px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-full text-sm">待面试</span>
+                              className="inline-flex px-3 py-1 bg-stone-100 dark:bg-[#374151] text-primary-400 dark:text-[#d1d5db] rounded-full text-sm">待面试</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500">
+                    <td className="px-6 py-4 text-sm text-primary-400">
                       {formatDate(resume.uploadedAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -401,7 +401,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                         {resume.storageUrl && (
                           <button
                             onClick={(e) => handleDownload(resume, e)}
-                            className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
+                            className="p-2 text-primary-300 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
                             title="下载"
                           >
                             <Download className="w-4 h-4" />
@@ -412,7 +412,7 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                           <button
                             onClick={(e) => handleReanalyze(resume.id, e)}
                             disabled={reanalyzingId === resume.id}
-                            className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
+                            className="p-2 text-primary-300 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
                             title="重新分析"
                           >
                             <RefreshCw className={`w-4 h-4 ${reanalyzingId === resume.id ? 'animate-spin' : ''}`} />
@@ -422,12 +422,12 @@ export default function HistoryList({ onSelectResume }: HistoryListProps) {
                         <button
                           onClick={(e) => handleDeleteClick(resume, e)}
                           disabled={deletingId === resume.id}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                          className="p-2 text-primary-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                           title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="w-5 h-5 text-primary-200 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
                       </div>
                     </td>
                   </motion.tr>

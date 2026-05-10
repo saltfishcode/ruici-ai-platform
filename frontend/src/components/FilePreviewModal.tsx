@@ -99,22 +99,22 @@ export default function FilePreviewModal({ open, onClose, resumeId, contentType,
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
           <motion.div
-            className="relative w-[90vw] h-[85vh] max-w-6xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="relative w-[90vw] h-[85vh] max-w-6xl bg-white dark:bg-[#1a1f2e] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate max-w-[70%]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-[#2d3548] shrink-0">
+              <h3 className="text-lg font-semibold text-primary-800 dark:text-[#f3f4f6] truncate max-w-[70%]">
                 {filename || '文件预览'}
               </h3>
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-stone-100 dark:hover:bg-[#1f2937] transition-colors"
               >
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="w-5 h-5 text-primary-400" />
               </button>
             </div>
 
@@ -128,7 +128,7 @@ export default function FilePreviewModal({ open, onClose, resumeId, contentType,
               {error && (
                 <div className="flex flex-col items-center justify-center h-full gap-3">
                   <AlertTriangle className="w-10 h-10 text-amber-500" />
-                  <p className="text-slate-600 dark:text-slate-400">{error}</p>
+                  <p className="text-primary-500 dark:text-[#9ca3af]">{error}</p>
                 </div>
               )}
 
@@ -167,7 +167,7 @@ function renderContent(
 
     case 'markdown':
       return (
-        <div className="prose prose-slate dark:prose-invert max-w-none p-6 bg-white dark:bg-slate-800 rounded-lg overflow-auto h-full">
+        <div className="prose prose-neutral dark:prose-invert max-w-none p-6 bg-white dark:bg-[#1f2937] rounded-lg overflow-auto h-full">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {textContent}
           </ReactMarkdown>
@@ -187,7 +187,7 @@ function renderContent(
     default:
       return (
         <div className="flex items-center justify-center h-full">
-          <p className="text-slate-500">不支持预览此文件格式</p>
+          <p className="text-primary-400">不支持预览此文件格式</p>
         </div>
       );
   }

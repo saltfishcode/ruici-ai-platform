@@ -136,11 +136,11 @@ export default function VoiceInterviewEvaluationPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <div className="w-10 h-10 border-3 border-slate-200 dark:border-slate-700 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-300">
+          <div className="w-10 h-10 border-3 border-stone-200 dark:border-[#2d3548] border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-primary-500 dark:text-[#d1d5db]">
             {evaluateStatus === 'PROCESSING' ? 'AI 正在分析面试表现...' : '正在生成评估报告...'}
           </p>
-          <p className="text-slate-400 text-sm mt-2">预计需要 10-30 秒</p>
+          <p className="text-primary-300 text-sm mt-2">预计需要 10-30 秒</p>
         </div>
       </div>
     );
@@ -151,19 +151,19 @@ export default function VoiceInterviewEvaluationPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <p className="text-slate-600 dark:text-slate-300 text-lg mb-2">评估报告生成失败</p>
-          <p className="text-slate-400 text-sm mb-6">{error}</p>
+          <p className="text-primary-500 dark:text-[#d1d5db] text-lg mb-2">评估报告生成失败</p>
+          <p className="text-primary-300 text-sm mb-6">{error}</p>
           <div className="flex items-center gap-3 justify-center">
             <button
               onClick={handleRetry}
-              className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-2"
+              className="px-6 py-2 bg-primary-800 text-white rounded-lg hover:bg-primary-600 flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
               重试
             </button>
             <button
-              onClick={() => navigate('/simulation/history')}
-              className="px-6 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600"
+              onClick={() => navigate('/app/simulation/history')}
+              className="px-6 py-2 bg-stone-200 dark:bg-[#1f2937] text-primary-700 dark:text-[#d1d5db] rounded-lg hover:bg-stone-300 dark:hover:bg-[#374151]"
             >
               返回列表
             </button>
@@ -182,14 +182,14 @@ export default function VoiceInterviewEvaluationPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate('/simulation/history')}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            onClick={() => navigate('/app/simulation/history')}
+            className="p-2 text-primary-400 hover:text-primary-700 hover:bg-stone-100 dark:hover:bg-[#1f2937] rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">面试评估报告</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">语音会话 ID: {sessionId}</p>
+            <h1 className="text-xl font-bold text-primary-800 dark:text-[#f3f4f6]">面试评估报告</h1>
+            <p className="text-sm text-primary-400 dark:text-[#9ca3af]">语音会话 ID: {sessionId}</p>
           </div>
         </div>
         <InterviewDetailPanel interview={interviewDetail} />

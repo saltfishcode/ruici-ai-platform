@@ -11,7 +11,7 @@ import type { SimulationDirection } from './hooks/useInterviewConfig';
 import { Loader2 } from 'lucide-react';
 import { ROUTES } from './constants/routes';
 
-// Lazy load components
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const UploadPage = lazy(() => import('./pages/UploadPage'));
 const DocumentListPage = lazy(() => import('./pages/HistoryPage'));
 const DocumentDetailPage = lazy(() => import('./pages/ResumeDetailPage'));
@@ -28,48 +28,39 @@ const SimulationDetailPanel = lazy(() => import('./components/InterviewDetailPan
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const AiRuntimeConfigPage = lazy(() => import('./pages/AiRuntimeConfigPage'));
 
-// Loading component
 const Loading = () => (
   <div className="flex items-center justify-center min-h-[50vh]">
-    <div className="w-10 h-10 border-3 border-slate-200 border-t-primary-500 rounded-full animate-spin" />
+    <div className="w-10 h-10 border-3 border-stone-200 border-t-primary-800 rounded-full animate-spin" />
   </div>
 );
 
-// 文档上传页面包装器
 function DocumentUploadWrapper() {
   const navigate = useNavigate();
-
   const handleUploadComplete = (documentId: number) => {
-    // 异步模式：上传成功后跳转到文档库
-    navigate('/documents', { state: { newDocumentId: documentId } });
+    navigate(ROUTES.documents, { state: { newDocumentId: documentId } });
   };
-
   return <UploadPage onUploadComplete={handleUploadComplete} />;
 }
 
-// 文档列表包装器
 function DocumentListWrapper() {
   const navigate = useNavigate();
-
   const handleSelectDocument = (id: number) => {
-    navigate(`/documents/${id}`);
+    navigate(ROUTES.documentDetail(id));
   };
-
   return <DocumentListPage onSelectResume={handleSelectDocument} />;
 }
 
-// 文档详情包装器
 function DocumentDetailWrapper() {
   const { documentId } = useParams<{ documentId: string }>();
   const navigate = useNavigate();
   const { openInterviewModalWithResume } = useOutletContext<{ openInterviewModalWithResume: (resumeId: number) => void }>();
 
   if (!documentId) {
-    return <Navigate to="/documents" replace />;
+    return <Navigate to={ROUTES.documents} replace />;
   }
 
   const handleBack = () => {
-    navigate('/documents');
+    navigate(ROUTES.documents);
   };
 
   const handleStartSimulation = (id: number) => {
@@ -103,7 +94,6 @@ interface SimulationEntryState {
   };
 }
 
-// 模拟面试包装器
 function SimulationSessionWrapper() {
   const { documentId } = useParams<{ documentId: string }>();
   const navigate = useNavigate();
@@ -116,14 +106,12 @@ function SimulationSessionWrapper() {
     : (entryState.documentId ?? entryState.resumeId);
 
   useEffect(() => {
-    // 优先从location state获取resumeText
     const stateText = entryState.resumeText;
     if (stateText) {
       setResumeText(stateText);
       setLoading(false);
     } else if (effectiveDocumentId) {
-      // 如果没有，从API获取简历详情
-        documentApi.getDocumentDetail(effectiveDocumentId)
+      documentApi.getDocumentDetail(effectiveDocumentId)
         .then(resume => {
           setResumeText(resume.resumeText);
           setLoading(false);
@@ -139,23 +127,22 @@ function SimulationSessionWrapper() {
 
   const handleBack = () => {
     if (effectiveDocumentId) {
-      navigate(`/documents/${effectiveDocumentId}`, { replace: false });
+      navigate(ROUTES.documentDetail(effectiveDocumentId), { replace: false });
       return;
     }
-    navigate('/documents', { replace: false });
+    navigate(ROUTES.documents, { replace: false });
   };
 
   const handleSimulationComplete = () => {
-    // 模拟完成后跳转到记录页
-    navigate('/simulation/history');
+    navigate(ROUTES.simulationHistory);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="w-10 h-10 border-3 border-slate-200 border-t-primary-500 rounded-full mx-auto mb-4 animate-spin" />
-          <p className="text-slate-500">加载中...</p>
+          <div className="w-10 h-10 border-3 border-stone-200 border-t-primary-800 rounded-full mx-auto mb-4 animate-spin" />
+          <p className="text-primary-400">加载中...</p>
         </div>
       </div>
     );
@@ -173,81 +160,16 @@ function SimulationSessionWrapper() {
   );
 }
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Suspense fallback={<Loading />}>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            {/* 默认重定向到文档分析页面 */}
-            <Route index element={<Navigate to="/documents" replace />} />
-
-            {/* 文档上传页面 */}
-            <Route path="documents/upload" element={<DocumentUploadWrapper />} />
-
-            {/* 文档列表（分析结果） */}
-            <Route path="documents" element={<DocumentListWrapper />} />
-
-            {/* 文档详情 */}
-            <Route path="documents/:documentId" element={<DocumentDetailWrapper />} />
-
-            {/* 情景模拟中心 */}
-            <Route path="simulation" element={<SimulationHubPage />} />
-
-            {/* 模拟历史记录 */}
-            <Route path="simulation/history" element={<SimulationHistoryWrapper />} />
-
-            {/* 模拟详情报告 */}
-            <Route path="simulation/history/:sessionId" element={<SimulationDetailPageWrapper />} />
-
-            {/* 模拟会话（通用入口） */}
-            <Route path="simulation/session" element={<SimulationSessionWrapper />} />
-
-            {/* 模拟会话（关联文档） */}
-            <Route path="simulation/session/:documentId" element={<SimulationSessionWrapper />} />
-
-            {/* 语音交互 */}
-            <Route path="voice" element={<VoiceSimulationWrapper />} />
-
-            {/* 语音交互评估报告 */}
-            <Route path="voice/:sessionId/evaluation" element={<VoiceEvaluationPage />} />
-
-            {/* 知识库管理 */}
-            <Route path="knowledgebase" element={<KnowledgeBaseManagePageWrapper />} />
-
-            {/* 知识库上传 */}
-            <Route path="knowledgebase/upload" element={<KnowledgeBaseUploadPageWrapper />} />
-
-            {/* 场景日程管理 */}
-            <Route path="schedule" element={<SchedulePage />} />
-
-            {/* 关于项目 */}
-            <Route path="about" element={<AboutPage />} />
-
-            {/* AI 模型配置 */}
-            <Route path="ai-config" element={<AiRuntimeConfigPage />} />
-
-            {/* 问答助手（知识库聊天） */}
-            <Route path="knowledgebase/chat" element={<KnowledgeBaseQueryPageWrapper />} />
-          </Route>
-
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
-  );
-}
-
-// 模拟历史页面包装器
 function SimulationHistoryWrapper() {
   const navigate = useNavigate();
   const { openInterviewModalWithResume } = useOutletContext<{ openInterviewModalWithResume: (resumeId: number) => void }>();
 
   const handleBack = () => {
-    navigate('/documents');
+    navigate(ROUTES.documents);
   };
 
   const handleViewSimulation = async (sessionId: string, _documentId?: number) => {
-    navigate(`/simulation/history/${sessionId}`);
+    navigate(`${ROUTES.simulationHistory}/${sessionId}`);
   };
 
   const handleRestartSimulation = (documentId: number) => {
@@ -255,13 +177,12 @@ function SimulationHistoryWrapper() {
   };
 
   const handleContinueSimulation = (sessionId: string) => {
-    navigate('/simulation/session', { state: { sessionIdToResume: sessionId } });
+    navigate(ROUTES.simulationSession, { state: { sessionIdToResume: sessionId } });
   };
 
   return <SimulationHistoryPage onBack={handleBack} onViewInterview={handleViewSimulation} onRestartInterview={handleRestartSimulation} onContinueInterview={handleContinueSimulation} />;
 }
 
-// 模拟详情报告页面包装器
 function SimulationDetailPageWrapper() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
@@ -271,7 +192,7 @@ function SimulationDetailPageWrapper() {
 
   useEffect(() => {
     if (!sessionId) {
-      navigate('/simulation/history');
+      navigate(ROUTES.simulationHistory);
       return;
     }
     simulationApi.getSessionDetails(sessionId)
@@ -297,11 +218,11 @@ function SimulationDetailPageWrapper() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <p className="text-red-500 mb-4">{error || '模拟记录不存在'}</p>
+          <p className="text-accent-danger mb-4">{error || '模拟记录不存在'}</p>
           <button
             type="button"
-            onClick={() => navigate('/simulation/history')}
-            className="px-5 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+            onClick={() => navigate(ROUTES.simulationHistory)}
+            className="btn-primary"
           >
             返回模拟记录
           </button>
@@ -315,15 +236,15 @@ function SimulationDetailPageWrapper() {
       <div className="flex items-center gap-3 mb-6">
         <button
           type="button"
-          onClick={() => navigate('/simulation/history')}
-          className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          onClick={() => navigate(ROUTES.simulationHistory)}
+          className="p-2 text-primary-400 hover:text-primary-700 hover:bg-stone-100 rounded-lg transition-colors"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <title>返回模拟记录</title>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+        <h1 className="text-xl font-bold text-primary-800 dark:text-[#f3f4f6]">
           模拟详情 #{sessionId!.slice(-8)}
         </h1>
       </div>
@@ -331,60 +252,88 @@ function SimulationDetailPageWrapper() {
     </div>
   );
 }
+
 function KnowledgeBaseManagePageWrapper() {
   const navigate = useNavigate();
-
   const handleUpload = () => {
     navigate(ROUTES.knowledgebaseUpload);
   };
-
   const handleChat = () => {
-    navigate('/knowledgebase/chat');
+    navigate(ROUTES.knowledgebaseChat);
   };
-
   return <KnowledgeBaseManagePage onUpload={handleUpload} onChat={handleChat} />;
 }
 
-// 知识库问答页面包装器
 function KnowledgeBaseQueryPageWrapper() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isChatMode = location.pathname === '/knowledgebase/chat';
+  const isChatMode = location.pathname === ROUTES.knowledgebaseChat;
 
   const handleBack = () => {
     if (isChatMode) {
-      navigate('/knowledgebase');
+      navigate(ROUTES.knowledgebase);
     } else {
-      navigate('/documents');
+      navigate(ROUTES.documents);
     }
   };
-
   const handleUpload = () => {
     navigate(ROUTES.knowledgebaseUpload);
   };
-
   return <KnowledgeBaseQueryPage onBack={handleBack} onUpload={handleUpload} />;
 }
 
-// 知识库上传页面包装器
 function KnowledgeBaseUploadPageWrapper() {
   const navigate = useNavigate();
-
   const handleUploadComplete = (_result: UploadKnowledgeBaseResponse) => {
-    // 上传完成后返回管理页面
-    navigate('/knowledgebase');
+    navigate(ROUTES.knowledgebase);
   };
-
   const handleBack = () => {
-    navigate('/knowledgebase');
+    navigate(ROUTES.knowledgebase);
   };
-
   return <KnowledgeBaseUploadPage onUploadComplete={handleUploadComplete} onBack={handleBack} />;
 }
 
-// 语音交互页面包装器
 function VoiceSimulationWrapper() {
   return <VoiceSimulationPage />;
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          {/* Landing Page — independent layout */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* App workspace — sidebar layout */}
+          <Route path="/app" element={<Layout />}>
+            <Route index element={<Navigate to={ROUTES.documents} replace />} />
+
+            <Route path="documents/upload" element={<DocumentUploadWrapper />} />
+            <Route path="documents" element={<DocumentListWrapper />} />
+            <Route path="documents/:documentId" element={<DocumentDetailWrapper />} />
+
+            <Route path="simulation" element={<SimulationHubPage />} />
+            <Route path="simulation/history" element={<SimulationHistoryWrapper />} />
+            <Route path="simulation/history/:sessionId" element={<SimulationDetailPageWrapper />} />
+            <Route path="simulation/session" element={<SimulationSessionWrapper />} />
+            <Route path="simulation/session/:documentId" element={<SimulationSessionWrapper />} />
+
+            <Route path="voice" element={<VoiceSimulationWrapper />} />
+            <Route path="voice/:sessionId/evaluation" element={<VoiceEvaluationPage />} />
+
+            <Route path="knowledgebase" element={<KnowledgeBaseManagePageWrapper />} />
+            <Route path="knowledgebase/upload" element={<KnowledgeBaseUploadPageWrapper />} />
+            <Route path="knowledgebase/chat" element={<KnowledgeBaseQueryPageWrapper />} />
+
+            <Route path="schedule" element={<SchedulePage />} />
+            <Route path="about" element={<AboutPage />} />
+            <Route path="ai-config" element={<AiRuntimeConfigPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
 }
 
 export default App;

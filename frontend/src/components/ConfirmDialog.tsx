@@ -46,7 +46,7 @@ export default function ConfirmDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onCancel}
-            className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
+            className="absolute inset-0 bg-primary-900/40 backdrop-blur-md"
           />
 
           {/* 弹窗主体 */}
@@ -56,19 +56,19 @@ export default function ConfirmDialog({
             exit={{ opacity: 0, scale: 0.9, y: 10 }}
             transition={{ type: 'spring', damping: 25, stiffness: 400 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl max-w-md w-full overflow-hidden border border-slate-200/50 dark:border-slate-800/50"
+            className="relative bg-white dark:bg-[#1a1f2e] rounded-[2rem] shadow-2xl max-w-md w-full overflow-hidden border border-stone-200/50 dark:border-[#2d3548]/50"
           >
             {/* 装饰条 */}
             <div className={`h-1.5 w-full ${confirmVariant === 'danger' ? 'bg-red-500' : 'bg-primary-500'}`} />
 
             <div className="p-8">
               {/* 标题 */}
-              <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">
+              <h3 className="text-2xl font-extrabold text-primary-800 dark:text-[#f3f4f6] mb-3 tracking-tight">
                 {title}
               </h3>
 
               {/* 内容 */}
-              <div className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-8 text-[15px]">
+              <div className="text-primary-400 dark:text-[#9ca3af] font-medium leading-relaxed mb-8 text-[15px]">
                 {typeof message === 'string' ? (
                   message && <p className="whitespace-pre-line">{message}</p>
                 ) : (

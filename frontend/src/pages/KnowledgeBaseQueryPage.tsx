@@ -196,23 +196,23 @@ export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBa
     <div className="h-[calc(100vh-80px)] flex flex-col lg:flex-row gap-6">
       <aside className={`flex flex-col gap-4 transition-all duration-300 ${leftPanelOpen ? 'w-full lg:w-80' : 'w-full lg:w-20'}`}>
         <div className="flex-1 dark-card flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            {leftPanelOpen && <h3 className="font-bold text-sm text-slate-800 dark:text-white uppercase tracking-wider">历史会话</h3>}
-            <button onClick={handleNewSession} className="p-2 rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors group">
+          <div className="p-4 border-b border-stone-100 dark:border-[#2d3548] flex items-center justify-between">
+            {leftPanelOpen && <h3 className="font-bold text-sm text-primary-700 dark:text-[#f3f4f6] uppercase tracking-wider">历史会话</h3>}
+            <button onClick={handleNewSession} className="p-2 rounded-lg bg-primary-50 dark:bg-[#0f1117]/30 text-primary-600 dark:text-[#9ca3af] hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors group">
               <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
             {loadingSessions ? (
-              <div className="flex justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-slate-300" /></div>
+              <div className="flex justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-primary-200" /></div>
             ) : (
               sessions.map(s => (
-                <button key={s.id} onClick={() => handleLoadSession(s.id)} className={`w-full group flex items-center gap-3 p-3 rounded-xl transition-all ${currentSessionId === s.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                  <MessageSquare className={`w-4 h-4 flex-shrink-0 ${currentSessionId === s.id ? 'text-primary-500' : 'text-slate-400'}`} />
+                <button key={s.id} onClick={() => handleLoadSession(s.id)} className={`w-full group flex items-center gap-3 p-3 rounded-xl transition-all ${currentSessionId === s.id ? 'bg-primary-50 dark:bg-[#0f1117]/20 text-primary-700 dark:text-[#9ca3af] shadow-sm' : 'hover:bg-stone-50 dark:hover:bg-[#1f2937] text-primary-500 dark:text-[#9ca3af]'}`}>
+                  <MessageSquare className={`w-4 h-4 flex-shrink-0 ${currentSessionId === s.id ? 'text-primary-500' : 'text-primary-300'}`} />
                   {leftPanelOpen && (
                     <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium truncate">{s.title}</p>
-                      <p className="text-[10px] text-slate-400">{formatDateOnly(s.updatedAt)}</p>
+                      <p className="text-[10px] text-primary-300">{formatDateOnly(s.updatedAt)}</p>
                     </div>
                   )}
                   {currentSessionId === s.id && leftPanelOpen && (
@@ -227,24 +227,24 @@ export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBa
         </div>
 
         <div className="h-64 dark-card flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            {leftPanelOpen && <h3 className="font-bold text-sm text-slate-800 dark:text-white uppercase tracking-wider">选用资料</h3>}
-            <button onClick={() => setLeftPanelOpen(!leftPanelOpen)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors">
+          <div className="p-4 border-b border-stone-100 dark:border-[#2d3548] flex items-center justify-between">
+            {leftPanelOpen && <h3 className="font-bold text-sm text-primary-700 dark:text-[#f3f4f6] uppercase tracking-wider">选用资料</h3>}
+            <button onClick={() => setLeftPanelOpen(!leftPanelOpen)} className="p-1.5 hover:bg-stone-100 dark:hover:bg-[#1f2937] rounded-lg text-primary-300 transition-colors">
               {leftPanelOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-4 custom-scrollbar">
-            {loadingList ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-slate-300" /></div> : groupedKnowledgeBases.map(group => (
+            {loadingList ? <div className="p-4 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-primary-200" /></div> : groupedKnowledgeBases.map(group => (
               <div key={group.name} className="space-y-1">
                 {leftPanelOpen && (
-                  <button onClick={() => toggleCategory(group.name)} className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-slate-600 transition-colors">
+                  <button onClick={() => toggleCategory(group.name)} className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-bold text-primary-300 dark:text-[#9ca3af] uppercase tracking-widest hover:text-primary-500 transition-colors">
                     {group.name}
                     {group.isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                   </button>
                 )}
                 {group.isExpanded && group.items.map(kb => (
-                  <button key={kb.id} onClick={() => handleToggleKb(kb.id)} className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${selectedKbIds.has(kb.id) ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500'}`}>
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedKbIds.has(kb.id) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                  <button key={kb.id} onClick={() => handleToggleKb(kb.id)} className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${selectedKbIds.has(kb.id) ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' : 'hover:bg-stone-50 dark:hover:bg-[#1f2937] text-primary-400'}`}>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedKbIds.has(kb.id) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-stone-300 dark:bg-[#374151]'}`} />
                     {leftPanelOpen && <span className="text-xs font-semibold truncate flex-1 text-left">{kb.name}</span>}
                   </button>
                 ))}
@@ -255,14 +255,14 @@ export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBa
       </aside>
 
       <section className="flex-1 flex flex-col dark-card overflow-hidden relative">
-        <header className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
+        <header className="px-6 py-4 border-b border-stone-100 dark:border-[#2d3548] flex items-center justify-between bg-white/50 dark:bg-[#1a1f2e]/50 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-400">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-[#0f1117]/40 flex items-center justify-center text-primary-600 dark:text-[#9ca3af]">
               <Bot className="w-6 h-6" />
             </div>
             <div className="min-w-0">
-              <h2 className="font-bold text-slate-900 dark:text-white truncate">{currentSessionTitle || '新会话'}</h2>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tight">
+              <h2 className="font-bold text-primary-800 dark:text-[#f3f4f6] truncate">{currentSessionTitle || '新会话'}</h2>
+              <p className="text-[10px] text-primary-300 dark:text-[#9ca3af] font-bold uppercase tracking-tight">
                 {selectedKbIds.size > 0 ? `已激活 ${selectedKbIds.size} 份知识资料` : '请选择知识资料以开始'}
               </p>
             </div>
@@ -272,11 +272,11 @@ export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBa
         <div className="flex-1 relative">
           {messages.length === 0 ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-              <div className="w-20 h-20 rounded-3xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mb-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+              <div className="w-20 h-20 rounded-3xl bg-stone-50 dark:bg-[#1f2937]/50 flex items-center justify-center mb-6 border border-stone-100 dark:border-[#2d3548]/50 shadow-sm">
                 <Sparkles className="w-10 h-10 text-primary-400/50" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">准备好探索了吗？</h3>
-              <p className="max-w-xs text-slate-500 dark:text-slate-400 text-sm leading-relaxed">选择左侧的知识库资料，然后在下方输入问题。AI 将精准检索资料并为你提供深度见解。</p>
+              <h3 className="text-xl font-bold text-primary-700 dark:text-[#f3f4f6] mb-2">准备好探索了吗？</h3>
+              <p className="max-w-xs text-primary-400 dark:text-[#9ca3af] text-sm leading-relaxed">选择左侧的知识库资料，然后在下方输入问题。AI 将精准检索资料并为你提供深度见解。</p>
             </div>
           ) : (
             <Virtuoso
@@ -285,16 +285,16 @@ export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBa
               className="custom-scrollbar"
               initialTopMostItemIndex={messages.length - 1}
               itemContent={(_index, message) => (
-                <div className={`p-6 md:px-10 ${message.type === 'assistant' ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''}`}>
+                <div className={`p-6 md:px-10 ${message.type === 'assistant' ? 'bg-stone-50/50 dark:bg-[#1a1f2e]/30' : ''}`}>
                   <div className="max-w-4xl mx-auto flex gap-6">
-                    <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm ${message.type === 'user' ? 'bg-slate-800 text-white' : 'bg-primary-500 text-white shadow-glow shadow-primary-500/20'}`}>
+                    <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm ${message.type === 'user' ? 'bg-primary-700 text-white' : 'bg-primary-800 text-white shadow-soft'}`}>
                       {message.type === 'user' ? <Edit className="w-4 h-4" /> : <Bot className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{message.type === 'user' ? 'YOU' : 'RUICI AI'}</span>
+                        <span className="text-xs font-bold text-primary-300 dark:text-[#9ca3af] uppercase tracking-wider">{message.type === 'user' ? 'YOU' : 'RUICI AI'}</span>
                       </div>
-                      <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent">
+                      <div className="prose prose-neutral dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent">
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                           components={{
@@ -305,7 +305,7 @@ export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBa
                                   {String(children).replace(/\n$/, '')}
                                 </CodeBlock>
                               ) : (
-                                <code className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-primary-600 dark:text-primary-400 font-mono text-[0.9em]" {...props}>
+                                <code className="px-1.5 py-0.5 rounded-md bg-stone-100 dark:bg-[#1f2937] text-primary-600 dark:text-[#9ca3af] font-mono text-[0.9em]" {...props}>
                                   {children}
                                 </code>
                               );
@@ -324,21 +324,21 @@ export default function KnowledgeBaseQueryPage({ onUpload, onBack }: KnowledgeBa
           )}
         </div>
 
-        <footer className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+        <footer className="p-6 border-t border-stone-100 dark:border-[#2d3548] bg-white/80 dark:bg-[#1a1f2e]/80 backdrop-blur-md">
           <div className="max-w-4xl mx-auto relative group">
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="输入你的问题，按 Enter 发送..."
-              className="w-full pl-6 pr-16 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all resize-none min-h-[60px] max-h-48 custom-scrollbar shadow-inner"
+              className="w-full pl-6 pr-16 py-4 bg-stone-50 dark:bg-[#0f1117] border border-stone-200 dark:border-[#2d3548] rounded-2xl text-primary-800 dark:text-stone-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all resize-none min-h-[60px] max-h-48 custom-scrollbar shadow-inner"
               rows={1}
             />
             <div className="absolute right-3 bottom-3">
               <button
                 onClick={handleSend}
                 disabled={loading || !question.trim() || selectedKbIds.size === 0}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${loading || !question.trim() || selectedKbIds.size === 0 ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:-translate-y-0.5 active:scale-95'}`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${loading || !question.trim() || selectedKbIds.size === 0 ? 'bg-stone-100 dark:bg-[#1f2937] text-primary-300' : 'bg-primary-800 dark:bg-[#1f2937] text-white dark:text-[#f3f4f6] shadow-soft hover:shadow-medium hover:-translate-y-0.5 active:scale-95'}`}
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ChevronRight className="w-6 h-6" />}
               </button>

@@ -263,7 +263,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
     return (
       <div className="flex items-center justify-center h-96">
           <motion.div
-              className="w-12 h-12 border-4 border-slate-200 dark:border-slate-600 border-t-primary-500 rounded-full"
+              className="w-12 h-12 border-4 border-stone-200 dark:border-[#4b5563] border-t-primary-500 rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         />
@@ -275,7 +275,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
     return (
       <div className="text-center py-20">
         <p className="text-red-500 mb-4">加载失败，请返回重试</p>
-        <button type="button" onClick={onBack} className="px-6 py-2 bg-primary-500 text-white rounded-lg">返回列表</button>
+        <button type="button" onClick={onBack} className="px-6 py-2 bg-primary-800 text-white rounded-lg">返回列表</button>
       </div>
     );
   }
@@ -301,17 +301,17 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
             <motion.button
             type="button"
             onClick={detailView === 'interviewDetail' ? handleBackToInterviewList : onBack}
-            className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-300 transition-all shadow-sm"
+            className="w-10 h-10 bg-white dark:bg-[#1f2937] rounded-xl flex items-center justify-center text-primary-400 hover:bg-stone-50 dark:hover:bg-[#374151] hover:text-primary-600 dark:hover:text-[#e5e7eb] transition-all shadow-sm"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <ChevronLeft className="w-5 h-5" />
           </motion.button>
           <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              <h2 className="text-xl font-bold text-primary-800 dark:text-[#f3f4f6]">
               {detailView === 'interviewDetail' ? `面试详情 #${selectedInterview?.sessionId?.slice(-6) || ''}` : resume.filename}
             </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <p className="text-sm text-primary-400 dark:text-[#9ca3af] flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
                   {detailView === 'interviewDetail'
                 ? `完成于 ${formatDateOnly(selectedInterview?.completedAt || selectedInterview?.createdAt || '')}`
@@ -341,7 +341,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
               type="button"
               onClick={() => handleExportInterviewPdf(selectedInterview.sessionId)}
               disabled={exporting === selectedInterview.sessionId}
-              className="px-5 py-2.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 transition-all disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 border border-stone-200 dark:border-[#4b5563] bg-white dark:bg-[#1f2937] rounded-xl text-primary-500 dark:text-[#d1d5db] font-medium hover:bg-stone-50 transition-all disabled:opacity-50 flex items-center gap-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -355,7 +355,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
                 <motion.button
                   type="button"
                   onClick={handlePreviewOriginalFile}
-                  className="px-5 py-2.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 transition-all flex items-center gap-2"
+                  className="px-5 py-2.5 border border-stone-200 dark:border-[#4b5563] bg-white dark:bg-[#1f2937] rounded-xl text-primary-500 dark:text-[#d1d5db] font-medium hover:bg-stone-50 transition-all flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -366,7 +366,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
               <motion.button
                 type="button"
                 onClick={handleDownloadOriginalFile}
-                className="px-5 py-2.5 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 transition-all flex items-center gap-2"
+                className="px-5 py-2.5 border border-stone-200 dark:border-[#4b5563] bg-white dark:bg-[#1f2937] rounded-xl text-primary-500 dark:text-[#d1d5db] font-medium hover:bg-stone-50 transition-all flex items-center gap-2"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -389,24 +389,24 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
       </div>
 
       {detailView !== 'interviewDetail' && activeTab === 'analysis' && (
-        <div className="mb-6 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div className="mb-6 bg-white dark:bg-[#1f2937] rounded-2xl p-5 shadow-sm border border-stone-100 dark:border-[#2d3548]">
           <div className="flex flex-col lg:flex-row lg:items-end gap-4">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">重新分析方向</p>
+              <p className="text-sm font-semibold text-primary-600 dark:text-[#e5e7eb] mb-2">重新分析方向</p>
               <input
                 type="text"
                 value={reanalyzeProfession}
                 onChange={(event) => setReanalyzeProfession(event.target.value)}
                 placeholder="例如：Java 后端、产品经理、职业沟通表达"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-primary-800 dark:text-[#f3f4f6] placeholder:text-primary-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
             <div className="lg:w-64">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">重新分析力度</p>
+              <p className="text-sm font-semibold text-primary-600 dark:text-[#e5e7eb] mb-2">重新分析力度</p>
               <select
                 value={reanalyzeDifficulty}
                 onChange={(event) => setReanalyzeDifficulty(event.target.value as AnalysisDifficulty)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-primary-800 dark:text-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               >
                 {ANALYSIS_DIFFICULTY_OPTIONS.map(option => (
                   <option key={option.value} value={option.value}>
@@ -415,7 +415,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
                 ))}
               </select>
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 lg:max-w-xs">
+            <div className="text-xs text-primary-400 dark:text-[#9ca3af] lg:max-w-xs">
               这里的配置会直接传给后端重新分析接口，用来覆盖当前文档的分析方向与分析力度。
             </div>
           </div>
@@ -424,21 +424,21 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
 
       {/* 标签页切换 - 仅在非面试详情时显示 */}
       {detailView !== 'interviewDetail' && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 mb-6 inline-flex gap-1">
+          <div className="bg-white dark:bg-[#1f2937] rounded-2xl p-2 mb-6 inline-flex gap-1">
           {tabs.map((tab) => (
             <motion.button
               type="button"
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               className={`relative px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-colors
-                ${activeTab === tab.id ? 'text-primary-600 dark:text-primary-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                ${activeTab === tab.id ? 'text-primary-600 dark:text-[#9ca3af]' : 'text-primary-400 dark:text-[#9ca3af] hover:text-primary-600 dark:hover:text-stone-200'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               {activeTab === tab.id && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 bg-primary-50 dark:bg-primary-900 rounded-xl"
+                  className="absolute inset-0 bg-primary-50 dark:bg-[#0f1117] rounded-xl"
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                 />
               )}
@@ -447,7 +447,7 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
                     <span
-                        className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400 text-xs rounded-full">{tab.count}</span>
+                        className="px-2 py-0.5 bg-primary-100 dark:bg-[#0f1117] text-primary-600 dark:text-[#9ca3af] text-xs rounded-full">{tab.count}</span>
                 )}
               </span>
             </motion.button>

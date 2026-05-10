@@ -1,5 +1,17 @@
 export const ROUTES = {
-  documentUpload: '/documents/upload',
-  knowledgebaseUpload: '/knowledgebase/upload',
+  home: '/',
+  app: '/app',
+  documents: '/app/documents',
+  documentUpload: '/app/documents/upload',
+  documentDetail: (id: string | number) => `/app/documents/${id}`,
+  simulation: '/app/simulation',
+  simulationHistory: '/app/simulation/history',
+  simulationSession: '/app/simulation/session',
+  voice: '/app/voice',
+  knowledgebase: '/app/knowledgebase',
+  knowledgebaseUpload: '/app/knowledgebase/upload',
+  knowledgebaseChat: '/app/knowledgebase/chat',
+  schedule: '/app/schedule',
+  aiConfig: '/app/ai-config',
+  about: '/app/about',
 } as const;
-

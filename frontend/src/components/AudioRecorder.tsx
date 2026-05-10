@@ -238,7 +238,7 @@ export default function AudioRecorder({
           transition-all duration-300 shadow-xl
           ${isRecording
             ? 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/40'
-            : 'bg-slate-700 hover:bg-slate-600 shadow-slate-900/50'
+            : 'bg-primary-600 hover:bg-primary-500 shadow-primary-900/50'
           }
         `}
         title={isRecording ? '停止录音' : '开始说话'}
@@ -246,7 +246,7 @@ export default function AudioRecorder({
         {isRecording ? (
           <Mic className="w-7 h-7 text-white" />
         ) : (
-          <MicOff className="w-7 h-7 text-slate-300" />
+          <MicOff className="w-7 h-7 text-primary-200" />
         )}
       </button>
     </div>

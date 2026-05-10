@@ -63,19 +63,19 @@ export default function UploadPage({ onUploadComplete }: UploadPageProps) {
       extraContent={(
         <div className="space-y-5">
           <div>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">职业方向</p>
+            <p className="text-sm font-semibold text-primary-600 dark:text-[#e5e7eb] mb-2">职业方向</p>
             <input
               type="text"
               value={profession}
               onChange={(event) => setProfession(event.target.value)}
               placeholder="例如：Java 后端、产品经理、运营、职业沟通表达"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              className="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-primary-800 dark:text-[#f3f4f6] placeholder:text-primary-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">留空也可以上传；填写后会让分析更聚焦当前职业场景。</p>
+            <p className="mt-2 text-xs text-primary-400 dark:text-[#9ca3af]">留空也可以上传；填写后会让分析更聚焦当前职业场景。</p>
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">分析力度</p>
+            <p className="text-sm font-semibold text-primary-600 dark:text-[#e5e7eb] mb-3">分析力度</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {ANALYSIS_DIFFICULTY_OPTIONS.map(option => {
                 const selected = analysisDifficulty === option.value;
@@ -85,14 +85,14 @@ export default function UploadPage({ onUploadComplete }: UploadPageProps) {
                     type="button"
                     onClick={() => setAnalysisDifficulty(option.value)}
                     className={`p-4 rounded-xl border-2 text-left transition-all ${selected
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-[#0f1117]/20'
+                      : 'border-stone-200 dark:border-[#2d3548] hover:border-stone-300 dark:hover:border-[#4b5563]'
                     }`}
                   >
-                    <p className={`text-sm font-semibold ${selected ? 'text-primary-700 dark:text-primary-300' : 'text-slate-800 dark:text-white'}`}>
+                    <p className={`text-sm font-semibold ${selected ? 'text-primary-700 dark:text-[#9ca3af]' : 'text-primary-700 dark:text-[#f3f4f6]'}`}>
                       {option.label}
                     </p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{option.desc}</p>
+                    <p className="mt-1 text-xs leading-5 text-primary-400 dark:text-[#9ca3af]">{option.desc}</p>
                   </button>
                 );
               })}

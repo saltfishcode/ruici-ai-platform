@@ -110,14 +110,14 @@ export default function FileUploadCard({
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-[10px] font-bold uppercase tracking-widest mb-6 border border-primary-100 dark:border-primary-800"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-50 dark:bg-[#0f1117]/30 text-primary-600 dark:text-[#9ca3af] text-[10px] font-bold uppercase tracking-widest mb-6 border border-primary-100 dark:border-[#2d3548]"
         >
           <Upload className="w-3 h-3" /> File Processor
         </motion.div>
-        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight leading-tight">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-primary-800 dark:text-[#f3f4f6] mb-4 tracking-tight leading-tight">
           {title}
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-lg font-medium">
+        <p className="text-primary-400 dark:text-[#9ca3af] max-w-2xl mx-auto text-lg font-medium">
           {subtitle}
         </p>
       </div>
@@ -137,7 +137,7 @@ export default function FileUploadCard({
         {/* 主上传卡片 */}
         <motion.div
           className={`relative group h-96 dark-card overflow-hidden cursor-pointer transition-all duration-500 flex flex-col items-center justify-center border-2 border-dashed
-          ${dragOver ? 'border-primary-500 bg-primary-50/30 dark:bg-primary-900/10 scale-[1.01]' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-900/50'}`}
+          ${dragOver ? 'border-primary-500 bg-primary-50/30 dark:bg-[#0f1117]/10 scale-[1.01]' : 'border-stone-200 dark:border-[#2d3548] hover:border-stone-300 dark:hover:border-[#4b5563] hover:bg-stone-50/50 dark:hover:bg-[#1a1f2e]/50'}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -164,17 +164,17 @@ export default function FileUploadCard({
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="w-full max-w-md px-8 text-center flex flex-col items-center"
               >
-                <div className="w-24 h-24 rounded-3xl bg-primary-500 text-white flex items-center justify-center mb-6 shadow-glow transition-transform group-hover:scale-110 duration-500">
+                <div className="w-24 h-24 rounded-3xl bg-primary-800 text-white flex items-center justify-center mb-6 shadow-medium transition-transform group-hover:scale-110 duration-500">
                   <FileText className="w-12 h-12" />
                 </div>
-                <div className="w-full bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-6 relative">
-                  <p className="font-bold text-slate-900 dark:text-white truncate pr-6">{selectedFile.name}</p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mt-1 uppercase">
+                <div className="w-full bg-white dark:bg-[#0f1117] p-4 rounded-2xl border border-stone-100 dark:border-[#2d3548] shadow-sm mb-6 relative">
+                  <p className="font-bold text-primary-800 dark:text-[#f3f4f6] truncate pr-6">{selectedFile.name}</p>
+                  <p className="text-[10px] text-primary-300 dark:text-[#9ca3af] font-bold mt-1 uppercase">
                     {formatFileSize(selectedFile.size)} · Ready to Index
                   </p>
                   <button
                     onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-red-500 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-primary-200 hover:text-red-500 transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -182,7 +182,7 @@ export default function FileUploadCard({
                 
                 {showNameInput && (
                   <div className="w-full mb-8 text-left">
-                    <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">{nameLabel}</label>
+                    <label className="block text-[10px] font-bold text-primary-300 dark:text-[#9ca3af] uppercase tracking-widest mb-2 ml-1">{nameLabel}</label>
                     <input
                       type="text"
                       value={name}
@@ -209,13 +209,13 @@ export default function FileUploadCard({
                 animate={{ opacity: 1 }}
                 className="flex flex-col items-center text-center px-10"
               >
-                <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-8 transition-all duration-500 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/20 group-hover:text-primary-500 group-hover:-translate-y-2">
+                <div className="w-20 h-20 rounded-2xl bg-stone-100 dark:bg-[#1f2937] flex items-center justify-center text-primary-300 mb-8 transition-all duration-500 group-hover:bg-primary-50 dark:group-hover:bg-[#0f1117]/20 group-hover:text-primary-500 group-hover:-translate-y-2">
                   <Upload className="w-10 h-10" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
+                <h3 className="text-2xl font-bold text-primary-800 dark:text-[#f3f4f6] mb-3 tracking-tight">
                   点击或拖拽文件至此处
                 </h3>
-                <p className="text-slate-400 dark:text-slate-500 font-medium mb-8 max-w-xs">
+                <p className="text-primary-300 dark:text-[#9ca3af] font-medium mb-8 max-w-xs">
                   {formatHint} · {maxSizeHint}
                 </p>
                 <button className="btn-secondary group-hover:border-primary-500 group-hover:text-primary-600 transition-all duration-300">

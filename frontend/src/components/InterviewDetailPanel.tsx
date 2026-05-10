@@ -143,7 +143,7 @@ function ScoreCard({
 function StrengthsSection({ strengths }: { strengths: string[] }) {
   return (
       <motion.div
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm"
+          className="bg-white dark:bg-[#1f2937] rounded-2xl p-6 shadow-sm"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
@@ -157,7 +157,7 @@ function StrengthsSection({ strengths }: { strengths: string[] }) {
       </h4>
       <ul className="space-y-3">
         {strengths.map((s: string, i: number) => (
-            <li key={i} className="text-slate-700 dark:text-slate-300 flex items-start gap-3">
+            <li key={i} className="text-primary-600 dark:text-[#d1d5db] flex items-start gap-3">
             <span className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></span>
             <span>{s}</span>
           </li>
@@ -171,7 +171,7 @@ function StrengthsSection({ strengths }: { strengths: string[] }) {
 function ImprovementsSection({ improvements }: { improvements: string[] }) {
   return (
       <motion.div
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm"
+          className="bg-white dark:bg-[#1f2937] rounded-2xl p-6 shadow-sm"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
@@ -186,7 +186,7 @@ function ImprovementsSection({ improvements }: { improvements: string[] }) {
       </h4>
       <ul className="space-y-3">
         {improvements.map((s: string, i: number) => (
-            <li key={i} className="text-slate-700 dark:text-slate-300 flex items-start gap-3">
+            <li key={i} className="text-primary-600 dark:text-[#d1d5db] flex items-start gap-3">
             <span className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0"></span>
             <span>{s}</span>
           </li>
@@ -208,7 +208,7 @@ function QuestionsSection({
 }) {
   return (
     <div>
-      <h4 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+      <h4 className="font-semibold text-primary-700 dark:text-[#f3f4f6] mb-4 flex items-center gap-2">
         <svg className="w-5 h-5 text-primary-500" viewBox="0 0 24 24" fill="none">
           <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -244,23 +244,23 @@ function QuestionCard({
 }) {
   return (
       <motion.div
-          className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm overflow-hidden"
+          className="bg-white dark:bg-[#1f2937] rounded-2xl shadow-sm overflow-hidden"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 + index * 0.05 }}
     >
       {/* 问题头部 */}
         <div
-            className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-stone-50 dark:hover:bg-[#374151]/50 transition-colors"
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">
           <span
-              className="w-8 h-8 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg flex items-center justify-center text-sm font-semibold">
+              className="w-8 h-8 bg-stone-100 dark:bg-[#374151] text-primary-500 dark:text-[#d1d5db] rounded-lg flex items-center justify-center text-sm font-semibold">
             {answer.questionIndex + 1}
           </span>
           <span
-              className="px-3 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-medium rounded-full">
+              className="px-3 py-1 bg-primary-50 dark:bg-[#0f1117]/30 text-primary-600 dark:text-[#9ca3af] text-xs font-medium rounded-full">
             {answer.category || '综合'}
           </span>
           <span className={`font-semibold ${getScoreColor(answer.score, [80, 60])}`}>
@@ -268,7 +268,7 @@ function QuestionCard({
           </span>
         </div>
           <motion.svg
-          className="w-5 h-5 text-slate-400"
+          className="w-5 h-5 text-primary-300"
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
           viewBox="0 0 24 24"
@@ -280,7 +280,7 @@ function QuestionCard({
 
       {/* 问题内容 */}
       <div className="px-5 pb-2">
-        <p className="text-slate-800 dark:text-white font-medium leading-relaxed">{answer.question}</p>
+        <p className="text-primary-700 dark:text-[#f3f4f6] font-medium leading-relaxed">{answer.question}</p>
       </div>
 
       {/* 展开内容 */}
@@ -295,8 +295,8 @@ function QuestionCard({
           >
             <div className="px-5 pb-5 space-y-4">
               {/* 你的回答 */}
-              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1">
+              <div className="bg-stone-50 dark:bg-[#374151]/50 rounded-xl p-4">
+                <p className="text-sm text-primary-400 dark:text-[#9ca3af] mb-2 flex items-center gap-1">
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -305,7 +305,7 @@ function QuestionCard({
                 <p className={`leading-relaxed ${
                   !answer.userAnswer || answer.userAnswer === '不知道' 
                     ? 'text-red-500 font-medium'
-                      : 'text-slate-700 dark:text-slate-300'
+                      : 'text-primary-600 dark:text-[#d1d5db]'
                 }`}>
                   "{answer.userAnswer || '(未回答)'}"
                 </p>
@@ -314,22 +314,22 @@ function QuestionCard({
               {/* AI 深度评价 */}
               {answer.feedback && (
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 flex items-center gap-2 font-medium">
+                  <p className="text-sm text-primary-500 dark:text-[#9ca3af] mb-2 flex items-center gap-2 font-medium">
                     <svg className="w-4 h-4 text-primary-500" viewBox="0 0 24 24" fill="none">
                       <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       <path d="M18 9L12 15L9 12L3 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     AI 深度评价
                   </p>
-                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed pl-6">{answer.feedback}</p>
+                  <p className="text-primary-600 dark:text-[#d1d5db] leading-relaxed pl-6">{answer.feedback}</p>
                 </div>
               )}
 
               {/* 参考答案 */}
               {answer.referenceAnswer && (
                   <div
-                      className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 border border-slate-100 dark:border-slate-600">
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-2 font-medium">
+                      className="bg-stone-50 dark:bg-[#374151]/50 rounded-xl p-4 border border-stone-100 dark:border-[#4b5563]">
+                    <p className="text-sm text-primary-500 dark:text-[#9ca3af] mb-3 flex items-center gap-2 font-medium">
                     <svg className="w-4 h-4 text-primary-500" viewBox="0 0 24 24" fill="none">
                       <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
                       <path d="M9 12H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -338,7 +338,7 @@ function QuestionCard({
                     参考答案
                   </p>
                     <div
-                        className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">{answer.referenceAnswer}</div>
+                        className="text-primary-600 dark:text-[#d1d5db] leading-relaxed whitespace-pre-line">{answer.referenceAnswer}</div>
                 </div>
               )}
             </div>

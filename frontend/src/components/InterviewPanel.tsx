@@ -94,13 +94,13 @@ export default function InterviewPanel({
 
   if (interviews.length === 0) {
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center">
+        <div className="bg-white dark:bg-[#1f2937] rounded-2xl p-12 text-center">
           <div
-              className="w-16 h-16 mx-auto mb-6 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
-          <Mic className="w-8 h-8 text-slate-400" />
+              className="w-16 h-16 mx-auto mb-6 bg-stone-100 dark:bg-[#374151] rounded-full flex items-center justify-center">
+          <Mic className="w-8 h-8 text-primary-300" />
         </div>
-          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">暂无面试记录</h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">开始模拟面试，获取专业评估</p>
+          <h3 className="text-xl font-semibold text-primary-600 dark:text-[#d1d5db] mb-2">暂无面试记录</h3>
+          <p className="text-primary-400 dark:text-[#9ca3af] mb-6">开始模拟面试，获取专业评估</p>
         <motion.button
           onClick={onStartInterview}
           className="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium shadow-lg shadow-primary-500/30"
@@ -118,22 +118,22 @@ export default function InterviewPanel({
       {/* 面试表现趋势图 */}
       {chartData.length > 0 && (
           <motion.div
-              className="bg-white dark:bg-slate-800 rounded-2xl p-6"
+              className="bg-white dark:bg-[#1f2937] rounded-2xl p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary-500" />
-              <span className="font-semibold text-slate-800 dark:text-white">面试表现趋势</span>
+              <span className="font-semibold text-primary-700 dark:text-[#f3f4f6]">面试表现趋势</span>
             </div>
-            <span className="text-sm text-slate-500 dark:text-slate-400">共 {chartData.length} 场练习</span>
+            <span className="text-sm text-primary-400 dark:text-[#9ca3af]">共 {chartData.length} 场练习</span>
           </div>
 
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700"/>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-primary-600"/>
                 <XAxis
                     dataKey="name"
                   axisLine={false}
@@ -171,13 +171,13 @@ export default function InterviewPanel({
 
       {/* 历史面试场次 */}
       <motion.div
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6"
+          className="bg-white dark:bg-[#1f2937] rounded-2xl p-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
         <div className="flex items-center justify-between mb-6">
-          <span className="font-semibold text-slate-800 dark:text-white">历史面试场次</span>
+          <span className="font-semibold text-primary-700 dark:text-[#f3f4f6]">历史面试场次</span>
         </div>
 
         <div className="space-y-4">
@@ -211,13 +211,13 @@ export default function InterviewPanel({
 
         {loadingInterview && (
             <div className="fixed inset-0 bg-black/20 dark:bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 flex items-center gap-4">
+              <div className="bg-white dark:bg-[#1f2937] rounded-2xl p-6 flex items-center gap-4">
                 <motion.div
-                    className="w-8 h-8 border-3 border-slate-200 dark:border-slate-600 border-t-primary-500 rounded-full"
+                    className="w-8 h-8 border-3 border-stone-200 dark:border-[#4b5563] border-t-primary-500 rounded-full"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
-                <span className="text-slate-600 dark:text-slate-300">加载面试详情...</span>
+                <span className="text-primary-500 dark:text-[#d1d5db]">加载面试详情...</span>
             </div>
           </div>
         )}
@@ -256,23 +256,23 @@ function InterviewItemCard({
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
       onClick={onView}
-      className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors group"
+      className="flex items-center gap-4 p-4 bg-stone-50 dark:bg-[#374151]/50 rounded-xl hover:bg-stone-100 dark:hover:bg-[#374151] cursor-pointer transition-colors group"
     >
       {/* 得分 */}
       <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg ${
         interview.overallScore !== null 
           ? getScoreColor(interview.overallScore, [85, 70])
-            : 'bg-slate-100 dark:bg-slate-600 text-slate-400'
+            : 'bg-stone-100 dark:bg-[#374151] text-primary-300'
       }`}>
         {interview.overallScore ?? '-'}
       </div>
 
       {/* 信息 */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-slate-800 dark:text-white truncate">
+        <p className="font-medium text-primary-700 dark:text-[#f3f4f6] truncate">
           模拟面试 #{total - index}
         </p>
-        <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-4 text-sm text-primary-400 dark:text-[#9ca3af]">
           <span className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
             {formatDateOnly(interview.createdAt)}
@@ -310,7 +310,7 @@ function InterviewItemCard({
         type="button"
         onClick={(e) => { e.stopPropagation(); onExport(); }}
         disabled={exporting}
-        className="px-3 py-2 text-slate-400 hover:text-primary-500 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition-all"
+        className="px-3 py-2 text-primary-300 hover:text-primary-500 hover:bg-white dark:hover:bg-[#4b5563] rounded-lg transition-all"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -322,7 +322,7 @@ function InterviewItemCard({
           type="button"
           onClick={onDelete}
           disabled={deleting}
-          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2 text-primary-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="删除面试记录"
         >
           {deleting ? (
@@ -339,7 +339,7 @@ function InterviewItemCard({
 
       {/* 箭头 */}
       <ChevronRight
-          className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0"/>
+          className="w-5 h-5 text-primary-200 dark:text-[#9ca3af] group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0"/>
     </motion.div>
   );
 }

@@ -2,61 +2,109 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @plugin "@tailwindcss/typography";
 
-/* 启用深色模式 - 使用 class 策略 */
+/* 深色模式 - class 策略 */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ═══════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Cohere-inspired enterprise AI aesthetic
+   Near-black primary, white canvas, deep-green product bands,
+   coral accents, editorial restraint.
+   ═══════════════════════════════════════════════════════════ */
 
-/* 自定义主题 */
 @theme {
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #bae6fd;
-  --color-primary-300: #7dd3fc;
-  --color-primary-400: #38bdf8;
-  --color-primary-500: #0ea5e9;
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
-  --color-primary-800: #075985;
-  --color-primary-900: #0c4a6e;
-  --color-primary-950: #082f49;
+  /* ─── Brand & Primary ─── */
+  --color-primary-50: #f8f8f9;
+  --color-primary-100: #eeeeef;
+  --color-primary-200: #d9d9dd;
+  --color-primary-300: #b0b0b8;
+  --color-primary-400: #75758a;
+  --color-primary-500: #4a4a5a;
+  --color-primary-600: #2d2d3a;
+  --color-primary-700: #1f1f2a;
+  --color-primary-800: #17171c;
+  --color-primary-900: #0f0f14;
+  --color-primary-950: #08080a;
 
-  /* 辅助色 - 保持 Teal 作为特色 */
-  --color-teal-50: #f0fdfa;
-  --color-teal-100: #ccfbf1;
-  --color-teal-200: #99f6e4;
-  --color-teal-300: #5eead4;
-  --color-teal-400: #2dd4bf;
-  --color-teal-500: #14b8a6;
-  --color-teal-600: #0d9488;
-  --color-teal-700: #0f766e;
-  --color-teal-800: #115e59;
-  --color-teal-900: #134e4a;
-  --color-teal-950: #042f2e;
+  /* ─── Deep Green (product bands) ─── */
+  --color-green-50: #edfce9;
+  --color-green-100: #d4f5cd;
+  --color-green-200: #a8eba0;
+  --color-green-300: #6dd862;
+  --color-green-400: #2db87a;
+  --color-green-500: #0d7a5a;
+  --color-green-600: #005c44;
+  --color-green-700: #003c33;
+  --color-green-800: #002a24;
+  --color-green-900: #001a17;
+  --color-green-950: #000f0d;
 
+  /* ─── Action Blue (links, secondary emphasis) ─── */
+  --color-blue-50: #f1f5ff;
+  --color-blue-100: #e0eaff;
+  --color-blue-200: #c2d5ff;
+  --color-blue-300: #94b4ff;
+  --color-blue-400: #6690f0;
+  --color-blue-500: #4c6ee6;
+  --color-blue-600: #1863dc;
+  --color-blue-700: #1250b5;
+  --color-blue-800: #0e3d8a;
+  --color-blue-900: #0a2a60;
+  --color-blue-950: #071829;
+
+  /* ─── Coral (taxonomy, warm accents) ─── */
+  --color-coral-50: #fff5f2;
+  --color-coral-100: #ffe8e0;
+  --color-coral-200: #ffcfbf;
+  --color-coral-300: #ffad9b;
+  --color-coral-400: #ff8c70;
+  --color-coral-500: #ff7759;
+  --color-coral-600: #e55a3d;
+  --color-coral-700: #b8432e;
+  --color-coral-800: #8a3222;
+  --color-coral-900: #5c2117;
+  --color-coral-950: #2e110b;
+
+  /* ─── Neutral surfaces ─── */
+  --color-stone-50: #fafaf8;
+  --color-stone-100: #f5f5f2;
+  --color-stone-200: #eeece7;
+  --color-stone-300: #e2dfd8;
+  --color-stone-400: #c8c4bb;
+  --color-stone-500: #a09c93;
+  --color-stone-600: #7a766d;
+  --color-stone-700: #5c5850;
+  --color-stone-800: #3d3a34;
+  --color-stone-900: #1f1d1a;
+  --color-stone-950: #0f0e0d;
+
+  /* ─── Semantic ─── */
   --color-accent-success: #10b981;
   --color-accent-warning: #f59e0b;
-  --color-accent-danger: #ef4444;
-  --color-accent-info: #3b82f6;
+  --color-accent-danger: #b30000;
+  --color-accent-info: #1863dc;
 
+  /* ─── Typography ─── */
   --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
-  
-  --shadow-soft: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-medium: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
-  --shadow-glow: 0 0 20px -5px var(--color-primary-500);
+
+  /* ─── Shadows (minimal, Cohere-flat) ─── */
+  --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-medium: 0 4px 12px -2px rgb(0 0 0 / 0.06), 0 2px 6px -2px rgb(0 0 0 / 0.04);
+  --shadow-elevated: 0 8px 24px -4px rgb(0 0 0 / 0.08), 0 4px 8px -4px rgb(0 0 0 / 0.04);
 }
 
-/* 自定义基础样式 */
+/* ─── Base Layer ─── */
 @layer base {
   html, body, #root {
     @apply h-full m-0 p-0;
   }
 
   body {
-    @apply antialiased selection:bg-primary-100 selection:text-primary-900;
+    @apply antialiased;
     font-family: var(--font-sans);
-    @apply bg-[#f8fafc] text-slate-900;
-    @apply dark:bg-[#020617] dark:text-slate-50;
+    @apply bg-white text-primary-800;
+    @apply dark:bg-[#0f1117] dark:text-[#d1d5db];
+    @apply selection:bg-blue-100 selection:text-blue-900;
   }
 
   #root {
@@ -65,228 +113,272 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    @apply font-bold tracking-tight text-slate-900 dark:text-white;
+    @apply font-bold tracking-tight text-primary-800 dark:text-[#f3f4f6];
   }
+
+  h1 { @apply text-4xl lg:text-5xl leading-[1] tracking-[-0.02em]; }
+  h2 { @apply text-3xl lg:text-4xl leading-[1.1] tracking-[-0.015em]; }
+  h3 { @apply text-2xl leading-[1.2] tracking-[-0.01em]; }
 }
 
-/* 现代组件系统 */
+/* ─── Component Layer ─── */
 @layer components {
-    /* 面板与容器 */
-    .glass-panel {
-        @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-soft;
-    }
-
-    .card-hover {
-        @apply transition-all duration-300 hover:shadow-medium hover:-translate-y-0.5;
-    }
-
-    /* 改进后的深色模式卡片 */
-    .dark-card {
-        @apply bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-soft;
-        @apply transition-colors duration-200;
-    }
-
-    /* 现代输入框 */
-    .dark-input {
-        @apply w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-slate-100;
-        @apply focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 dark:focus:ring-primary-400/10 dark:focus:border-primary-400;
-        @apply placeholder:text-slate-400 dark:placeholder:text-slate-600 transition-all duration-200;
-    }
-
-    /* 按钮系统 */
-    .btn-primary {
-        @apply relative overflow-hidden bg-primary-600 dark:bg-primary-500 text-white font-semibold rounded-xl;
-        @apply px-6 py-2.5 shadow-lg shadow-primary-500/20 active:scale-95 transition-all duration-200;
-        @apply hover:bg-primary-700 dark:hover:bg-primary-400 hover:shadow-xl hover:shadow-primary-500/30;
-    }
-
-    .btn-secondary {
-        @apply bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl;
-        @apply px-6 py-2.5 border border-slate-200 dark:border-slate-700 active:scale-95 transition-all duration-200;
-        @apply hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600;
-    }
-
-    .btn-ghost {
-        @apply text-slate-600 dark:text-slate-400 font-medium rounded-xl px-4 py-2 transition-all duration-200;
-        @apply hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100;
-    }
-}
-
-    /* 状态徽章 */
-    .status-badge {
-        @apply px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase;
-        @apply border backdrop-blur-sm;
-    }
-
-
-/* 自定义滚动条 */
-@layer utilities {
-  .scrollbar-thin::-webkit-scrollbar {
-    @apply w-2 h-2;
-  }
-
-    .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-slate-100 rounded;
-        @apply dark:bg-slate-800;
-  }
-
-    .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded hover:bg-slate-400;
-        @apply dark:bg-slate-600 dark:hover:bg-slate-500;
-  }
-}
-
-/* React Big Calendar 自定义样式 */
-@layer components {
-  .rbc-calendar {
-    @apply font-sans;
-  }
-
-  .rbc-toolbar {
-    @apply mb-6;
-  }
-
-  .rbc-toolbar button {
-    @apply px-4 py-2 rounded-lg font-medium text-sm;
-    @apply bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200;
-    @apply border border-slate-200/50 dark:border-slate-700/50;
-    @apply hover:bg-slate-200/90 dark:hover:bg-slate-700/90;
-    @apply backdrop-blur-sm;
+  /* === Buttons === */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply bg-primary-800 text-white;
+    @apply font-medium text-sm leading-[1.71];
+    @apply px-6 py-3 rounded-[32px];
     @apply transition-all duration-200;
+    @apply hover:bg-primary-700;
+    @apply active:scale-[0.97];
+    @apply shadow-soft hover:shadow-medium;
+    @apply dark:bg-[#1f2937] dark:text-[#f3f4f6] dark:border dark:border-[#374151] dark:hover:bg-[#374151];
   }
 
-  .rbc-toolbar button.rbc-active {
-    @apply bg-primary-600/90 dark:bg-primary-500/90 text-white;
-    @apply border-primary-600/90 dark:border-primary-500/90;
-    @apply shadow-lg shadow-primary-500/20;
-    @apply backdrop-blur-sm;
-  }
-
-  .rbc-toolbar-label {
-    @apply font-display font-bold text-lg text-slate-900 dark:text-white;
-  }
-
-  .rbc-header {
-    @apply py-3 font-display font-semibold text-sm uppercase tracking-wide;
-    @apply bg-slate-50/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300;
-    @apply border-b-2 border-slate-200/50 dark:border-slate-700/50;
-    @apply backdrop-blur-sm;
-  }
-
-  .rbc-month-view, .rbc-time-view, .rbc-agenda-view {
-    @apply rounded-xl overflow-hidden;
-    @apply border border-slate-200 dark:border-slate-700/50;
-  }
-
-  .rbc-day-bg, .rbc-time-header-content, .rbc-time-gutter {
-    @apply bg-white dark:bg-slate-900/50;
-  }
-
-  .rbc-off-range-bg {
-    @apply bg-slate-50 dark:bg-slate-950/50;
-  }
-
-  .rbc-today {
-    @apply bg-primary-50/80;
-    @apply dark:bg-primary-950/40;
-    @apply backdrop-blur-sm;
-  }
-
-  .rbc-time-slot {
-    @apply border-slate-100 dark:border-slate-800/50;
-  }
-
-  .rbc-event {
-    @apply rounded-lg shadow-md;
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply bg-transparent text-primary-800 dark:text-[#d1d5db];
+    @apply font-medium text-sm;
+    @apply px-5 py-2.5 rounded-[30px];
+    @apply border border-primary-200 dark:border-[#374151];
     @apply transition-all duration-200;
-    @apply hover:shadow-xl hover:shadow-primary-500/20 hover:scale-[1.02];
-    @apply backdrop-blur-sm;
+    @apply hover:border-primary-400 dark:hover:border-[#9ca3af];
+    @apply hover:bg-primary-50 dark:hover:bg-[#1f2937];
+    @apply active:scale-[0.97];
   }
 
-  .rbc-event-content {
-    @apply font-medium;
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply text-primary-600 dark:text-[#9ca3af] font-medium text-sm;
+    @apply px-4 py-2 rounded-lg;
+    @apply transition-all duration-200;
+    @apply hover:bg-stone-100 dark:hover:bg-[#1f2937];
+    @apply hover:text-primary-800 dark:hover:text-[#f3f4f6];
   }
 
-  .rbc-month-row {
-    @apply border-slate-200 dark:border-slate-700/30;
+  .btn-coral {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply bg-coral-500 text-white font-medium text-sm;
+    @apply px-6 py-3 rounded-[32px];
+    @apply transition-all duration-200;
+    @apply hover:bg-coral-600 active:scale-[0.97];
+    @apply shadow-soft;
   }
 
-  .rbc-day-slot .rbc-time-slot {
-    @apply border-slate-100 dark:border-slate-800/30;
-  }
-
-  .rbc-time-view-resources .rbc-time-gutter {
-    @apply bg-slate-50/80 dark:bg-slate-800/30;
-  }
-
-  .rbc-time-header-content {
-    @apply border-slate-200 dark:border-slate-700/30;
-  }
-
-  .rbc-agenda-view table.rbc-agenda-table {
-    @apply border-slate-200 dark:border-slate-700/50;
-    @apply bg-white dark:bg-slate-900/50;
-  }
-
-  .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
-    @apply border-slate-100 dark:border-slate-800/30;
-    @apply py-3 px-4;
-  }
-
-  .rbc-agenda-view table.rbc-agenda-table .rbc-agenda-time-cell {
-    @apply font-display font-semibold text-slate-700 dark:text-slate-300;
-  }
-
-  .rbc-show-more {
-    @apply font-semibold text-primary-600 dark:text-primary-400;
-    @apply hover:text-primary-700 dark:hover:text-primary-300;
+  .card {
+    @apply bg-white dark:bg-[#1a1f2e] rounded-lg;
+    @apply border border-stone-200 dark:border-[#2d3548];
+    @apply shadow-soft dark:shadow-none;
     @apply transition-colors duration-200;
   }
 
-  /* 深色模式下日历单元格边框优化 */
-  .dark .rbc-month-view,
-  .dark .rbc-time-view,
-  .dark .rbc-agenda-view {
-    @apply border-slate-700/50;
+  .card-hover {
+    @apply transition-all duration-300;
+    @apply hover:shadow-medium hover:-translate-y-0.5;
+    @apply hover:border-stone-300 dark:hover:border-[#4b5563];
   }
 
-  .dark .rbc-header {
-    @apply bg-slate-800/60 text-slate-200 border-slate-700/50;
+  .card-stone {
+    @apply bg-stone-200 dark:bg-[#1f2937] rounded-lg;
+    @apply border border-stone-300 dark:border-[#2d3548];
+    @apply p-6 lg:p-8;
   }
 
-  .dark .rbc-day-bg {
-    @apply bg-slate-900/30;
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply bg-transparent text-primary-800 dark:text-stone-200;
+    @apply font-medium text-sm;
+    @apply px-5 py-2.5 rounded-[30px];
+    @apply border border-primary-200 dark:border-[#3a3a48];
+    @apply transition-all duration-200;
+    @apply hover:border-primary-400 dark:hover:border-stone-400;
+    @apply hover:bg-primary-50 dark:hover:bg-[#1e1e28];
+    @apply active:scale-[0.97];
   }
 
-  .dark .rbc-off-range-bg {
-    @apply bg-slate-950/50 text-slate-500;
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply text-primary-600 dark:text-stone-300 font-medium text-sm;
+    @apply px-4 py-2 rounded-lg;
+    @apply transition-all duration-200;
+    @apply hover:bg-stone-100 dark:hover:bg-primary-700;
+    @apply hover:text-primary-800 dark:hover:text-white;
   }
 
-  .dark .rbc-today {
-    @apply bg-primary-950/30;
+  .btn-coral {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply bg-coral-500 text-white font-medium text-sm;
+    @apply px-6 py-3 rounded-[32px];
+    @apply transition-all duration-200;
+    @apply hover:bg-coral-600 active:scale-[0.97];
+    @apply shadow-soft;
   }
 
-  .dark .rbc-month-row {
-    @apply border-slate-700/30;
+  /* === Cards === */
+  .card {
+    @apply bg-white dark:bg-[#16161c] rounded-lg;
+    @apply border border-stone-200 dark:border-[#2a2a35];
+    @apply shadow-soft;
+    @apply transition-colors duration-200;
   }
 
-  .dark .rbc-time-slot {
-    @apply border-slate-800/30;
+  .card-hover {
+    @apply transition-all duration-300;
+    @apply hover:shadow-medium hover:-translate-y-0.5;
+    @apply hover:border-stone-300 dark:hover:border-[#3a3a48];
   }
 
-  .dark .rbc-time-header-content {
-    @apply bg-slate-800/40 border-slate-700/30;
+  .card-stone {
+    @apply bg-stone-200 dark:bg-[#1a1a22] rounded-lg;
+    @apply border border-stone-300 dark:border-[#2a2a35];
+    @apply p-6 lg:p-8;
   }
 
-  .dark .rbc-time-gutter {
-    @apply bg-slate-800/40;
+  /* === Dark Feature Band (deep green) === */
+  .band-dark {
+    @apply bg-green-700 text-white;
+    @apply rounded-[22px] p-12 lg:p-20;
   }
 
-  .dark .rbc-agenda-view table.rbc-agenda-table {
-    @apply bg-slate-900/30 border-slate-700/50;
+  .band-navy {
+    @apply bg-blue-950 text-white;
+    @apply rounded-[22px] p-12 lg:p-20;
   }
 
-  .dark .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
-    @apply border-slate-800/30;
+  /* === Inputs === */
+  .input {
+    @apply w-full px-4 py-3;
+    @apply bg-white dark:bg-[#1a1f2e];
+    @apply border border-stone-200 dark:border-[#2d3548];
+    @apply rounded-lg text-sm text-primary-800 dark:text-[#e5e7eb];
+    @apply placeholder:text-primary-400 dark:placeholder:text-[#6b7280];
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 dark:focus:ring-blue-400/20 dark:focus:border-blue-400;
+    @apply transition-all duration-200;
+  }
+
+  /* === Status Badges === */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full;
+    @apply text-xs font-medium tracking-wide;
+    @apply border;
+  }
+
+  .badge-coral {
+    @apply bg-coral-50 dark:bg-coral-950 text-coral-600 dark:text-coral-400;
+    @apply border-coral-200 dark:border-coral-800;
+  }
+
+  .badge-green {
+    @apply bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400;
+    @apply border-green-200 dark:border-green-800;
+  }
+
+  .badge-blue {
+    @apply bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400;
+    @apply border-blue-200 dark:border-blue-800;
+  }
+
+  /* === Glass Panel (legacy compat) === */
+  .glass-panel {
+    @apply bg-white/90 dark:bg-[#1a1f2e]/90 backdrop-blur-xl;
+    @apply border border-stone-200/60 dark:border-[#2d3548]/60;
+    @apply shadow-soft dark:shadow-none;
+  }
+
+  .pill {
+    @apply inline-flex items-center px-3 py-1.5 rounded-[30px];
+    @apply text-xs font-medium;
+    @apply border border-stone-200 dark:border-[#374151];
+    @apply text-primary-600 dark:text-[#9ca3af];
+    @apply hover:border-primary-400 dark:hover:border-[#6b7280];
+    @apply transition-colors duration-200;
+  }
+
+  .pill-active {
+    @apply bg-primary-800 dark:bg-coral-500 text-white dark:text-white;
+    @apply border-primary-800 dark:border-coral-500;
+  }
+
+  /* === Pill chip (filters, tags) === */
+  .pill {
+    @apply inline-flex items-center px-3 py-1.5 rounded-[30px];
+    @apply text-xs font-medium;
+    @apply border border-stone-200 dark:border-primary-600;
+    @apply text-primary-600 dark:text-stone-300;
+    @apply hover:border-primary-400 dark:hover:border-primary-400;
+    @apply transition-colors duration-200;
+  }
+
+  .pill-active {
+    @apply bg-primary-800 dark:bg-white text-white dark:text-primary-800;
+    @apply border-primary-800 dark:border-white;
+  }
+}
+
+/* ─── Scrollbar ─── */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-stone-300 dark:bg-primary-600 rounded-full;
+    @apply hover:bg-stone-400 dark:hover:bg-primary-500;
+  }
+}
+
+/* ─── React Big Calendar (preserved, adapted to new palette) ─── */
+@layer components {
+  .rbc-calendar { @apply font-sans; }
+  .rbc-toolbar { @apply mb-6; }
+  .rbc-toolbar button {
+    @apply px-4 py-2 rounded-lg font-medium text-sm;
+    @apply bg-stone-100 dark:bg-primary-700 text-primary-700 dark:text-stone-200;
+    @apply border border-stone-200 dark:border-primary-600;
+    @apply hover:bg-stone-200 dark:hover:bg-primary-600;
+    @apply transition-all duration-200;
+  }
+  .rbc-toolbar button.rbc-active {
+    @apply bg-primary-800 dark:bg-white text-white dark:text-primary-800;
+    @apply border-primary-800 dark:border-white;
+    @apply shadow-soft;
+  }
+  .rbc-toolbar-label {
+    @apply font-display font-bold text-lg text-primary-800 dark:text-white;
+  }
+  .rbc-header {
+    @apply py-3 font-display font-semibold text-sm uppercase tracking-wide;
+    @apply bg-stone-50 dark:bg-primary-700 text-primary-600 dark:text-stone-300;
+    @apply border-b border-stone-200 dark:border-primary-600;
+  }
+  .rbc-month-view, .rbc-time-view, .rbc-agenda-view {
+    @apply rounded-xl overflow-hidden;
+    @apply border border-stone-200 dark:border-primary-600;
+  }
+  .rbc-day-bg, .rbc-time-header-content, .rbc-time-gutter {
+    @apply bg-white dark:bg-primary-800;
+  }
+  .rbc-off-range-bg {
+    @apply bg-stone-50 dark:bg-primary-900;
+  }
+  .rbc-today {
+    @apply bg-blue-50/60 dark:bg-blue-950/30;
+  }
+  .rbc-time-slot {
+    @apply border-stone-100 dark:border-primary-700;
+  }
+  .rbc-event {
+    @apply rounded-lg shadow-soft transition-all duration-200;
+    @apply hover:shadow-medium hover:scale-[1.02];
+  }
+  .rbc-event-content { @apply font-medium; }
+  .rbc-month-row { @apply border-stone-200 dark:border-primary-700; }
+  .rbc-show-more {
+    @apply font-semibold text-blue-600 dark:text-blue-400;
+    @apply hover:text-blue-700 dark:hover:text-blue-300;
+    @apply transition-colors duration-200;
   }
 }

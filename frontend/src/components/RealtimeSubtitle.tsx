@@ -65,10 +65,10 @@ export default function RealtimeSubtitle({
   }, [messages, userText, displayedAiText]);
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-800 overflow-hidden">
+    <div className="flex flex-col h-full bg-white dark:bg-[#1f2937] overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 tracking-wide">对话实录</h4>
+      <div className="px-5 py-4 border-b border-stone-200 dark:border-[#2d3548] flex items-center justify-between bg-stone-50 dark:bg-[#1f2937]/80">
+        <h4 className="text-sm font-semibold text-primary-600 dark:text-[#e5e7eb] tracking-wide">对话实录</h4>
         <div className="flex items-center gap-3">
           {isAiSpeaking && (
             <div className="flex items-center gap-1.5">
@@ -133,10 +133,10 @@ export default function RealtimeSubtitle({
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-12"
+              className="h-full flex flex-col items-center justify-center text-primary-400 dark:text-[#9ca3af] py-12"
             >
-              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4 border border-slate-200 dark:border-slate-600">
-                <svg className="w-5 h-5 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-full bg-stone-100 dark:bg-[#374151] flex items-center justify-center mb-4 border border-stone-200 dark:border-[#4b5563]">
+                <svg className="w-5 h-5 text-primary-300 dark:text-[#9ca3af]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>

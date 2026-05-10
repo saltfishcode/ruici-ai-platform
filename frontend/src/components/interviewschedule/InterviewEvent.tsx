@@ -23,10 +23,10 @@ export const InterviewEvent: React.FC<InterviewEventProps> = ({ event }) => {
       shadow: 'shadow-emerald-200/60 dark:shadow-emerald-500/20',
     },
     CANCELLED: {
-      bg: 'bg-slate-100/90 dark:bg-slate-500/25',
-      text: 'text-slate-700 dark:text-slate-200',
-      border: 'border-slate-300/60 dark:border-slate-400/40',
-      shadow: 'shadow-slate-200/60 dark:shadow-slate-500/20',
+      bg: 'bg-stone-100/90 dark:bg-stone-500/25',
+      text: 'text-primary-600 dark:text-[#e5e7eb]',
+      border: 'border-stone-300/60 dark:border-[#4b5563]/40',
+      shadow: 'shadow-stone-200/60 dark:shadow-primary-500/20',
     },
     RESCHEDULED: {
       bg: 'bg-amber-100/90 dark:bg-amber-500/25',
