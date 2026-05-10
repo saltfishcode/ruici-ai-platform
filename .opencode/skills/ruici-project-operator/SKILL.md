@@ -1,3 +1,8 @@
+---
+name: ruici-project-operator
+description: 面向 ruici-ai-platform 项目的日常开发操作指引与约束说明。Use when working in this repository on development, bug fixes, refactors, API coordination, or security-sensitive changes.
+---
+
 # Ruici Project Operator
 
 ## 适用范围
