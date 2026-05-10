@@ -45,6 +45,8 @@ import java.util.stream.Collectors;
 public class InterviewQuestionService {
 
     private static final Logger log = LoggerFactory.getLogger(InterviewQuestionService.class);
+    private static final String DEFAULT_CLIENT_TYPE = "default";
+    private static final String PLAIN_CLIENT_TYPE = "plain";
 
     private static final String DEFAULT_QUESTION_TYPE = "GENERAL";
     private static final int MAX_FOLLOW_UP_COUNT = 2;
@@ -74,6 +76,10 @@ public class InterviewQuestionService {
     private final PromptTemplate skillUserPromptTemplate;
     private final PromptTemplate resumeSystemPromptTemplate;
     private final PromptTemplate resumeUserPromptTemplate;
+    private final String skillSystemPromptPath;
+    private final String skillUserPromptPath;
+    private final String resumeSystemPromptPath;
+    private final String resumeUserPromptPath;
     private final BeanOutputConverter<QuestionListDTO> outputConverter;
     private final StructuredOutputInvoker structuredOutputInvoker;
     private final InterviewSkillService skillService;
@@ -100,6 +106,10 @@ public class InterviewQuestionService {
         this.skillUserPromptTemplate = loadTemplate(resourceLoader, properties.getQuestionUserPromptPath());
         this.resumeSystemPromptTemplate = loadTemplate(resourceLoader, properties.getResumeQuestionSystemPromptPath());
         this.resumeUserPromptTemplate = loadTemplate(resourceLoader, properties.getResumeQuestionUserPromptPath());
+        this.skillSystemPromptPath = properties.getQuestionSystemPromptPath();
+        this.skillUserPromptPath = properties.getQuestionUserPromptPath();
+        this.resumeSystemPromptPath = properties.getResumeQuestionSystemPromptPath();
+        this.resumeUserPromptPath = properties.getResumeQuestionUserPromptPath();
         this.outputConverter = new BeanOutputConverter<>(QuestionListDTO.class);
         this.followUpCount = Math.max(0, Math.min(properties.getFollowUpCount(), MAX_FOLLOW_UP_COUNT));
     }
@@ -208,6 +218,14 @@ public class InterviewQuestionService {
 
             String systemPrompt = resumeSystemPromptTemplate.render() + "\n\n" + outputConverter.getFormat();
             String userPrompt = resumeUserPromptTemplate.render(variables);
+            // 简历题链路固定走 plain client，日志里明确打出 clientType，避免和方向题混淆。
+            log.info(
+                "情景模拟简历题 AI 调用: clientType={}, skillId={}, systemPrompt={}, userPrompt={}",
+                PLAIN_CLIENT_TYPE,
+                skill.id(),
+                resumeSystemPromptPath,
+                resumeUserPromptPath
+            );
 
             // 安全检测：总提示词长度超过模型上下文窗口可能导致请求失败
             int totalChars = systemPrompt.length() + userPrompt.length();
@@ -264,6 +282,14 @@ public class InterviewQuestionService {
             String systemPrompt = skillSystemPromptTemplate.render()
                 + GENERIC_MODE_SYSTEM_APPEND + outputConverter.getFormat();
             String userPrompt = skillUserPromptTemplate.render(variables);
+            // 方向题链路保留 tool-capable client 语义，日志只记录资源标识与 skillId。
+            log.info(
+                "情景模拟方向题 AI 调用: clientType={}, skillId={}, systemPrompt={}, userPrompt={}",
+                DEFAULT_CLIENT_TYPE,
+                skill.id(),
+                skillSystemPromptPath,
+                skillUserPromptPath
+            );
 
             // 安全检测：总提示词长度超过模型上下文窗口可能导致请求失败
             int totalChars = systemPrompt.length() + userPrompt.length();

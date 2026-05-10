@@ -67,6 +67,15 @@ export const documentApi = {
     return response.data;
   },
 
+  async getOriginalFile(id: number, disposition: 'inline' | 'attachment' = 'attachment'): Promise<Blob> {
+    const response = await request.getInstance().get(`/api/documents/${id}/original-file`, {
+      params: { disposition },
+      responseType: 'blob',
+      skipResultTransform: true,
+    } as never);
+    return response.data;
+  },
+
   async getStatistics(): Promise<ResumeStats> {
     return request.get<ResumeStats>('/api/documents/statistics');
   },

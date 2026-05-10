@@ -9,6 +9,7 @@ import com.ruici.ai.common.config.runtime.repository.AiRuntimeConfigAuditReposit
 import com.ruici.ai.common.config.runtime.repository.AiRuntimeConfigRepository;
 import com.ruici.ai.common.config.runtime.resolver.AiRuntimeConfigResolver;
 import com.ruici.ai.common.config.runtime.resolver.DefaultAiRuntimeConfigResolver;
+import com.ruici.ai.common.config.runtime.service.AiRuntimeCacheInvalidationNotifier;
 import com.ruici.ai.common.config.runtime.service.AiRuntimeConfigCommandService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +51,8 @@ class AiRuntimeConfigCommandServiceTest {
     private LlmProviderRegistry llmProviderRegistry;
     @Mock
     private DefaultAiRuntimeConfigResolver defaultResolver;
+    @Mock
+    private AiRuntimeCacheInvalidationNotifier cacheInvalidationNotifier;
 
     private AiRuntimeConfigCommandService commandService;
 
@@ -57,7 +60,7 @@ class AiRuntimeConfigCommandServiceTest {
     void setUp() {
         commandService = new AiRuntimeConfigCommandService(
             configRepository, auditRepository, validationService,
-            configResolver, llmProviderRegistry, defaultResolver);
+            configResolver, llmProviderRegistry, defaultResolver, cacheInvalidationNotifier);
     }
 
     @Nested
@@ -112,7 +115,7 @@ class AiRuntimeConfigCommandServiceTest {
 
             assertThat(existing.getConfigVersion()).isEqualTo(4L);
             assertThat(existing.getModelName()).isEqualTo("gpt-5.2");
-            verify(defaultResolver).evictSnapshot(anyString());
+            verify(cacheInvalidationNotifier).evictAndBroadcast(any());
             verify(llmProviderRegistry).evictChatClient(any(), eq("default"));
             verify(llmProviderRegistry).evictChatClient(any(), eq("plain"));
         }
@@ -136,7 +139,7 @@ class AiRuntimeConfigCommandServiceTest {
 
             assertThat(entity.getEnabled()).isFalse();
             assertThat(entity.getConfigVersion()).isEqualTo(3L);
-            verify(defaultResolver).evictSnapshot(anyString());
+            verify(cacheInvalidationNotifier).evictAndBroadcast(any());
         }
 
         @Test
@@ -163,8 +166,7 @@ class AiRuntimeConfigCommandServiceTest {
             RefreshAiRuntimeConfigResponse response = commandService.refreshCache("tester");
 
             assertThat(response.latestConfigVersion()).isEqualTo(5L);
-            verify(defaultResolver).evictAllSnapshots();
-            verify(llmProviderRegistry).evictAllChatClients();
+            verify(cacheInvalidationNotifier).refreshAllAndBroadcast();
             verify(auditRepository).save(any());
         }
     }

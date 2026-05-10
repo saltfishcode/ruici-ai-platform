@@ -82,6 +82,38 @@ public class ResumeController {
     }
 
     /**
+     * 预览或下载原始上传文件。
+     */
+    @GetMapping("/api/documents/{id}/original-file")
+    public ResponseEntity<byte[]> getOriginalFile(
+        @PathVariable Long id,
+        @RequestParam(value = "disposition", defaultValue = "inline") String disposition
+    ) {
+        try {
+            var result = historyService.getOriginalFile(id);
+            String encodedFilename = URLEncoder.encode(result.filename(), StandardCharsets.UTF_8);
+            String requestedDisposition = "attachment".equalsIgnoreCase(disposition) ? "attachment" : "inline";
+            boolean shouldForceAttachment = shouldForceDownload(result.contentType(), requestedDisposition);
+            String effectiveDisposition = shouldForceAttachment ? "attachment" : requestedDisposition;
+            // HTML 原文件不做浏览器内联预览，统一降级为下载流，避免直接执行页面内容。
+            String safeContentType = shouldForceAttachment
+                ? MediaType.APPLICATION_OCTET_STREAM_VALUE
+                : result.contentType();
+            MediaType mediaType = MediaType.parseMediaType(safeContentType);
+
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                    effectiveDisposition + "; filename*=UTF-8''" + encodedFilename)
+                .header("X-Content-Type-Options", "nosniff")
+                .contentType(mediaType)
+                .body(result.fileBytes());
+        } catch (Exception e) {
+            log.error("获取原始文档失败: documentId={}", id, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * 导出文档分析报告为 PDF。
      */
     @GetMapping("/api/documents/{id}/export")
@@ -133,6 +165,15 @@ public class ResumeController {
             "status", "UP",
             "service", "Ruici AI Platform - Document Service"
         ));
+    }
+
+    /**
+     * 对高风险可执行文本类型做安全降级，当前仅拦截 HTML 内联预览。
+     */
+    private boolean shouldForceDownload(String contentType, String disposition) {
+        return "inline".equalsIgnoreCase(disposition)
+            && contentType != null
+            && contentType.toLowerCase().contains("text/html");
     }
 
 }

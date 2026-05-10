@@ -347,10 +347,17 @@ mvn "-Dtest=LlmProviderRegistryTest,KnowledgeBaseQueryServiceTest,DashscopeLlmSe
 | Phase 6: Voice | 会话级 LLM 快照 | ✅ 已完成 |
 | Phase 7: 管理能力 | 管理接口、启停、刷新、审计 | ✅ 已完成 |
 | Phase 7.5: 前端模型选择 | 前端页面/API 层/路由/导航 | ✅ 已完成 |
-| ASR/TTS 动态切换 | 按会话级快照 | ⏳ 未开始 |
+| ASR/TTS 动态切换 | 按会话级快照 | ✅ 已完成 |
 
-### 剩余待推进
+### 本轮补全结果
 
-1. **补全 `AiRuntimeConfigValidationServiceTest`**（计划要求的最低门禁测试，当前缺失）
-2. **ASR/TTS 的会话级 snapshot**（仅当业务需要时）
-3. **多实例缓存失效传播方案**
+1. **`AiRuntimeConfigValidationServiceTest` 已补全**，覆盖 `chat / embedding / asr / tts` 保存校验门禁
+2. **ASR/TTS 会话级 snapshot 已接入**，语音会话创建时固化 `ASR/TTS` 快照并在 WebSocket 实时链路消费
+3. **多实例缓存失效传播方案已落地**，通过 Redis Topic 广播运行时缓存失效事件
+
+### 本轮验证
+
+```bash
+mvn "-Dtest=AiRuntimeConfigValidationServiceTest,DefaultAiRuntimeConfigResolverTest,AiRuntimeConfigCommandServiceTest,VoiceInterviewServiceTest,DashscopeLlmServiceTest" test
+# Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
+```

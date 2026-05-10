@@ -30,14 +30,18 @@ import java.util.Map;
  */
 @Service
 public class ResumeGradingService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(ResumeGradingService.class);
-    
+    private static final String CLIENT_TYPE = "default";
+    private static final String CONFIG_KEY = "THIRD_PARTY_MODEL";
+
     private final LlmProviderRegistry llmProviderRegistry;
     private final PromptTemplate systemPromptTemplate;
     private final PromptTemplate userPromptTemplate;
     private final BeanOutputConverter<ResumeAnalysisResponseDTO> outputConverter;
     private final StructuredOutputInvoker structuredOutputInvoker;
+    private final String systemPromptPath;
+    private final String userPromptPath;
     
     // 中间DTO用于接收AI响应
     private record ResumeAnalysisResponseDTO(
@@ -79,6 +83,8 @@ public class ResumeGradingService {
                 .getContentAsString(StandardCharsets.UTF_8)
         );
         this.outputConverter = new BeanOutputConverter<>(ResumeAnalysisResponseDTO.class);
+        this.systemPromptPath = properties.getSystemPromptPath();
+        this.userPromptPath = properties.getUserPromptPath();
     }
     
     /**
@@ -116,9 +122,19 @@ public class ResumeGradingService {
                     null,
                     null,
                     AiRuntimeScene.DOCUMENT,
-                    LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.DOCUMENT, "default", "THIRD_PARTY_MODEL"),
-                    "default",
+                    LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.DOCUMENT, CLIENT_TYPE, CONFIG_KEY),
+                    CLIENT_TYPE,
                     false
+                );
+                // 仅记录链路标识，不输出原始 prompt 与文档正文，便于排障同时控制噪声与敏感信息暴露。
+                log.info(
+                    "文档分析 AI 调用: scene={}, clientType={}, provider={}, model={}, systemPrompt={}, userPrompt={}",
+                    AiRuntimeScene.DOCUMENT,
+                    CLIENT_TYPE,
+                    runtimeSnapshot.providerId(),
+                    runtimeSnapshot.modelName(),
+                    systemPromptPath,
+                    userPromptPath
                 );
                 dto = structuredOutputInvoker.invoke(
                     llmProviderRegistry.getChatClient(runtimeSnapshot),

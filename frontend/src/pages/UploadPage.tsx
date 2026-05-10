@@ -52,8 +52,8 @@ export default function UploadPage({ onUploadComplete }: UploadPageProps) {
     <FileUploadCard
       title="开始文档分析"
       subtitle="上传职业文档，补充分析方向与分析力度，AI 将生成更贴近场景的分析结果"
-      accept=".pdf,.doc,.docx,.txt"
-      formatHint="支持 PDF, DOCX, TXT"
+      accept=".pdf,.doc,.docx,.txt,.md,.markdown,.html,.htm"
+      formatHint="支持 PDF, DOCX, TXT, MD, HTML"
       maxSizeHint="最大 10MB"
       uploading={uploading}
       uploadButtonText="开始上传"

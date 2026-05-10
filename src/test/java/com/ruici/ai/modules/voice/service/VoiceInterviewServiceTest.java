@@ -1,6 +1,7 @@
 package com.ruici.ai.modules.voice.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
+import com.ruici.ai.common.config.runtime.resolver.AiRuntimeConfigResolver;
 import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.config.runtime.model.AiRuntimeConfigSource;
 import com.ruici.ai.common.config.runtime.model.AiRuntimeDomain;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RBucket;
@@ -28,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("语音会话创建运行时快照测试")
@@ -48,7 +51,7 @@ class VoiceInterviewServiceTest {
     @Mock
     private RBucket<VoiceInterviewSessionEntity> sessionBucket;
 
-    @Mock
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private VoiceInterviewProperties properties;
 
     @Mock
@@ -57,13 +60,16 @@ class VoiceInterviewServiceTest {
     @Mock
     private LlmProviderRegistry llmProviderRegistry;
 
+    @Mock
+    private AiRuntimeConfigResolver aiRuntimeConfigResolver;
+
     @AfterEach
     void tearDown() {
         RequestContextHolder.resetRequestAttributes();
     }
 
     @Test
-    @DisplayName("创建会话时会固化 voice LLM 快照到会话实体")
+    @DisplayName("创建会话时会固化 voice LLM/ASR/TTS 快照到会话实体")
     void shouldPersistVoiceRuntimeSnapshotWhenCreatingSession() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setScheme("http");
@@ -71,7 +77,7 @@ class VoiceInterviewServiceTest {
         request.setServerPort(8080);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        AiRuntimeConfigSnapshot snapshot = new AiRuntimeConfigSnapshot(
+        AiRuntimeConfigSnapshot llmSnapshot = new AiRuntimeConfigSnapshot(
             "THIRD_PARTY_MODEL",
             AiRuntimeDomain.CHAT,
             AiRuntimeScene.VOICE,
@@ -82,10 +88,36 @@ class VoiceInterviewServiceTest {
             AiRuntimeConfigSource.DB_RUNTIME_CONFIG,
             false
         );
+        AiRuntimeConfigSnapshot asrSnapshot = new AiRuntimeConfigSnapshot(
+            "AI_ASR_MODEL",
+            AiRuntimeDomain.ASR,
+            AiRuntimeScene.VOICE,
+            "dashscope",
+            "qwen3-asr-flash-realtime",
+            null,
+            5L,
+            AiRuntimeConfigSource.DB_RUNTIME_CONFIG,
+            false
+        );
+        AiRuntimeConfigSnapshot ttsSnapshot = new AiRuntimeConfigSnapshot(
+            "AI_TTS_MODEL",
+            AiRuntimeDomain.TTS,
+            AiRuntimeScene.VOICE,
+            "dashscope",
+            "qwen3-tts-flash-realtime",
+            null,
+            6L,
+            AiRuntimeConfigSource.DB_RUNTIME_CONFIG,
+            false
+        );
         CreateSessionRequest createRequest = CreateSessionRequest.builder()
             .skillId("java-backend")
+            .llmProvider("dashscope")
             .introEnabled(true)
             .build();
+
+        given(properties.getQwen().getAsr().getModel()).willReturn("qwen3-asr-flash-realtime");
+        given(properties.getQwen().getTts().getModel()).willReturn("qwen3-tts-flash-realtime");
 
         given(llmProviderRegistry.resolveChatSnapshot(
             eq("dashscope"),
@@ -95,7 +127,9 @@ class VoiceInterviewServiceTest {
             eq(LlmProviderRegistry.buildSnapshotKey(AiRuntimeScene.VOICE, "voice", "THIRD_PARTY_MODEL")),
             eq("voice"),
             eq(true)
-        )).willReturn(snapshot);
+        )).willReturn(llmSnapshot);
+        given(aiRuntimeConfigResolver.resolveAsrConfig(any())).willReturn(asrSnapshot);
+        given(aiRuntimeConfigResolver.resolveTtsConfig(any())).willReturn(ttsSnapshot);
         given(sessionRepository.save(any(VoiceInterviewSessionEntity.class))).willAnswer(invocation -> {
             VoiceInterviewSessionEntity entity = invocation.getArgument(0);
             entity.setId(100L);
@@ -110,17 +144,28 @@ class VoiceInterviewServiceTest {
             redissonClient,
             properties,
             voiceEvaluateStreamProducer,
-            llmProviderRegistry
+            llmProviderRegistry,
+            aiRuntimeConfigResolver
         );
 
         service.createSession(createRequest);
-        org.mockito.Mockito.verify(sessionRepository).save(org.mockito.ArgumentMatchers.argThat(session ->
+        verify(sessionRepository).save(org.mockito.ArgumentMatchers.argThat(session ->
             "dashscope".equals(session.getLlmProvider())
                 && "qwen-plus-realtime".equals(session.getLlmModelName())
                 && "qwen-flash".equals(session.getLlmFallbackModelName())
                 && Long.valueOf(12L).equals(session.getLlmConfigVersion())
                 && AiRuntimeConfigSource.DB_RUNTIME_CONFIG.name().equals(session.getLlmConfigSource())
                 && Boolean.FALSE.equals(session.getLlmConfigStale())
+                && "dashscope".equals(session.getAsrProvider())
+                && "qwen3-asr-flash-realtime".equals(session.getAsrModelName())
+                && Long.valueOf(5L).equals(session.getAsrConfigVersion())
+                && AiRuntimeConfigSource.DB_RUNTIME_CONFIG.name().equals(session.getAsrConfigSource())
+                && Boolean.FALSE.equals(session.getAsrConfigStale())
+                && "dashscope".equals(session.getTtsProvider())
+                && "qwen3-tts-flash-realtime".equals(session.getTtsModelName())
+                && Long.valueOf(6L).equals(session.getTtsConfigVersion())
+                && AiRuntimeConfigSource.DB_RUNTIME_CONFIG.name().equals(session.getTtsConfigSource())
+                && Boolean.FALSE.equals(session.getTtsConfigStale())
         ));
     }
 }

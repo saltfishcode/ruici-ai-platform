@@ -34,6 +34,8 @@ import java.time.LocalDateTime;
 public class VoiceInterviewSessionEntity {
 
     private static final String CHAT_CONFIG_KEY = "THIRD_PARTY_MODEL";
+    private static final String ASR_CONFIG_KEY = "AI_ASR_MODEL";
+    private static final String TTS_CONFIG_KEY = "AI_TTS_MODEL";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -94,6 +96,38 @@ public class VoiceInterviewSessionEntity {
     @Column(name = "llm_config_stale")
     @Builder.Default
     private Boolean llmConfigStale = false;
+
+    @Column(name = "asr_provider", length = 50)
+    private String asrProvider;
+
+    @Column(name = "asr_model_name", length = 128)
+    private String asrModelName;
+
+    @Column(name = "asr_config_version")
+    private Long asrConfigVersion;
+
+    @Column(name = "asr_config_source", length = 64)
+    private String asrConfigSource;
+
+    @Column(name = "asr_config_stale")
+    @Builder.Default
+    private Boolean asrConfigStale = false;
+
+    @Column(name = "tts_provider", length = 50)
+    private String ttsProvider;
+
+    @Column(name = "tts_model_name", length = 128)
+    private String ttsModelName;
+
+    @Column(name = "tts_config_version")
+    private Long ttsConfigVersion;
+
+    @Column(name = "tts_config_source", length = 64)
+    private String ttsConfigSource;
+
+    @Column(name = "tts_config_stale")
+    @Builder.Default
+    private Boolean ttsConfigStale = false;
 
     @Column(name = "current_phase")
     @Enumerated(EnumType.STRING)
@@ -194,6 +228,78 @@ public class VoiceInterviewSessionEntity {
             llmConfigVersion,
             llmConfigSource != null ? AiRuntimeConfigSource.valueOf(llmConfigSource) : null,
             Boolean.TRUE.equals(llmConfigStale)
+        );
+    }
+
+    public void applyAsrRuntimeSnapshot(AiRuntimeConfigSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        this.asrProvider = snapshot.providerId();
+        this.asrModelName = snapshot.modelName();
+        this.asrConfigVersion = snapshot.configVersion();
+        this.asrConfigSource = snapshot.source() != null ? snapshot.source().name() : null;
+        this.asrConfigStale = snapshot.stale();
+    }
+
+    public boolean hasAsrRuntimeSnapshot() {
+        return asrProvider != null
+            && !asrProvider.isBlank()
+            && asrModelName != null
+            && !asrModelName.isBlank()
+            && asrConfigVersion != null;
+    }
+
+    public AiRuntimeConfigSnapshot toAsrRuntimeSnapshot() {
+        if (!hasAsrRuntimeSnapshot()) {
+            return null;
+        }
+        return new AiRuntimeConfigSnapshot(
+            ASR_CONFIG_KEY,
+            AiRuntimeDomain.ASR,
+            AiRuntimeScene.VOICE,
+            asrProvider,
+            asrModelName,
+            null,
+            asrConfigVersion,
+            asrConfigSource != null ? AiRuntimeConfigSource.valueOf(asrConfigSource) : null,
+            Boolean.TRUE.equals(asrConfigStale)
+        );
+    }
+
+    public void applyTtsRuntimeSnapshot(AiRuntimeConfigSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        this.ttsProvider = snapshot.providerId();
+        this.ttsModelName = snapshot.modelName();
+        this.ttsConfigVersion = snapshot.configVersion();
+        this.ttsConfigSource = snapshot.source() != null ? snapshot.source().name() : null;
+        this.ttsConfigStale = snapshot.stale();
+    }
+
+    public boolean hasTtsRuntimeSnapshot() {
+        return ttsProvider != null
+            && !ttsProvider.isBlank()
+            && ttsModelName != null
+            && !ttsModelName.isBlank()
+            && ttsConfigVersion != null;
+    }
+
+    public AiRuntimeConfigSnapshot toTtsRuntimeSnapshot() {
+        if (!hasTtsRuntimeSnapshot()) {
+            return null;
+        }
+        return new AiRuntimeConfigSnapshot(
+            TTS_CONFIG_KEY,
+            AiRuntimeDomain.TTS,
+            AiRuntimeScene.VOICE,
+            ttsProvider,
+            ttsModelName,
+            null,
+            ttsConfigVersion,
+            ttsConfigSource != null ? AiRuntimeConfigSource.valueOf(ttsConfigSource) : null,
+            Boolean.TRUE.equals(ttsConfigStale)
         );
     }
 }

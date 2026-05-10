@@ -63,7 +63,7 @@ public class ResumeUploadService {
 
         // 2. 验证文件类型
         String contentType = parseService.detectContentType(file);
-        validateContentType(contentType);
+        validateContentType(file, contentType);
 
         // 3. 检查文档是否已存在（去重）
         Optional<ResumeEntity> existingResume = persistenceService.findExistingResume(file);
@@ -92,6 +92,7 @@ public class ResumeUploadService {
         // 6. 保存文档到数据库（状态为 PENDING）
         ResumeEntity savedResume = persistenceService.saveResume(
             file,
+            contentType,
             resumeText,
             fileKey,
             fileUrl,
@@ -138,10 +139,20 @@ public class ResumeUploadService {
     /**
      * 验证文件类型
      */
-    private void validateContentType(String contentType) {
-        fileValidationService.validateContentTypeByList(
+    private void validateContentType(org.springframework.web.multipart.MultipartFile file, String contentType) {
+        fileValidationService.validateContentType(
             contentType,
-            appConfig.getAllowedTypes(),
+            file.getOriginalFilename(),
+            mimeType -> fileValidationService.isAllowedType(mimeType, appConfig.getAllowedTypes()),
+            fileName -> {
+                String lowerName = fileName.toLowerCase();
+                // md/html 可能被 Tika 识别成 text/plain 或其它文本变体，这里额外保留扩展名兜底。
+                return lowerName.endsWith(".md")
+                    || lowerName.endsWith(".markdown")
+                    || lowerName.endsWith(".mdown")
+                    || lowerName.endsWith(".html")
+                    || lowerName.endsWith(".htm");
+            },
             "不支持的文件类型: " + contentType
         );
     }

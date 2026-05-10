@@ -79,7 +79,7 @@ public class FileValidationService {
     /**
      * 检查文件类型是否在允许列表中
      */
-    private boolean isAllowedType(String contentType, List<String> allowedTypes) {
+    public boolean isAllowedType(String contentType, List<String> allowedTypes) {
         if (contentType == null || allowedTypes == null || allowedTypes.isEmpty()) {
             return false;
         }

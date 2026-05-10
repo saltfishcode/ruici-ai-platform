@@ -6,6 +6,7 @@ import com.alibaba.dashscope.audio.qwen_tts_realtime.QwenTtsRealtimeCallback;
 import com.alibaba.dashscope.audio.qwen_tts_realtime.QwenTtsRealtimeConfig;
 import com.alibaba.dashscope.audio.qwen_tts_realtime.QwenTtsRealtimeParam;
 import com.google.gson.JsonObject;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.modules.voice.config.VoiceInterviewProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -105,6 +106,10 @@ public class QwenTtsService {
      * @return PCM audio data at configured sample rate, or empty array if synthesis fails
      */
     public byte[] synthesize(String text) {
+        return synthesize(text, null);
+    }
+
+    public byte[] synthesize(String text, AiRuntimeConfigSnapshot snapshot) {
         // Handle null, empty, or whitespace-only text
         if (text == null || text.trim().isEmpty()) {
             log.debug("Empty or null text provided, returning empty audio array");
@@ -128,7 +133,7 @@ public class QwenTtsService {
         try {
             // Build QwenTtsRealtimeParam with connection settings
             QwenTtsRealtimeParam param = QwenTtsRealtimeParam.builder()
-                    .model(model)
+                    .model(resolveModel(snapshot))
                     .apikey(apiKey)
                     .build();
 
@@ -230,6 +235,13 @@ public class QwenTtsService {
     private QwenTtsRealtimeAudioFormat getAudioFormat() {
         // Qwen TTS Realtime uses 24kHz by default
         return QwenTtsRealtimeAudioFormat.PCM_24000HZ_MONO_16BIT;
+    }
+
+    private String resolveModel(AiRuntimeConfigSnapshot snapshot) {
+        if (snapshot != null && snapshot.modelName() != null && !snapshot.modelName().isBlank()) {
+            return snapshot.modelName().trim();
+        }
+        return model;
     }
 
     /**
