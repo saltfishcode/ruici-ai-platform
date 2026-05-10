@@ -90,17 +90,17 @@ function ScoreCard({
   strokeDashoffset: number;
 }) {
   return (
-    <div className="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-2xl p-8 text-white">
-      <div className="flex flex-col items-center text-center">
+    <div className="bg-green-700 dark:bg-green-800 rounded-lg p-8 text-white">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-8">
         {/* 圆环进度条 */}
-        <div className="relative w-32 h-32 mb-6">
-          <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
+        <div className="relative w-28 h-28 mx-auto lg:mx-0 flex-shrink-0">
+          <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 120 120">
             <circle
               cx="60"
               cy="60"
               r="54"
-              stroke="rgba(255,255,255,0.2)"
-              strokeWidth="8"
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth="6"
               fill="none"
             />
             <motion.circle
@@ -108,7 +108,7 @@ function ScoreCard({
               cy="60"
               r="54"
               stroke="white"
-              strokeWidth="8"
+              strokeWidth="6"
               fill="none"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -119,21 +119,23 @@ function ScoreCard({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <motion.span
-              className="text-4xl font-bold"
+              className="text-3xl font-bold"
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
             >
               {score ?? '-'}
             </motion.span>
-            <span className="text-sm text-white/70">总分</span>
+            <span className="text-xs text-white/60 tracking-wide">总分</span>
           </div>
         </div>
 
-        <h3 className="text-2xl font-bold mb-3">面试评估</h3>
-        <p className="text-white/90 max-w-2xl leading-relaxed">
-          {feedback || '表现良好，展示了扎实的技术基础。'}
-        </p>
+        <div className="text-center lg:text-left flex-1">
+          <h3 className="text-xl font-semibold mb-2 tracking-tight">模拟评估</h3>
+          <p className="text-white/80 leading-relaxed text-sm">
+            {feedback || '表现良好，展示了扎实的技术基础。'}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -143,22 +145,22 @@ function ScoreCard({
 function StrengthsSection({ strengths }: { strengths: string[] }) {
   return (
       <motion.div
-          className="bg-white dark:bg-[#1f2937] rounded-2xl p-6 shadow-sm"
+          className="bg-white dark:bg-[#1a1f2e] rounded-lg border border-stone-200 dark:border-[#2d3548] p-6"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
     >
-        <h4 className="font-semibold text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+        <h4 className="text-sm font-medium text-accent-success mb-4 flex items-center gap-2 tracking-wide uppercase">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         表现优势
       </h4>
-      <ul className="space-y-3">
+      <ul className="space-y-2.5">
         {strengths.map((s: string, i: number) => (
-            <li key={i} className="text-primary-600 dark:text-[#d1d5db] flex items-start gap-3">
-            <span className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></span>
+            <li key={i} className="text-primary-600 dark:text-[#d1d5db] text-sm flex items-start gap-3 leading-relaxed">
+            <span className="w-1.5 h-1.5 bg-accent-success rounded-full mt-2 flex-shrink-0"></span>
             <span>{s}</span>
           </li>
         ))}
@@ -171,23 +173,23 @@ function StrengthsSection({ strengths }: { strengths: string[] }) {
 function ImprovementsSection({ improvements }: { improvements: string[] }) {
   return (
       <motion.div
-          className="bg-white dark:bg-[#1f2937] rounded-2xl p-6 shadow-sm"
+          className="bg-white dark:bg-[#1a1f2e] rounded-lg border border-stone-200 dark:border-[#2d3548] p-6"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-        <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+        <h4 className="text-sm font-medium text-accent-warning mb-4 flex items-center gap-2 tracking-wide uppercase">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
           <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
         </svg>
         改进建议
       </h4>
-      <ul className="space-y-3">
+      <ul className="space-y-2.5">
         {improvements.map((s: string, i: number) => (
-            <li key={i} className="text-primary-600 dark:text-[#d1d5db] flex items-start gap-3">
-            <span className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0"></span>
+            <li key={i} className="text-primary-600 dark:text-[#d1d5db] text-sm flex items-start gap-3 leading-relaxed">
+            <span className="w-1.5 h-1.5 bg-accent-warning rounded-full mt-2 flex-shrink-0"></span>
             <span>{s}</span>
           </li>
         ))}
@@ -208,14 +210,14 @@ function QuestionsSection({
 }) {
   return (
     <div>
-      <h4 className="font-semibold text-primary-700 dark:text-[#f3f4f6] mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5 text-primary-500" viewBox="0 0 24 24" fill="none">
+      <h4 className="text-sm font-medium text-primary-500 dark:text-[#9ca3af] mb-4 flex items-center gap-2 tracking-wide uppercase">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
           <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         问答记录详情
       </h4>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {answers.map((answer, idx) => (
           <QuestionCard
             key={idx}
@@ -244,31 +246,29 @@ function QuestionCard({
 }) {
   return (
       <motion.div
-          className="bg-white dark:bg-[#1f2937] rounded-2xl shadow-sm overflow-hidden"
+          className="bg-white dark:bg-[#1a1f2e] rounded-lg border border-stone-200 dark:border-[#2d3548] overflow-hidden"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 + index * 0.05 }}
+      transition={{ delay: 0.1 + index * 0.03 }}
     >
       {/* 问题头部 */}
         <div
-            className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-stone-50 dark:hover:bg-[#374151]/50 transition-colors"
+            className="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-stone-50 dark:hover:bg-[#1f2937] transition-colors"
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">
-          <span
-              className="w-8 h-8 bg-stone-100 dark:bg-[#374151] text-primary-500 dark:text-[#d1d5db] rounded-lg flex items-center justify-center text-sm font-semibold">
+          <span className="w-7 h-7 bg-primary-50 dark:bg-[#0f1117] text-primary-500 dark:text-[#9ca3af] rounded flex items-center justify-center text-xs font-medium">
             {answer.questionIndex + 1}
           </span>
-          <span
-              className="px-3 py-1 bg-primary-50 dark:bg-[#0f1117]/30 text-primary-600 dark:text-[#9ca3af] text-xs font-medium rounded-full">
+          <span className="px-2.5 py-0.5 bg-stone-100 dark:bg-[#0f1117] text-primary-500 dark:text-[#9ca3af] text-xs font-medium rounded">
             {answer.category || '综合'}
           </span>
-          <span className={`font-semibold ${getScoreColor(answer.score, [80, 60])}`}>
-            得分: {answer.score}
+          <span className={`text-sm font-medium ${getScoreColor(answer.score, [80, 60])}`}>
+            {answer.score} 分
           </span>
         </div>
           <motion.svg
-          className="w-5 h-5 text-primary-300"
+          className="w-4 h-4 text-primary-300 dark:text-[#6b7280]"
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
           viewBox="0 0 24 24"
@@ -279,8 +279,8 @@ function QuestionCard({
       </div>
 
       {/* 问题内容 */}
-      <div className="px-5 pb-2">
-        <p className="text-primary-700 dark:text-[#f3f4f6] font-medium leading-relaxed">{answer.question}</p>
+      <div className="px-5 pb-3">
+        <p className="text-sm text-primary-700 dark:text-[#f3f4f6] leading-relaxed">{answer.question}</p>
       </div>
 
       {/* 展开内容 */}
@@ -293,52 +293,41 @@ function QuestionCard({
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 space-y-4">
+            <div className="px-5 pb-5 space-y-3 border-t border-stone-100 dark:border-[#2d3548] pt-3">
               {/* 你的回答 */}
-              <div className="bg-stone-50 dark:bg-[#374151]/50 rounded-xl p-4">
-                <p className="text-sm text-primary-400 dark:text-[#9ca3af] mb-2 flex items-center gap-1">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+              <div className="bg-stone-50 dark:bg-[#0f1117] rounded p-4">
+                <p className="text-xs text-primary-400 dark:text-[#6b7280] mb-1.5 flex items-center gap-1 font-medium tracking-wide uppercase">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
                     <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   你的回答
                 </p>
-                <p className={`leading-relaxed ${
+                <p className={`text-sm leading-relaxed ${
                   !answer.userAnswer || answer.userAnswer === '不知道' 
-                    ? 'text-red-500 font-medium'
+                    ? 'text-accent-danger font-medium'
                       : 'text-primary-600 dark:text-[#d1d5db]'
                 }`}>
-                  "{answer.userAnswer || '(未回答)'}"
+                  {answer.userAnswer || '(未回答)'}
                 </p>
               </div>
 
               {/* AI 深度评价 */}
               {answer.feedback && (
-                <div>
-                  <p className="text-sm text-primary-500 dark:text-[#9ca3af] mb-2 flex items-center gap-2 font-medium">
-                    <svg className="w-4 h-4 text-primary-500" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M18 9L12 15L9 12L3 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    AI 深度评价
+                <div className="pl-4 border-l-2 border-primary-200 dark:border-[#2d3548]">
+                  <p className="text-xs text-primary-400 dark:text-[#6b7280] mb-1 font-medium tracking-wide uppercase">
+                    AI 评价
                   </p>
-                  <p className="text-primary-600 dark:text-[#d1d5db] leading-relaxed pl-6">{answer.feedback}</p>
+                  <p className="text-sm text-primary-600 dark:text-[#d1d5db] leading-relaxed">{answer.feedback}</p>
                 </div>
               )}
 
               {/* 参考答案 */}
               {answer.referenceAnswer && (
-                  <div
-                      className="bg-stone-50 dark:bg-[#374151]/50 rounded-xl p-4 border border-stone-100 dark:border-[#4b5563]">
-                    <p className="text-sm text-primary-500 dark:text-[#9ca3af] mb-3 flex items-center gap-2 font-medium">
-                    <svg className="w-4 h-4 text-primary-500" viewBox="0 0 24 24" fill="none">
-                      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M9 12H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      <path d="M12 9V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
+                  <div className="bg-green-50 dark:bg-green-900/10 rounded p-4 border border-green-100 dark:border-green-900/30">
+                    <p className="text-xs text-green-700 dark:text-green-400 mb-1.5 font-medium tracking-wide uppercase">
                     参考答案
                   </p>
-                    <div
-                        className="text-primary-600 dark:text-[#d1d5db] leading-relaxed whitespace-pre-line">{answer.referenceAnswer}</div>
+                    <div className="text-sm text-primary-600 dark:text-[#d1d5db] leading-relaxed whitespace-pre-line">{answer.referenceAnswer}</div>
                 </div>
               )}
             </div>

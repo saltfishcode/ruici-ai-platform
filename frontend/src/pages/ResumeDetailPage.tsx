@@ -9,7 +9,7 @@ import InterviewDetailPanel from '../components/InterviewDetailPanel';
 import FilePreviewModal from '../components/FilePreviewModal';
 import {formatDateOnly} from '../utils/date';
 import {isPreviewable} from '../utils/previewUtils';
-import {CheckSquare, ChevronLeft, Clock, Download, Eye, MessageSquare, Mic} from 'lucide-react';
+import {CheckSquare, ChevronLeft, Clock, Download, Eye, MessageSquare, Mic, RefreshCw} from 'lucide-react';
 import type {InterviewDetail} from '../types/simulation';
 import type {ResumeDetail} from '../types/document';
 
@@ -341,9 +341,9 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
               type="button"
               onClick={() => handleExportInterviewPdf(selectedInterview.sessionId)}
               disabled={exporting === selectedInterview.sessionId}
-              className="px-5 py-2.5 border border-stone-200 dark:border-[#4b5563] bg-white dark:bg-[#1f2937] rounded-xl text-primary-500 dark:text-[#d1d5db] font-medium hover:bg-stone-50 transition-all disabled:opacity-50 flex items-center gap-2"
+              className="btn-secondary flex items-center gap-2 disabled:opacity-50"
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.97 }}
             >
               <Download className="w-4 h-4" />
               {exporting === selectedInterview.sessionId ? '导出中...' : '导出 PDF'}
@@ -355,9 +355,9 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
                 <motion.button
                   type="button"
                   onClick={handlePreviewOriginalFile}
-                  className="px-5 py-2.5 border border-stone-200 dark:border-[#4b5563] bg-white dark:bg-[#1f2937] rounded-xl text-primary-500 dark:text-[#d1d5db] font-medium hover:bg-stone-50 transition-all flex items-center gap-2"
+                  className="btn-secondary flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: 0.97 }}
                 >
                   <Eye className="w-4 h-4" />
                   预览原文件
@@ -366,47 +366,51 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
               <motion.button
                 type="button"
                 onClick={handleDownloadOriginalFile}
-                className="px-5 py-2.5 border border-stone-200 dark:border-[#4b5563] bg-white dark:bg-[#1f2937] rounded-xl text-primary-500 dark:text-[#d1d5db] font-medium hover:bg-stone-50 transition-all flex items-center gap-2"
+                className="btn-secondary flex items-center gap-2"
                 whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.97 }}
               >
                 <Download className="w-4 h-4" />
                 下载原文件
               </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => onStartInterview(resumeId)}
-              className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium shadow-lg shadow-primary-500/30 hover:shadow-xl transition-all flex items-center gap-2"
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Mic className="w-4 h-4" />
-              开始情景模拟
-            </motion.button>
+              <motion.button
+                type="button"
+                onClick={() => onStartInterview(resumeId)}
+                className="btn-primary flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <Mic className="w-4 h-4" />
+                开始情景模拟
+              </motion.button>
             </>
           )}
         </div>
       </div>
 
       {detailView !== 'interviewDetail' && activeTab === 'analysis' && (
-        <div className="mb-6 bg-white dark:bg-[#1f2937] rounded-2xl p-5 shadow-sm border border-stone-100 dark:border-[#2d3548]">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+        <div className="mb-6 bg-white dark:bg-[#1a1f2e] rounded-lg border border-stone-200 dark:border-[#2d3548] p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <RefreshCw className="w-4 h-4 text-primary-400 dark:text-[#9ca3af]" />
+            <span className="text-sm font-medium text-primary-500 dark:text-[#9ca3af] tracking-wide uppercase">重新分析配置</span>
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-end gap-5">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-primary-600 dark:text-[#e5e7eb] mb-2">重新分析方向</p>
+              <label className="block text-xs font-medium text-primary-400 dark:text-[#9ca3af] mb-1.5 tracking-wide">分析方向</label>
               <input
                 type="text"
                 value={reanalyzeProfession}
                 onChange={(event) => setReanalyzeProfession(event.target.value)}
                 placeholder="例如：Java 后端、产品经理、职业沟通表达"
-                className="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-primary-800 dark:text-[#f3f4f6] placeholder:text-primary-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full px-4 py-2.5 rounded-[4px] border border-primary-200 dark:border-[#2d3548] bg-white dark:bg-[#0f1117] text-primary-800 dark:text-[#f3f4f6] placeholder:text-primary-300 dark:placeholder:text-[#6b7280] focus:outline-none focus:border-[#9b60aa] focus:ring-1 focus:ring-[#9b60aa] transition-colors"
               />
             </div>
-            <div className="lg:w-64">
-              <p className="text-sm font-semibold text-primary-600 dark:text-[#e5e7eb] mb-2">重新分析力度</p>
+            <div className="lg:w-56">
+              <label className="block text-xs font-medium text-primary-400 dark:text-[#9ca3af] mb-1.5 tracking-wide">分析力度</label>
               <select
                 value={reanalyzeDifficulty}
                 onChange={(event) => setReanalyzeDifficulty(event.target.value as AnalysisDifficulty)}
-                className="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-primary-800 dark:text-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full px-4 py-2.5 rounded-[4px] border border-primary-200 dark:border-[#2d3548] bg-white dark:bg-[#0f1117] text-primary-800 dark:text-[#f3f4f6] focus:outline-none focus:border-[#9b60aa] focus:ring-1 focus:ring-[#9b60aa] transition-colors"
               >
                 {ANALYSIS_DIFFICULTY_OPTIONS.map(option => (
                   <option key={option.value} value={option.value}>
@@ -415,10 +419,21 @@ export default function ResumeDetailPage({ resumeId, onBack, onStartInterview }:
                 ))}
               </select>
             </div>
-            <div className="text-xs text-primary-400 dark:text-[#9ca3af] lg:max-w-xs">
-              这里的配置会直接传给后端重新分析接口，用来覆盖当前文档的分析方向与分析力度。
-            </div>
+            <motion.button
+              type="button"
+              onClick={handleReanalyze}
+              disabled={reanalyzing}
+              className="px-5 py-2.5 bg-primary-800 dark:bg-[#1f2937] text-white dark:text-[#f3f4f6] text-sm font-medium rounded-[32px] border border-transparent dark:border-[#374151] hover:bg-primary-700 dark:hover:bg-[#374151] transition-all disabled:opacity-50 flex items-center gap-2 shadow-soft whitespace-nowrap"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <RefreshCw className={`w-4 h-4 ${reanalyzing ? 'animate-spin' : ''}`} />
+              {reanalyzing ? '分析中...' : '重新分析'}
+            </motion.button>
           </div>
+          <p className="mt-3 text-xs text-primary-300 dark:text-[#6b7280]">
+            配置将覆盖当前文档的分析方向与力度，提交后自动触发重新分析。
+          </p>
         </div>
       )}
 

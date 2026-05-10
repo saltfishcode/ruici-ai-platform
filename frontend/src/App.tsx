@@ -233,20 +233,25 @@ function SimulationDetailPageWrapper() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-4 mb-8">
         <button
           type="button"
           onClick={() => navigate(ROUTES.simulationHistory)}
-          className="p-2 text-primary-400 hover:text-primary-700 hover:bg-stone-100 rounded-lg transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 dark:border-[#2d3548] text-primary-400 dark:text-[#9ca3af] hover:text-primary-700 dark:hover:text-[#f3f4f6] hover:border-primary-300 dark:hover:border-[#4b5563] transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <title>返回模拟记录</title>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-primary-800 dark:text-[#f3f4f6]">
-          模拟详情 #{sessionId!.slice(-8)}
-        </h1>
+        <div>
+          <h1 className="text-lg font-semibold text-primary-800 dark:text-[#f3f4f6] tracking-tight">
+            模拟详情
+          </h1>
+          <p className="text-xs text-primary-400 dark:text-[#6b7280] font-mono tracking-wide">
+            #{sessionId!.slice(-8)}
+          </p>
+        </div>
       </div>
       <SimulationDetailPanel interview={interview} />
     </div>
