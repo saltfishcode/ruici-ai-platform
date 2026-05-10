@@ -128,6 +128,7 @@ public class InterviewSessionService {
         // 基于 Skill 生成面试问题
         List<InterviewQuestionDTO> questions = questionService.generateQuestionsBySkill(
             chatClient,
+            runtimeSnapshot,
             scenarioType,
             skillId,
             difficulty,

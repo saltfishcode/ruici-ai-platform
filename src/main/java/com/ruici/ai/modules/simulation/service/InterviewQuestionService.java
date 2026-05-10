@@ -2,6 +2,7 @@ package com.ruici.ai.modules.simulation.service;
 
 import com.ruici.ai.common.ai.LlmProviderRegistry;
 import com.ruici.ai.common.ai.StructuredOutputInvoker;
+import com.ruici.ai.common.config.runtime.snapshot.AiRuntimeConfigSnapshot;
 import com.ruici.ai.common.constant.CommonConstants.ScenarioDefaults;
 import com.ruici.ai.common.exception.BusinessException;
 import com.ruici.ai.common.exception.ErrorCode;
@@ -125,6 +126,7 @@ public class InterviewQuestionService {
 
     public List<InterviewQuestionDTO> generateQuestionsBySkill(
             ChatClient chatClient,
+            AiRuntimeConfigSnapshot runtimeSnapshot,
             SimulationScenarioType scenarioType,
             String skillId,
             String difficulty,
@@ -141,7 +143,7 @@ public class InterviewQuestionService {
         String historicalSection = buildHistoricalSection(historicalQuestions);
         if (!hasResume) {
             return ensureDistinctMainQuestions(generateDirectionOnly(
-                chatClient, scenarioType, skill, difficultyDesc, questionCount, historicalSection
+                chatClient, runtimeSnapshot, scenarioType, skill, difficultyDesc, questionCount, historicalSection
             ), questionCount, skill);
         }
 
@@ -153,13 +155,13 @@ public class InterviewQuestionService {
 
         CompletableFuture<List<InterviewQuestionDTO>> resumeFuture = CompletableFuture.supplyAsync(
             () -> generateResumeQuestions(
-                scenarioType, resumeText, resumeCount, skill, difficultyDesc, historicalSection
+                runtimeSnapshot, scenarioType, resumeText, resumeCount, skill, difficultyDesc, historicalSection
             ),
             questionExecutor);
 
         CompletableFuture<List<InterviewQuestionDTO>> directionFuture = CompletableFuture.supplyAsync(
             () -> generateDirectionOnly(
-                chatClient, scenarioType, skill, difficultyDesc, directionCount, historicalSection
+                chatClient, runtimeSnapshot, scenarioType, skill, difficultyDesc, directionCount, historicalSection
             ),
             questionExecutor);
 
@@ -171,7 +173,7 @@ public class InterviewQuestionService {
             log.error("简历题生成失败，降级为全方向题", e.getCause());
             directionFuture.cancel(true);
             return ensureDistinctMainQuestions(generateDirectionOnly(
-                chatClient, scenarioType, skill, difficultyDesc, questionCount, historicalSection
+                chatClient, runtimeSnapshot, scenarioType, skill, difficultyDesc, questionCount, historicalSection
             ), questionCount, skill);
         }
 
@@ -197,6 +199,7 @@ public class InterviewQuestionService {
     }
 
     private List<InterviewQuestionDTO> generateResumeQuestions(
+            AiRuntimeConfigSnapshot runtimeSnapshot,
             SimulationScenarioType scenarioType,
             String resumeText,
             int questionCount,
@@ -220,8 +223,10 @@ public class InterviewQuestionService {
             String userPrompt = resumeUserPromptTemplate.render(variables);
             // 简历题链路固定走 plain client，日志里明确打出 clientType，避免和方向题混淆。
             log.info(
-                "情景模拟简历题 AI 调用: clientType={}, skillId={}, systemPrompt={}, userPrompt={}",
+                "情景模拟简历题 AI 调用: clientType={}, provider={}, model={}, skillId={}, systemPrompt={}, userPrompt={}",
                 PLAIN_CLIENT_TYPE,
+                runtimeSnapshot != null ? runtimeSnapshot.providerId() : "unknown",
+                runtimeSnapshot != null ? runtimeSnapshot.modelName() : "unknown",
                 skill.id(),
                 resumeSystemPromptPath,
                 resumeUserPromptPath
@@ -253,7 +258,8 @@ public class InterviewQuestionService {
     }
 
     private List<InterviewQuestionDTO> generateDirectionOnly(
-            ChatClient chatClient, SimulationScenarioType scenarioType,
+            ChatClient chatClient, AiRuntimeConfigSnapshot runtimeSnapshot,
+            SimulationScenarioType scenarioType,
             SkillDTO skill, String difficultyDesc,
             int questionCount, String historicalSection) {
         Map<String, Integer> allocation = skillService.calculateAllocation(skill.categories(), questionCount);
@@ -282,10 +288,12 @@ public class InterviewQuestionService {
             String systemPrompt = skillSystemPromptTemplate.render()
                 + GENERIC_MODE_SYSTEM_APPEND + outputConverter.getFormat();
             String userPrompt = skillUserPromptTemplate.render(variables);
-            // 方向题链路保留 tool-capable client 语义，日志只记录资源标识与 skillId。
+            // 方向题链路保留 tool-capable client 语义，日志记录资源标识、skillId 与实际命中模型。
             log.info(
-                "情景模拟方向题 AI 调用: clientType={}, skillId={}, systemPrompt={}, userPrompt={}",
+                "情景模拟方向题 AI 调用: clientType={}, provider={}, model={}, skillId={}, systemPrompt={}, userPrompt={}",
                 DEFAULT_CLIENT_TYPE,
+                runtimeSnapshot != null ? runtimeSnapshot.providerId() : "unknown",
+                runtimeSnapshot != null ? runtimeSnapshot.modelName() : "unknown",
                 skill.id(),
                 skillSystemPromptPath,
                 skillUserPromptPath

@@ -196,6 +196,7 @@ class InterviewSessionServiceTest {
             given(llmProviderRegistry.getChatClient(runtimeSnapshot)).willReturn(chatClient);
             given(questionService.generateQuestionsBySkill(
                 eq(chatClient),
+                eq(runtimeSnapshot),
                 any(),
                 eq("java-backend"),
                 eq("senior"),

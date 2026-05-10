@@ -56,7 +56,31 @@
 - 前端 2.0 约定：详情页会把用户当前输入的 `profession` 与 `analysisDifficulty` 直接透传给该接口，用于覆盖本次重分析视角。
 - 限流：`GLOBAL=2`，`IP=2`
 
-## 7. 健康检查
+## 7. 预览/下载原始上传文件
+
+- `GET /api/documents/{id}/original-file`
+- 查询参数：
+  - `disposition`（可选，`inline` / `attachment`，默认 `inline`）
+- 用途：获取用户上传的原始文件（非解析后文本），支持浏览器内联预览或下载。
+- 返回：二进制流（`ResponseEntity<byte[]>`），不包裹 `Result<T>`。
+- 响应头：
+  - `Content-Disposition`：根据 `disposition` 参数设置 `inline` 或 `attachment`，文件名 UTF-8 编码。
+  - `Content-Type`：原始文件的 MIME 类型（来自数据库 `content_type` 字段）。
+  - `Content-Length`：文件字节数。
+  - `X-Content-Type-Options: nosniff`
+- 安全策略：
+  - `text/html`、`image/svg+xml`、`application/xhtml+xml`、`text/xml` 类型强制降级为 `attachment` + `application/octet-stream`，防止浏览器执行可执行内容。
+- 限流：`GLOBAL=10`，`IP=5`
+- 鉴权：**当前无访问控制**（已知问题，待登录态接入后补充 ownership 校验）。
+- 错误处理：
+  - 文件不存在（`RESUME_NOT_FOUND`）或通用 404：返回 HTTP 404。
+  - 存储服务异常（`STORAGE_DOWNLOAD_FAILED`）：返回 HTTP 502。
+  - 未知异常：返回 HTTP 500。
+- 剩余已知问题（详见 `word/目前已知问题-v1.3.2.md` 第 4 节）：
+  - 无访问控制（待登录态接入）。
+  - 大文件全量加载到内存（当前 10MB 限制下可接受）。
+
+## 8. 健康检查
 
 - `GET /api/documents/health`
 - 用途：提供文档模块状态检查。

@@ -1,6 +1,8 @@
 package com.ruici.ai.modules.document;
 
 import com.ruici.ai.common.annotation.RateLimit;
+import com.ruici.ai.common.exception.BusinessException;
+import com.ruici.ai.common.exception.ErrorCode;
 import com.ruici.ai.common.result.Result;
 import com.ruici.ai.modules.document.model.ResumeDetailDTO;
 import com.ruici.ai.modules.document.model.ResumeListItemDTO;
@@ -83,8 +85,13 @@ public class ResumeController {
 
     /**
      * 预览或下载原始上传文件。
+     *
+     * <p>安全策略：对可执行文本类型（HTML/SVG/XHTML）强制降级为下载流，
+     * 避免浏览器直接执行页面内容或嵌入脚本。</p>
      */
     @GetMapping("/api/documents/{id}/original-file")
+    @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 10)
+    @RateLimit(dimension = RateLimit.Dimension.IP, count = 5)
     public ResponseEntity<byte[]> getOriginalFile(
         @PathVariable Long id,
         @RequestParam(value = "disposition", defaultValue = "inline") String disposition
@@ -95,7 +102,7 @@ public class ResumeController {
             String requestedDisposition = "attachment".equalsIgnoreCase(disposition) ? "attachment" : "inline";
             boolean shouldForceAttachment = shouldForceDownload(result.contentType(), requestedDisposition);
             String effectiveDisposition = shouldForceAttachment ? "attachment" : requestedDisposition;
-            // HTML 原文件不做浏览器内联预览，统一降级为下载流，避免直接执行页面内容。
+            // 可执行文本类型不做浏览器内联预览，统一降级为下载流，避免直接执行页面内容。
             String safeContentType = shouldForceAttachment
                 ? MediaType.APPLICATION_OCTET_STREAM_VALUE
                 : result.contentType();
@@ -106,7 +113,13 @@ public class ResumeController {
                     effectiveDisposition + "; filename*=UTF-8''" + encodedFilename)
                 .header("X-Content-Type-Options", "nosniff")
                 .contentType(mediaType)
+                .contentLength(result.fileBytes().length)
                 .body(result.fileBytes());
+        } catch (BusinessException e) {
+            log.warn("获取原始文档业务异常: documentId={}, code={}, message={}",
+                id, e.getCode(), e.getMessage());
+            int httpStatus = mapBusinessExceptionToHttpStatus(e);
+            return ResponseEntity.status(httpStatus).build();
         } catch (Exception e) {
             log.error("获取原始文档失败: documentId={}", id, e);
             return ResponseEntity.internalServerError().build();
@@ -168,12 +181,28 @@ public class ResumeController {
     }
 
     /**
-     * 对高风险可执行文本类型做安全降级，当前仅拦截 HTML 内联预览。
+     * 对高风险可执行文本类型做安全降级，拦截 HTML / SVG / XHTML 内联预览。
      */
     private boolean shouldForceDownload(String contentType, String disposition) {
-        return "inline".equalsIgnoreCase(disposition)
-            && contentType != null
-            && contentType.toLowerCase().contains("text/html");
+        if (!"inline".equalsIgnoreCase(disposition) || contentType == null) {
+            return false;
+        }
+        String lower = contentType.toLowerCase();
+        return lower.contains("text/html")
+            || lower.contains("image/svg+xml")
+            || lower.contains("application/xhtml+xml")
+            || lower.contains("text/xml");
+    }
+
+    private int mapBusinessExceptionToHttpStatus(BusinessException e) {
+        int code = e.getCode();
+        if (code == ErrorCode.RESUME_NOT_FOUND.getCode() || code == ErrorCode.NOT_FOUND.getCode()) {
+            return 404;
+        }
+        if (code == ErrorCode.STORAGE_DOWNLOAD_FAILED.getCode()) {
+            return 502;
+        }
+        return 500;
     }
 
 }
