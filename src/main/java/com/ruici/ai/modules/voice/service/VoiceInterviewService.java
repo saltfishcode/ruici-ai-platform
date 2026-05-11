@@ -547,10 +547,10 @@ public class VoiceInterviewService {
      * 根据启用的阶段确定第一个阶段
      */
     private VoiceInterviewSessionEntity.InterviewPhase determineFirstPhase(CreateSessionRequest request) {
-        if (request.getIntroEnabled()) return VoiceInterviewSessionEntity.InterviewPhase.INTRO;
-        if (request.getTechEnabled()) return VoiceInterviewSessionEntity.InterviewPhase.TECH;
-        if (request.getProjectEnabled()) return VoiceInterviewSessionEntity.InterviewPhase.PROJECT;
-        if (request.getHrEnabled()) return VoiceInterviewSessionEntity.InterviewPhase.HR;
+        if (Boolean.TRUE.equals(request.getIntroEnabled())) return VoiceInterviewSessionEntity.InterviewPhase.INTRO;
+        if (Boolean.TRUE.equals(request.getTechEnabled())) return VoiceInterviewSessionEntity.InterviewPhase.TECH;
+        if (Boolean.TRUE.equals(request.getProjectEnabled())) return VoiceInterviewSessionEntity.InterviewPhase.PROJECT;
+        if (Boolean.TRUE.equals(request.getHrEnabled())) return VoiceInterviewSessionEntity.InterviewPhase.HR;
         return VoiceInterviewSessionEntity.InterviewPhase.COMPLETED;
     }
 

@@ -408,7 +408,7 @@ export default function VoiceInterviewPage() {
         }
       }
 
-      const wsUrl = session.webSocketUrl || `${wsProtocol}://${host}/ws/voice-interview/${session.sessionId}`;
+      const wsUrl = `${wsProtocol}://${host}/ws/voice-interview/${session.sessionId}`;
       connectWithHandlers(session.sessionId, wsUrl);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '创建面试会话失败，请重试';
@@ -454,7 +454,7 @@ export default function VoiceInterviewPage() {
         }
       }
 
-      const wsUrl = session.webSocketUrl || `${wsProtocol}://${host}/ws/voice-interview/${session.sessionId}`;
+      const wsUrl = `${wsProtocol}://${host}/ws/voice-interview/${session.sessionId}`;
       connectWithHandlers(session.sessionId, wsUrl);
     } catch (error) {
       setError(error instanceof Error ? error.message : '恢复会话失败');

@@ -75,17 +75,22 @@ run_build_frontend() {
 
 run_up() {
   echo "[up] Starting all services..."
-  $COMPOSE_COMMAND -f "$COMPOSE_FILE" up -d --remove-orphans
+  $COMPOSE_COMMAND -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
 }
 
 run_up_core() {
   echo "[up-core] Starting middleware and app..."
-  $COMPOSE_COMMAND -f "$COMPOSE_FILE" up -d postgres redis rustfs createbuckets app
+  if grep -qE '^\s+minio:' "$COMPOSE_FILE"; then
+    STORAGE_SVC="minio"
+  else
+    STORAGE_SVC="rustfs"
+  fi
+  $COMPOSE_COMMAND -f "$COMPOSE_FILE" up -d --force-recreate postgres redis "$STORAGE_SVC" createbuckets app
 }
 
 run_up_frontend() {
   echo "[up-frontend] Starting frontend..."
-  $COMPOSE_COMMAND -f "$COMPOSE_FILE" up -d frontend
+  $COMPOSE_COMMAND -f "$COMPOSE_FILE" up -d --force-recreate frontend
 }
 
 run_status() {
