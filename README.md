@@ -451,9 +451,3 @@ configVersion 等 **非敏感控制信息**。真实 API Key 仍然只保留在 
 ### OpenAI-compatible 一定完全兼容吗？
 
 不一定。不同网关在 `chat/completions`、流式事件结构、工具调用和结构化输出上可能存在差异。项目已经采用 Provider 分层：聊天默认走中转，语音/向量保留 Qwen。
-
-## 内部说明
-
-`private/项目重构提示词-优化.md` 是当前重构的设计基线之一。对外文档以本 `README` 为准，对内设计可继续沿 `private/` 目录逐步推进。
-
-同时，`api/README.md` 汇总了当前后端接口入口，供前端逐步迁移使用。
